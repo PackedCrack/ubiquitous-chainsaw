@@ -1,19 +1,17 @@
 SET(STD_PCH <cstdint>
           <vector>
-          <random>
           <chrono>
-          <array>
-          <set>
-          <unordered_map>
           <algorithm>
-          <type_traits>
         <concepts>
         <stdexcept>
         <string>
         <string_view>
-        <numeric>
-        <optional>
-        <cassert>)
+        <expected>
+        <atomic>
+        <cassert>
+        <utility>
+        <format>
+        <cerrno>)
 
 # --- functions --- #
 function(use_pch PROJ)

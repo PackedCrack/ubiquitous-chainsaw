@@ -7,6 +7,8 @@
 #include "SDL3/SDL.h"
 
 
+#include "bluetooth/CScanner.hpp"
+
 namespace
 {
 void process_cmd_line_args(int argc, char** argv)
@@ -27,6 +29,44 @@ void process_cmd_line_args(int argc, char** argv)
         // TODO
     }
 }
+
+[[nodiscard]] std::span<const bluetooth::Inquiry> to_span(
+        const std::vector<bluetooth::Inquiry>& inquiries)
+{
+    return inquiries;
+}
+[[nodiscard]] std::expected<std::span<const bluetooth::Inquiry>, bluetooth::CScanner::Error> print_inquiries(
+        std::span<const bluetooth::Inquiry> inquiries)
+{
+    for(const auto& inquiry : inquiries)
+    {
+        std::string services{};
+        for(size_t i = 0u; i < inquiry.services.size(); ++i)
+        {
+            bluetooth::ServiceClass service = inquiry.services[i];
+            services += bluetooth::service_class_to_str(service);
+            if (i < inquiry.services.size() - 1u)
+                services += ", ";
+        }
+        
+        LOG_INFO_FMT("Bluetooth Device:\nName: {}\nAddress: {}\nService Class: {}\nMajor Device Class: {}",
+                     inquiry.name,
+                     inquiry.addr,
+                     services,
+                     bluetooth::major_device_class_to_str(inquiry.majorClass));
+    }
+    
+    return inquiries;
+}
+[[nodiscard]] std::expected<std::span<const bluetooth::Inquiry>, bluetooth::CScanner::Error> log_scan_err(
+        const bluetooth::CScanner::Error& err)
+{
+    LOG_ERROR_FMT("Scanned failed with Error Code: {} and Message: {}",
+                  std::to_underlying(err.code),
+                  err.msg);
+    
+    return std::unexpected{ err };
+}
 }   // namespace
 
 
@@ -37,6 +77,22 @@ int main(int argc, char** argv)
     try
     {
         process_cmd_line_args(argc, argv);
+        
+        
+        std::expected<bluetooth::CScanner, bluetooth::CScanner::Error> result = bluetooth::CScanner::make_scanner();
+        if(!result)
+        {
+            const bluetooth::CScanner::Error& err = result.error();
+            LOG_FATAL_FMT("Failed to create Bluetooth scanner.\nError Code: {}\nMessage: {}",
+                          std::to_underlying(err.code),
+                          err.msg);
+        }
+        
+        bluetooth::CScanner scanner = std::move(result.value());
+        scanner.new_scan()
+        .transform(to_span)
+        .and_then(print_inquiries)
+        .or_else(log_scan_err);
         
         
         gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };

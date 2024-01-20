@@ -31,7 +31,9 @@ add_subdirectory("src")
 # properties
 set_target_properties(${MAIN_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
 set_target_properties(${MAIN_PROJECT} PROPERTIES CXX_STANDARD 23)
+set_target_properties(${MAIN_PROJECT} PROPERTIES C_STANDARD 11)
 set_target_properties(${MAIN_PROJECT} PROPERTIES CXX_STANDARD_REQUIRED ON)
+set_target_properties(${MAIN_PROJECT} PROPERTIES C_STANDARD_REQUIRED ON)
 set_target_properties(${MAIN_PROJECT} PROPERTIES FOLDER ${FOLDER_MAIN})
 #include
 target_include_directories(${MAIN_PROJECT} PRIVATE "${SDL_SRC_PATH}/include")
@@ -39,6 +41,7 @@ target_include_directories(${MAIN_PROJECT} PRIVATE "${IMGUI_SRC_PATH}/include")
 #link
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_SDL})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_IMGUI})
+target_link_libraries(${MAIN_PROJECT} PRIVATE libbluetooth.so)
 # compiler settings etc
 apply_compiler_warnings(${MAIN_PROJECT})
 use_pch(${MAIN_PROJECT})
