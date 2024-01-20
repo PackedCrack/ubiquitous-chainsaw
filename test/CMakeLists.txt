@@ -30,29 +30,14 @@ add_executable(${TEST_PROJECT}
         test.cpp
 )
 
-target_precompile_headers(${TEST_PROJECT}
-PRIVATE
-        <cstdint>
-        <vector>
-        <random>
-        <chrono>
-        <array>
-        <set>
-        <unordered_map>
-        <algorithm>
-        <type_traits>
-        <concepts>
-        <chrono>
-        <stdexcept>
-        <string>
-        <string_view>
-)
+
 
 set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_include_directories(${TEST_PROJECT} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googletest/include)
 target_link_libraries(${TEST_PROJECT} gtest_main)
+use_pch(${TEST_PROJECT})
 
 enable_testing()
 add_test(NAME ${TEST_PROJECT} COMMAND ${TEST_PROJECT})

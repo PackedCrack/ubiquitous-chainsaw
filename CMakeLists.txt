@@ -26,7 +26,7 @@ fetch_third_party()
 
 
 add_executable(${MAIN_PROJECT})
-add_dependencies(${MAIN_PROJECT} CPPCHECK)
+#add_dependencies(${MAIN_PROJECT} CPPCHECK)
 add_subdirectory("src")
 # properties
 set_target_properties(${MAIN_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")

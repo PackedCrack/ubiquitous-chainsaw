@@ -38,12 +38,13 @@ int main(int argc, char** argv)
     {
         process_cmd_line_args(argc, argv);
         
-        gui::CGui gui{ };
-
+        
         gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
         gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
-
-
+        gui::CGui gui{};
+        
+        
+        
         bool exit = false;
         while (!exit)
         {
