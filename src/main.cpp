@@ -67,6 +67,20 @@ void process_cmd_line_args(int argc, char** argv)
     
     return std::unexpected{ err };
 }
+[[nodiscard]] bluetooth::CScanner make_scanner()
+{
+    std::expected<bluetooth::CScanner, bluetooth::CScanner::Error> result = bluetooth::CScanner::make_scanner();
+    if(!result)
+    {
+        const bluetooth::CScanner::Error& err = result.error();
+        LOG_FATAL_FMT("Failed to create Bluetooth scanner.\nError Code: {}\nMessage: {}",
+                      std::to_underlying(err.code),
+                      err.msg);
+    }
+    
+    bluetooth::CScanner scanner = std::move(result.value());
+    return scanner;
+}
 }   // namespace
 
 
@@ -79,16 +93,7 @@ int main(int argc, char** argv)
         process_cmd_line_args(argc, argv);
         
         
-        std::expected<bluetooth::CScanner, bluetooth::CScanner::Error> result = bluetooth::CScanner::make_scanner();
-        if(!result)
-        {
-            const bluetooth::CScanner::Error& err = result.error();
-            LOG_FATAL_FMT("Failed to create Bluetooth scanner.\nError Code: {}\nMessage: {}",
-                          std::to_underlying(err.code),
-                          err.msg);
-        }
-        
-        bluetooth::CScanner scanner = std::move(result.value());
+        bluetooth::CScanner scanner = make_scanner();
         scanner.new_scan()
         .transform(to_span)
         .and_then(print_inquiries)
@@ -113,11 +118,11 @@ int main(int argc, char** argv)
         }
 
 
-        return 0;
+        return EXIT_SUCCESS;
     }
     catch(const exception::fatal_error& err)
     {
         LOG_ERROR_FMT("Fatal exception: {}", err.what());
-        return -1;
+        return EXIT_FAILURE;
     }
 }

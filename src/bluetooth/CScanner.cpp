@@ -206,7 +206,6 @@ std::expected<std::vector<Inquiry>, CScanner::Error> CScanner::new_scan() const
         return error(ErrorCode::responseFailure, std::format("Scan failed with error: {}", str_error()));
     responses.resize(static_cast<size_t>(numResponses));
     
-    LOG_INFO_FMT("DeviceID: {}. Socket: {}, Num responses: {}", m_DeviceID, m_Socket, numResponses);
     std::vector<Inquiry> inquiries{};
     for(auto& inquiry : responses)
     {
@@ -217,6 +216,7 @@ std::expected<std::vector<Inquiry>, CScanner::Error> CScanner::new_scan() const
                 .majorClass = extract_major_device_class(&inquiry.dev_class[0])
         });
     }
+    
     
     return inquiries;
 }
