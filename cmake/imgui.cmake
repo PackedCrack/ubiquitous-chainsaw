@@ -42,11 +42,15 @@ SET(IMGUI_SOURCES ${IMGUI_SRC_PATH}/imconfig.h
     )
 
 add_library(${FETCH_DEP_IMGUI} STATIC)
-set_target_properties(${FETCH_DEP_IMGUI} PROPERTIES CXX_STANDARD 20)
+set_target_properties(${FETCH_DEP_IMGUI} PROPERTIES CXX_STANDARD 23)
+set_target_properties(${FETCH_DEP_IMGUI} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${LIB_OUTPUT_DIR}")
 
 target_sources(${FETCH_DEP_IMGUI} PRIVATE ${IMGUI_SOURCES})
 
 target_include_directories(${FETCH_DEP_IMGUI} PRIVATE ${IMGUI_SRC_PATH})
 target_include_directories(${FETCH_DEP_IMGUI} PRIVATE ${SDL_SRC_PATH}/include/)
+
+target_link_directories(${FETCH_DEP_IMGUI} PRIVATE ${LIB_OUTPUT_DIR})
+target_link_libraries(${FETCH_DEP_IMGUI} PRIVATE ${FETCH_DEP_SDL})
 
 file(COPY ${IMGUI_SOURCES} DESTINATION ${IMGUI_SRC_PATH}/include/imgui/)

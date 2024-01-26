@@ -444,6 +444,10 @@ FodyWeavers.xsd
 
 # clion
 /.idea
+/cmake-build-debug-visual-studio
+/cmake-build-minsizerel-visual-studio
+/cmake-build-release-visual-studio
+/cmake-build-relwithdebinfo-visual-studio
 
 # cmake
 /cmake-build-debug

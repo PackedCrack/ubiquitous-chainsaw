@@ -12,6 +12,7 @@ FetchContent_Declare(
   BUILD_COMMAND     ""
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
+  CMAKE_ARGS        -DSDL_SHARED_DEFAULT=OFF -DSDL_STATIC_DEFAULT ON
 )
 
 FetchContent_GetProperties(${FETCH_DEP_SDL})
@@ -19,6 +20,7 @@ FetchContent_MakeAvailable(${FETCH_DEP_SDL})
 
 
 set_target_properties(${FETCH_DEP_SDL} PROPERTIES CXX_STANDARD 23)
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${LIB_OUTPUT_DIR}")
 
 file(GLOB_RECURSE SDL_SOURCES
       ${SDL_SRC_PATH}/include/*.cpp

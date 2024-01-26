@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
+
 SET(OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/")
+SET(LIB_OUTPUT_DIR "${CMAKE_BINARY_DIR}/lib/")
+
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 SET(FOLDER_MAIN "chainsaw")
@@ -25,7 +28,12 @@ fetch_third_party()
 #add_subdirectory("third-party")
 
 
-add_executable(${MAIN_PROJECT})
+add_executable(${MAIN_PROJECT}
+        src/bluetoothLE/CBLEScanner.hpp
+        src/bluetoothLE/windows/CScanner.hpp
+        src/bluetoothLE/windows/CScanner.cpp
+        src/bluetoothLE/common.hpp
+        src/common/CThreadSafeHashMap.hpp)
 #add_dependencies(${MAIN_PROJECT} CPPCHECK)
 add_subdirectory("src")
 # properties
@@ -39,9 +47,13 @@ set_target_properties(${MAIN_PROJECT} PROPERTIES FOLDER ${FOLDER_MAIN})
 target_include_directories(${MAIN_PROJECT} PRIVATE "${SDL_SRC_PATH}/include")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${IMGUI_SRC_PATH}/include")
 #link
+target_link_directories(${MAIN_PROJECT} PRIVATE ${LIB_OUTPUT_DIR})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_SDL})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_IMGUI})
-target_link_libraries(${MAIN_PROJECT} PRIVATE libbluetooth.so)
+#target_link_libraries(${MAIN_PROJECT} PRIVATE libbluetooth.so)
+
+
+
 # compiler settings etc
 apply_compiler_warnings(${MAIN_PROJECT})
 use_pch(${MAIN_PROJECT})

@@ -1,5 +1,6 @@
 SET(STD_PCH <cstdint>
           <vector>
+          <array>
           <chrono>
           <algorithm>
         <concepts>
@@ -11,6 +12,8 @@ SET(STD_PCH <cstdint>
         <cassert>
         <utility>
         <format>
+        <unordered_map>
+        <shared_mutex>
         <cerrno>)
 
 # --- functions --- #
