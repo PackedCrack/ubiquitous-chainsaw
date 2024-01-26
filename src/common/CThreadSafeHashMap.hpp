@@ -1,0 +1,88 @@
+//
+// Created by qwerty on 2024-01-26.
+//
+
+#pragma once
+
+
+template<typename hashable_key_t, typename element_t>
+class CThreadSafeHashMap
+{
+public:
+    CThreadSafeHashMap() = default;
+    ~CThreadSafeHashMap() = default;
+    CThreadSafeHashMap(const CThreadSafeHashMap& other) = delete;
+    CThreadSafeHashMap(CThreadSafeHashMap&& other) = delete;
+    CThreadSafeHashMap& operator=(const CThreadSafeHashMap& other) = delete;
+    CThreadSafeHashMap& operator=(CThreadSafeHashMap&& other) = delete;
+public:
+    enum class ErrorCode
+    {
+        elementNotFound
+    };
+    struct Error
+    {
+        std::wstring msg;
+        ErrorCode code;
+    };
+public:
+    // write
+    template<typename key_t, typename value_t>
+    void insert(key_t&& key, value_t&& value)
+    {
+        std::unique_lock lock{ m_Mutex };
+        m_Container[std::forward<key_t>(key)] = std::forward<value_t>(value);
+    }
+    template<typename key_t, typename... ctor_args_t>
+    [[nodiscard]] bool try_emplace(key_t&& key, ctor_args_t&&... args)
+    {
+        std::unique_lock lock{ m_Mutex };
+        auto[emplaced, iter] = m_Container.try_emplace(std::forward<key_t>(key), std::forward<ctor_args_t>(args)...);
+        
+        return emplaced;
+    }
+    template<typename key_t>
+    [[nodiscard]] bool erase(key_t&& key)
+    {
+        std::unique_lock lock{ m_Mutex };
+        size_t numErased = m_Container.erase(std::forward<key_t>(key));
+        return numErased != 0u;
+    }
+    // read
+    template<typename key_t>
+    [[nodiscard]] std::expected<element_t, Error> find(key_t&& key)
+    {
+        std::shared_lock lock{ m_Mutex };
+        auto it = m_Container.find(std::forward<key_t>(key));
+        if(it == std::end(m_Container))
+            return std::unexpected{ Error{ .msg = "Unable to find element.", .code = ErrorCode::elementNotFound } };
+        
+        return *it;
+    }
+    template<typename key_t>
+    [[nodiscard]] bool contains(key_t&& key)
+    {
+        std::shared_lock lock{ m_Mutex };
+        return m_Container.contains(std::forward<key_t>(key));
+    }
+    [[nodiscard]] std::vector<element_t> as_vector()
+    {
+        // Instead of custom iterators and counting readers we'll just copy the data into a vector and return that..
+        std::shared_lock lock{ m_Mutex };
+        
+        std::vector<element_t> copies{};
+        copies.reserve(m_Container.size());
+        for (const auto& pair : m_Container)
+            copies.push_back(pair.second);
+        
+        return copies;
+    }
+    [[nodiscard]] size_t size()
+    {
+        std::shared_lock lock{ m_Mutex };
+        return m_Container.size();
+    }
+private:
+    std::unordered_map<hashable_key_t, element_t> m_Container;
+    std::shared_mutex m_Mutex;
+};
