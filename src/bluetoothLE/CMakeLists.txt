@@ -1,6 +1,8 @@
+include_directories("windows")
+
 SET(BLUETOOTH_SRCS
-        CScanner.cpp
-        CScanner.hpp
+        common.hpp
+        CBLEScanner.hpp
 )
 
 target_sources(${MAIN_PROJECT} PRIVATE ${BLUETOOTH_SRCS})
