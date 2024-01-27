@@ -34,15 +34,21 @@ void process_cmd_line_args(int argc, char** argv)
 #include <iostream>
 #include <string>
 #include "bluetoothLE/windows/CScanner.hpp"
+#include "bluetoothLE/CBLEScanner.hpp"
 
 int main(int argc, char** argv)
 {
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
     CThreadSafeHashMap<std::string, ble::DeviceInfo> cache{};
-    ble::win::CScanner scanner{ cache };
     
-    scanner.begin_scan();
+    ble::CBLEScanner indScanner = ble::make_scanner(cache);
+    
+    //ble::win::CScanner scanner{ cache };
+    //scanner.begin_scan();
+    
+    //begin_scan(indScanner);
+    indScanner.begin_scan();
     
     while(true)
     {

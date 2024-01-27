@@ -448,6 +448,8 @@ FodyWeavers.xsd
 /cmake-build-minsizerel-visual-studio
 /cmake-build-release-visual-studio
 /cmake-build-relwithdebinfo-visual-studio
+# Why the fuck is this needed?
+#/cmake-build-debug-visual-studio/dependencies/src/imgui-src/include/*
 
 # cmake
 /cmake-build-debug

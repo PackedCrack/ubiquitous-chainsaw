@@ -31,6 +31,8 @@ void init_com()
     else
         return ble::AddressType::none;
 }
+
+
 }   // namespace
 
 namespace ble
@@ -39,28 +41,45 @@ namespace win
 {
 CScanner::CScanner(CThreadSafeHashMap<std::string, DeviceInfo>& deviceInfoCache)
     : m_Watcher{}
-    , m_FoundDevices{ deviceInfoCache }
+    , m_ReceivedRevoker{ m_Watcher.Received(winrt::auto_revoke, received_event_handler()) }
+    , m_pFoundDevices{ &deviceInfoCache }
 {
     init_com();
-    
-    m_Watcher.Received([this](auto&&, BluetoothLEAdvertisementReceivedEventArgs args)
-    {
-        DeviceInfo devInfo{};
-        
-        devInfo.addressType = address_type(args.BluetoothAddressType());
-        if(devInfo.addressType == AddressType::none)
-            devInfo.address = std::nullopt;
-        else
-            devInfo.address = std::make_optional(hex_addr_to_str(args.BluetoothAddress()));
-        
-        if(!m_FoundDevices.contains(devInfo.address.value()))
-            m_FoundDevices.insert(hex_addr_to_str(args.BluetoothAddress()), std::move(devInfo));
-    });
 }
 CScanner::~CScanner()
 {
+    if(m_pFoundDevices == nullptr)
+        return;
+    
     if(m_Watcher.Status() == BluetoothLEAdvertisementWatcherStatus::Started)
         m_Watcher.Stop();
+}
+
+CScanner::CScanner(CScanner&& other) noexcept
+        : m_Watcher{}
+        , m_pFoundDevices{ nullptr }
+{
+    other.m_Watcher.Stop(); // TODO:: Should probably wait for this?
+    m_Watcher = std::move(other.m_Watcher);
+    // We must update the event handlers since the this pointer has changed..
+    refresh_received_event_handler();
+    
+    std::swap(m_pFoundDevices, other.m_pFoundDevices);
+}
+
+CScanner& CScanner::operator=(CScanner&& other) noexcept
+{
+    if(this != &other)
+    {
+        other.m_Watcher.Stop();
+        m_Watcher = std::move(other.m_Watcher);
+        // We must update the event handlers since the this pointer has changed..
+        refresh_received_event_handler();
+        
+        std::swap(m_pFoundDevices, other.m_pFoundDevices);
+    }
+    
+    return *this;
 }
 
 void CScanner::begin_scan() const
@@ -70,6 +89,40 @@ void CScanner::begin_scan() const
 void CScanner::end_scan() const
 {
     m_Watcher.Stop();
+}
+
+void CScanner::revoke_received_event_handler()
+{
+    m_ReceivedRevoker.revoke();
+}
+
+void CScanner::register_received_event_handler()
+{
+    m_ReceivedRevoker = m_Watcher.Received(winrt::auto_revoke, received_event_handler());
+}
+
+void CScanner::refresh_received_event_handler()
+{
+    revoke_received_event_handler();
+    register_received_event_handler();
+}
+
+std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisementReceivedEventArgs)> CScanner::received_event_handler()
+{
+    std::printf("\nADDRESS IS: %p", this);
+    return [this](auto&&, BluetoothLEAdvertisementReceivedEventArgs args)
+    {
+        DeviceInfo devInfo{};
+        
+        devInfo.addressType = address_type(args.BluetoothAddressType());
+        if(devInfo.addressType == AddressType::none)
+            devInfo.address = std::nullopt;
+        else
+            devInfo.address = std::make_optional(hex_addr_to_str(args.BluetoothAddress()));
+        
+        if(!m_pFoundDevices->contains(devInfo.address.value()))
+            m_pFoundDevices->insert(ble::hex_addr_to_str(args.BluetoothAddress()), std::move(devInfo));
+    };
 }
 }   // namespace win
 }   // namespace ble
