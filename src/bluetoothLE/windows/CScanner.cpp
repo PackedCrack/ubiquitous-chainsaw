@@ -118,10 +118,12 @@ std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisem
         if(devInfo.addressType == AddressType::none)
             devInfo.address = std::nullopt;
         else
-            devInfo.address = std::make_optional(hex_addr_to_str(args.BluetoothAddress()));
+            devInfo.address = std::make_optional(args.BluetoothAddress());
         
-        if(!m_pFoundDevices->contains(devInfo.address.value()))
-            m_pFoundDevices->insert(ble::hex_addr_to_str(args.BluetoothAddress()), std::move(devInfo));
+        // TODO:: We cant cache on address if the address is optional.
+        std::string strAddress = ble::hex_addr_to_str(devInfo.address.value());
+        if(!m_pFoundDevices->contains(strAddress))
+            m_pFoundDevices->insert(std::move(strAddress), std::move(devInfo));
     };
 }
 }   // namespace win

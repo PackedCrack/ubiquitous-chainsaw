@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "../defines.hpp"
 
 
 namespace ble
@@ -57,9 +58,40 @@ enum class AddressType
     none
 };
 
+[[nodiscard]] inline std::string_view address_type_to_str(AddressType type)
+{
+    UNHANDLED_CASE_PROTECTION_ON
+    switch(type)
+    {
+        case AddressType::real:
+        {
+            static constexpr std::string_view asStr = "Real";
+            return asStr;
+        }
+        case AddressType::random:
+        {
+            static constexpr std::string_view asStr = "Random";
+            return asStr;
+        }
+        case AddressType::none:
+        {
+            static constexpr std::string_view asStr = "None";
+            return asStr;
+        }
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    
+    std::unreachable();
+}
+
 struct DeviceInfo
 {
-    std::optional<std::string> address;
+    std::optional<uint64_t> address;
     AddressType addressType = AddressType::none;
+    
+    [[nodiscard]] static std::string address_as_str(uint64_t address)
+    {
+        return hex_addr_to_str(address);
+    }
 };
 }   // namespace ble

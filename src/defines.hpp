@@ -2,14 +2,31 @@
 
 #include "logger.hpp"
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 #ifdef _MSC_VER
 #include "intrin.h"
 	#define HW_INTERRUPT __debugbreak()
 #elif __GNUC__
 #define HW_INTERRUPT __asm__("int $3")
+#define COMPILER_NAME GCC
 #elif __clang__
 #define HW_INTERRUPT __asm__("int 3") // TODO:: test this..
+#define COMPILER_NAME clang
+#endif
+
+#ifdef _MSC_VER
+#define Wswitch 4062
+#define UNHANDLED_CASE_PROTECTION_ON __pragma(warning(error: Wswitch))
+#define UNHANDLED_CASE_PROTECTION_OFF __pragma(warning(default: Wswitch))
+#else
+#define UNHANDLED_CASE_PROTECTION_ON _Pragma(TOSTRING(COMPILER_NAME diagnostic error "-Wswitch"))
+#define UNHANDLED_CASE_PROTECTION_OFF _Pragma(TOSTRING(COMPILER_NAME diagnostic warning "-Wswitch"))
+#define IGNORE_WARNING(expr, warning) _Pragma(TOSTRING(COMPILER_NAME diagnostic push)) \
+_Pragma(TOSTRING(COMPILER_NAME diagnostic ignored warning))                            \
+expr;                                                                                   \
+_Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
 #endif
 
 #ifndef NDEBUG
