@@ -189,7 +189,9 @@ int main(int argc, char** argv)
             std::vector<ble::DeviceInfo> infos = cache.as_vector();
             for(const auto& info : infos)
             {
-                LOG_INFO_FMT("Device in cache.\nAddress: {}\nAddress Type: {}", info.address.value(), std::to_underlying(info.addressType));
+                LOG_INFO_FMT("Device in cache.\nAddress: {}\nAddress Type: {}",
+                             ble::hex_addr_to_str(info.address.value()),
+                             ble::address_type_to_str(info.addressType));
                 
                 query_device(info.address.value());
             }
