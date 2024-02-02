@@ -2,6 +2,7 @@ include_directories("windows")
 
 SET(BLUETOOTH_SRCS
         common.hpp
+        services.hpp
         CBLEScanner.hpp
 )
 
