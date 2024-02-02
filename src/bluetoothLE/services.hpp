@@ -3,6 +3,7 @@
 
 namespace ble
 {
+
 struct UUID
 {
     uint32_t data1 = 0u;
