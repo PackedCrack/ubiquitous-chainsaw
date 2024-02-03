@@ -434,7 +434,8 @@ FodyWeavers.xsd
 *.spv
 
 # build folder
-/build
+/server/build
+/client/build
 
 # third party dependency folder (that cmake fetches)
 /_deps
@@ -443,16 +444,29 @@ FodyWeavers.xsd
 /build-cppcheck
 
 # clion
-/.idea
-/cmake-build-debug-visual-studio
-/cmake-build-minsizerel-visual-studio
-/cmake-build-release-visual-studio
-/cmake-build-relwithdebinfo-visual-studio
+/server/.idea
+/client/.idea
+/server/cmake-build-debug-visual-studio
+/client/cmake-build-debug-visual-studio
+/server/cmake-build-minsizerel-visual-studio
+/client/cmake-build-minsizerel-visual-studio
+/server/cmake-build-release-visual-studio
+/client/cmake-build-release-visual-studio
+/server/cmake-build-relwithdebinfo-visual-studio
+/client/cmake-build-relwithdebinfo-visual-studio
 # Why the fuck is this needed?
 #/cmake-build-debug-visual-studio/dependencies/src/imgui-src/include/*
 
 # cmake
-/cmake-build-debug
-/cmake-build-minsizerel
-/cmake-build-release
-/cmake-build-relwithdebinfo
+/server/cmake-build-debug
+/server/cmake-build-minsizerel
+/server/cmake-build-release
+/server/cmake-build-relwithdebinfo
+
+/client/cmake-build-debug
+/client/cmake-build-minsizerel
+/client/cmake-build-release
+/client/cmake-build-relwithdebinfo
+
+# vscode
+/server/.vscode
