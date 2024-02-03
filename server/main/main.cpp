@@ -1,4 +1,5 @@
 #include "CChip.hpp"
+#include "CNimble.h"
 
 
 void print_chip_info()
@@ -17,7 +18,17 @@ void print_chip_info()
 	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", sys::min_free_heap());
 }
 
+void test_nimble() 
+{
+
+nimble::CNimble ble {};
+
+}
+
 extern "C" void app_main(void)
+
 {
 	print_chip_info();
+
+	test_nimble();
 }
