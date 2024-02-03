@@ -1,15 +1,23 @@
 #pragma once
-
 #include "logger.hpp"
+#ifdef __XTENSA__
+#include "esp_err.h"
+#include "lwip/err.h"
+#endif
+
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
 #ifdef _MSC_VER
 #include "intrin.h"
-	#define HW_INTERRUPT __debugbreak()
+#define HW_INTERRUPT __debugbreak()
 #elif __GNUC__
+#ifdef __XTENSA__
+#define HW_INTERRUPT __asm__("break 0,0")
+#else
 #define HW_INTERRUPT __asm__("int $3")
+#endif
 #define COMPILER_NAME GCC
 #elif __clang__
 #define HW_INTERRUPT __asm__("int 3") // TODO:: test this..
@@ -81,3 +89,36 @@ logger::log_ass(__FILE__, __func__, __LINE__, FMT(msg)) \
 
 #define LOG_ASSERT_FMT(msg, ...) \
 logger::log_ass(__FILE__, __func__, __LINE__, FMT(msg, __VA_ARGS__))
+
+
+
+#ifdef __XTENSA__
+#define LOG_ERROR_ESP(msg, errorCode) \
+logger::log_err(__FILE__, __func__, __LINE__, FMT(msg, esp_err_to_name(errorCode))) \
+
+#define LOG_FATAL_ESP(msg, errorCode) \
+logger::log_fat(__FILE__, __func__, __LINE__, FMT(msg, esp_err_to_name(errorCode))) \
+
+#define LOG_ERROR_LWIP(msg, errorCode) \
+logger::log_err(__FILE__, __func__, __LINE__, FMT(msg, lwip_strerr(errorCode))) \
+
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
+	template<typename error_t>
+	constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
+	{
+		if constexpr (std::is_same_v<error_t, esp_err_t>)
+		{
+			return errorCode == ESP_OK;
+		}
+
+		if constexpr (std::is_same_v<error_t, err_t>)
+		{
+			return errorCode == ERR_OK;
+		}
+
+		// So CPPCHECk stops complaining
+		return 0;
+	}
+#endif

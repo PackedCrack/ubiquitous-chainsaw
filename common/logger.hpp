@@ -1,6 +1,6 @@
 #pragma once
-
 #include "exceptions.hpp"
+#include <cstdio>
 
 
 #ifdef _MSC_VER

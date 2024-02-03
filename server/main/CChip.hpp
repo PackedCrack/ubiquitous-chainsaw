@@ -4,7 +4,7 @@
 #include <string>
 
 
-namespace chip
+namespace sys
 {
 // free func because this value makes no sense to store. And might want to call it mid app without instantiating the entire chip info.
 [[nodiscard]] uint32_t min_free_heap();
@@ -28,9 +28,9 @@ public:
 	[[nodiscard]] std::string revision();
 	[[nodiscard]] uint8_t cores();
 private:
-	uint8_t m_Cores;
+	uint32_t m_Features;
 	uint16_t m_Revision;
 	uint16_t m_Model;
-	uint32_t m_Features;
+	uint8_t m_Cores;
 };
-}	// namespace chip
+}	// namespace sys

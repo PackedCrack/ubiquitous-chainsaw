@@ -5,7 +5,7 @@
 #include "freertos/FreeRTOS.h"
 
 
-namespace chip
+namespace sys
 {
 uint32_t min_free_heap()
 {
@@ -13,10 +13,10 @@ uint32_t min_free_heap()
 }
 
 CChip::CChip()
-	: m_Cores{ UINT8_MAX }
+	: m_Features{ UINT32_MAX }
 	, m_Revision{ UINT16_MAX }
 	, m_Model{ UINT16_MAX }
-	, m_Features{ UINT32_MAX }
+	, m_Cores{ UINT8_MAX }
 {
 	esp_chip_info_t chipInfo{};
 	esp_chip_info(&chipInfo);
@@ -67,4 +67,4 @@ uint8_t CChip::cores()
 {
 	return m_Cores;
 }
-}	// namespace chip
+}	// namespace sys

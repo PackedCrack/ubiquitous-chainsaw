@@ -20,7 +20,7 @@ namespace sys
 		esp_err_t result = esp_event_handler_instance_register(m_EventBase, m_EventID, eventCallback, callbackArgs, &m_Handle);
 		if(!success(result))
 		{
-			LOG_FATAL("FAILED WITH {}, WHEN TRYING TO REGISTER EVENT HANDLER INSTANCE", result);
+			LOG_FATAL_FMT("FAILED WITH {}, WHEN TRYING TO REGISTER EVENT HANDLER INSTANCE", result);
 		}
 	}
 

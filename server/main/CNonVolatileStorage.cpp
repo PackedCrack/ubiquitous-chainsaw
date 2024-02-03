@@ -25,7 +25,7 @@ namespace storage
 					auto eraseResult = nvs_flash_erase();
 					if(!success(eraseResult))
 					{
-						LOG_FATAL("ERASING DEFAULT FLASH PARTITION FAILED WITH {}", eraseResult);
+						LOG_FATAL_FMT("ERASING DEFAULT FLASH PARTITION FAILED WITH {}", eraseResult);
 					}
 				}
 				else
@@ -36,7 +36,7 @@ namespace storage
 					error codes from nvs_flash_generate_keys API (when “NVS_ENCRYPTION” is enabled).
 					error codes from nvs_flash_secure_init_partition API (when “NVS_ENCRYPTION” is enabled) .
 					*/
-					LOG_FATAL("UNHANDLED FLASH INITIALIZATION RESULT", initResult);
+					LOG_FATAL_FMT("UNHANDLED FLASH INITIALIZATION RESULT: {}", initResult);
 				}
 			}
 		} while (!success(initResult));
