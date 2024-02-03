@@ -1,6 +1,8 @@
 #include "CChip.hpp"
 #include "CNimble.h"
 
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
 
 void print_chip_info()
 {
@@ -30,5 +32,5 @@ extern "C" void app_main(void)
 {
 	print_chip_info();
 
-	test_nimble();
+	esp_err_t ret = nimble_port_init();
 }

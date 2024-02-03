@@ -1,0 +1,10 @@
+dependencies:
+  nimble_peripheral_utils:
+    component_hash: null
+    source:
+      path: C:\Users\qwerty\SDKs\esp-idf\examples\bluetooth\nimble\common\nimble_peripheral_utils
+      type: local
+    version: '*'
+manifest_hash: fe46af1ba6edd31adaab9cc0dd7fb40a5128dae7ec78e6222d09021e97ee89eb
+target: esp32
+version: 1.0.0
