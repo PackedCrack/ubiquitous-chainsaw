@@ -1,2 +1,2 @@
-idf_component_register(SRCS "CChip.cpp" "main.cpp"
+idf_component_register(SRCS "CNonVolatileStorage.cpp" "CChip.cpp" "main.cpp"
                     INCLUDE_DIRS "")
