@@ -1,8 +1,10 @@
 #include "CChip.hpp"
 #include "CNimble.h"
 
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
+#include "CNonVolatileStorage.hpp"
+
+
+
 
 void print_chip_info()
 {
@@ -23,6 +25,18 @@ void print_chip_info()
 void test_nimble() 
 {
 
+	// server
+	// server has: nvs, nimble
+	// nimble has host/controller
+	// host has gat and gapp
+	// CNimble
+	// CNimbleHost
+	// CNimbleHostGap -> connections, bonding etc
+	// CNimbleHostGatt -> services, data transfer etc
+
+	// nimble has host
+	// host has gap and gatt
+
 nimble::CNimble ble {};
 
 }
@@ -31,6 +45,8 @@ extern "C" void app_main(void)
 
 {
 	print_chip_info();
+	storage::CNonVolatileStorage nvs {};
 
-	esp_err_t ret = nimble_port_init();
+	test_nimble();
+	//esp_err_t ret = nimble_port_init();
 }

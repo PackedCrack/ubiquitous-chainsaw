@@ -47,7 +47,8 @@ namespace storage
 	CNonVolatileStorage::~CNonVolatileStorage()
 	{
 		auto result = nvs_flash_deinit();
-		assert(result); // this should never fail
+		assert(result == ESP_OK);
+
 	}
 
 	CNonVolatileStorage& CNonVolatileStorage::instance()
