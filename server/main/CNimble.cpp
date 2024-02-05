@@ -159,7 +159,7 @@ namespace nimble
             // todo add print device name. will add latert when abstracting fields
 
             // Initilize all services here. Doing it dynamically involves, malloc/memcpy/free. All services should be static anyway right?
-            // TODO need rework maybe
+            // TODO: GENERALIZE THIS
             const uint8_t NUM_SERVICES = 1; // requires ble_uuid_t which is an uint8_t;
             const uint16_t SERVICE_1 = 0;
             //const uint16_t SERVICE_2 = 1;
