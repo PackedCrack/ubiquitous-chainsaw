@@ -15,6 +15,7 @@ namespace nimble
         #define GATT_SVR_SVC_ALERT_UUID               0x1811 // https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
         #define GATT_SVR_SVC_ATTRI_UUID                0x1801
 
+        // static  outside func is external linkage
         static uint8_t serverAddrType; // will be 1 or 0 depedning on rnd or pub addr
 
         void bit_operation_tests() 
@@ -86,7 +87,7 @@ namespace nimble
         }
 
         static void server_on_sync_handle(void) 
-       {
+        {
             int result;
             const int RND_ADDR = 1;
             const int PUB_ADDR = 0;
@@ -124,7 +125,7 @@ namespace nimble
             return 0;
         }
 
-        static void gap_advertise(void)
+        void gap_advertise()
         {
     
             //bit_operation_tests();
@@ -186,9 +187,7 @@ namespace nimble
             gapAdvConfigParams.conn_mode = BLE_GAP_CONN_MODE_UND;
             gapAdvConfigParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
-            adv_packet_size(gapAdvFields, gapAdvConfigParams);
-
-            result = ble_gap_adv_start(serverAddrType, NULL, BLE_HS_FOREVER, &gapAdvConfigParams, server_gap_connection_handler, NULL);
+            result = ble_gap_adv_start(serverAddrType, NULL, BLE_HS_FOREVER, &gapAdvConfigParams, server_gap_on_connection_handler, NULL);
             if (result != 0) {
                 LOG_FATAL_FMT("Error starting advertisement = %d", result);
                 return;
@@ -205,8 +204,8 @@ namespace nimble
             return;
         }
 
-        ble_hs_cfg.reset_cb = nimble_on_reset_handle; // needs to be static why Christoffer teach me
-        ble_hs_cfg.sync_cb = nimble_on_sync_handle; // callback when host and controller become synced
+        ble_hs_cfg.reset_cb = server_on_reset_handle; // needs to be static why Christoffer teach me
+        ble_hs_cfg.sync_cb = server_on_sync_handle; // callback when host and controller become synced
         //ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
         //ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
         //ble_hs_cfg.sm_io_cap = CONFIG_EXAMPLE_IO_TYPE;
