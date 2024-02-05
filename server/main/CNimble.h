@@ -58,7 +58,7 @@ namespace nimble
     public:
         CNimble() = delete;
         CNimble(const char* deviceName);
-        ~CNimble() = default;
+        ~CNimble();
         CNimble(const CNimble& other) = default;
         CNimble(CNimble&& other) = default;
         CNimble& operator=(const CNimble& other) = default;

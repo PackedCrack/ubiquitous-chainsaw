@@ -195,7 +195,6 @@ namespace nimble
             }
         }
 
-
     } // namespace
    
 
@@ -234,6 +233,11 @@ namespace nimble
 
 
 
+    CNimble::~CNimble() 
+    {
+        esp_err_t result = nimble_port_deinit();
+        assert(result == ESP_OK);
+    }
 } // namespace nimble
 
 
