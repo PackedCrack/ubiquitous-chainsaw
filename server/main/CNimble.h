@@ -1,11 +1,10 @@
 #pragma once
 /* STD */
 #include <cstdio>
+#include <type_traits>
 
 /* Project */
 #include "defines.hpp"
-
-#include "esp_log.h"
 
 
 /* BLE */
@@ -13,10 +12,12 @@
 #include "host/ble_hs.h"
 #include "esp_netif_ip_addr.h"
 #include "host/util/util.h"
+#include "services/gap/ble_svc_gap.h"
 
+/* ESP */
+
+#include "esp_log.h"
 //#include "nimble/nimble_port_freertos.h"
-//#include "host/ble_hs.h"
-//#include "host/util/util.h"
 //#include "console/console.h"
 //#include "services/gap/ble_svc_gap.h"
 
@@ -29,8 +30,8 @@ namespace nimble
     // should we even have defines?
     // should these be in header or cpp?
     // Server address defines
-    #define RND_ADDR 1
-    #define PUB_ADDR 0
+    //#define RND_ADDR 1
+    //#define PUB_ADDR 0
 
 
 
@@ -38,6 +39,7 @@ namespace nimble
     {
         static void nimble_on_reset_handle(int reason);
         static void nimble_on_sync_handle(void);
+        static void gap_advertise();
 
     } // namespace
 
@@ -45,7 +47,8 @@ namespace nimble
     {
 
     public:
-        CNimble();
+        CNimble() = delete;
+        CNimble(const char* deviceName);
         ~CNimble() = default;
         CNimble(const CNimble& other) = default;
         CNimble(CNimble&& other) = default;
@@ -54,7 +57,7 @@ namespace nimble
 
 
 
-    private:
+    public:
     
     };
 

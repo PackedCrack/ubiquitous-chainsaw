@@ -24,7 +24,7 @@ void print_chip_info()
 
 void test_nimble() 
 {
-
+	const char* p_DEVICE_NAME = "Chainsaw-server";
 	// server
 	// server has: nvs, nimble
 	// nimble has host/controller
@@ -37,7 +37,7 @@ void test_nimble()
 	// nimble has host
 	// host has gap and gatt
 
-nimble::CNimble ble {};
+	nimble::CNimble ble {p_DEVICE_NAME};
 
 }
 
