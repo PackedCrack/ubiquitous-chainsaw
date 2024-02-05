@@ -127,7 +127,7 @@ namespace nimble
 
         void gap_advertise()
         {
-    
+            // Todo How to solve not incomplete type allowed? do i initilize all values in the struct? But isnt that done with std::memset
             //bit_operation_tests();
 
             // ble_hs_adv_fields has bit fields which fucks up the static_assert. WHAT IS THE BEST WAY TO DO THIS THEN?
