@@ -11,9 +11,11 @@ namespace nimble
     {
 
 
-    
+        #define SERVER_TAG "Chainsaw-server-kkkkkkkkkk" // used for ESP_LOG
+        #define GATT_SVR_SVC_ALERT_UUID               0x1811 // https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
+        #define GATT_SVR_SVC_ATTRI_UUID                0x1801
 
-        #define SERVER_TAG "Chainsaw-server" // used for ESP_LOG
+        static uint8_t serverAddrType; // will be 1 or 0 depedning on rnd or pub addr
 
         void bit_operation_tests() 
         {
@@ -62,7 +64,7 @@ namespace nimble
         {
 
             // Lower then number, the weaker the signal
-            static const unsigned int IS_PRESENT = 1;
+            static const unsigned int IS_PRESENT = 1u;
 
             if (field.tx_pwr_lvl_is_present == IS_PRESENT) 
             {
@@ -77,18 +79,13 @@ namespace nimble
             else 
                ESP_LOGI(SERVER_TAG, "Device Signal Strength Setting: NOT SET");
         }
-
-
-        // static variables
-        static uint8_t serverAddrType; // will be 1 or 0 depedning on rnd or pub addr
-
-        // Callback function
-        static void nimble_on_reset_handle(int reason) 
+      
+        static void server_on_reset_handle(int reason) 
         {
             LOG_FATAL_FMT("ESP ERROR. Reset due to %d\n", reason);
         }
 
-       static void nimble_on_sync_handle(void) 
+        static void server_on_sync_handle(void) 
        {
             int result;
             const int RND_ADDR = 1;
@@ -103,7 +100,7 @@ namespace nimble
             }
         
             uint8_t bleDeviceAddr[6] {};
-            result = ble_hs_id_copy_addr(serverAddrType, bleDeviceAddr, NULL);
+            result = ble_hs_id_copy_addr(serverAddrType, bleDeviceAddr, NULL); // serverAddrType is needed for advertisment packages (GAP)
             if (result != 0) 
             {
                 LOG_FATAL_FMT("Adress was unable to be retrieved %d\n", result);
@@ -121,99 +118,86 @@ namespace nimble
             
         }
 
+        static int server_gap_on_connection_handler(struct ble_gap_event *event, void *arg) 
+        {
+            LOG_INFO("Server gap callback was triggered");
+            return 0;
+        }
+
         static void gap_advertise(void)
         {
-            ble_gap_adv_params gapAdvConfigParams; // ble adverting configuration parameters
-            ble_hs_adv_fields gapAdvFields; // Adv data and scan response (name, services, UUID etc)
-            const char *name;
-            int result;
-        
+    
             //bit_operation_tests();
 
             // ble_hs_adv_fields has bit fields which fucks up the static_assert. WHAT IS THE BEST WAY TO DO THIS THEN?
             //static_assert(std::is_trivially_copyable<ble_hs_adv_fields>::value);
-
+            ble_hs_adv_fields gapAdvFields; // Adv data and scan response (name, services, UUID etc)
             std::memset(&gapAdvFields, 0, sizeof(gapAdvFields)); // undefined behaviour if struct not trivially copyable https://en.cppreference.com/w/cpp/string/byte/memset
 
             gapAdvFields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP; // "|" bitwise or operation. Meaning we add them together
+            assert(gapAdvFields.flags != 0);
             print_adv_field_flags(gapAdvFields);
-          
-            const unsigned int POWER_PRESENT = 1;
+
             // tx_pwr is the transmit power level of the devices radio signal  (not required to set btw)
-            gapAdvFields.tx_pwr_lvl_is_present = POWER_PRESENT;
+            const unsigned int IS_POWER_PRESENT = 1u;
+            gapAdvFields.tx_pwr_lvl_is_present = IS_POWER_PRESENT;
             gapAdvFields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO; // set the power level automatically
+            assert(gapAdvFields.tx_pwr_lvl_is_present == IS_POWER_PRESENT);
+            assert(gapAdvFields.tx_pwr_lvl != 0);
             print_adv_field_signal_power(gapAdvFields);
 
-            name = ble_svc_gap_device_name();
-            gapAdvFields.name = (uint8_t *)name;
-            gapAdvFields.name_len = strlen(name);
-            gapAdvFields.name_is_complete = 1;
-        //
-            //fields.uuids16 = (ble_uuid16_t[]) {
-            //    BLE_UUID16_INIT(GATT_SVR_SVC_ALERT_UUID)
-            //};
-            //fields.num_uuids16 = 1;
-            //fields.uuids16_is_complete = 1;
-        //
-            //rc = ble_gap_adv_set_fields(&fields);
-            //if (rc != 0) {
-            //    MODLOG_DFLT(ERROR, "error setting advertisement data; rc=%d\n", rc);
-            //    return;
-            //}
-        //
-            ///* Begin advertising. */
-            //memset(&adv_params, 0, sizeof adv_params);
-            //adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-            //adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-            //rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER,
-            //                       &adv_params, bleprph_gap_event, NULL);
-            //if (rc != 0) {
-            //    MODLOG_DFLT(ERROR, "error enabling advertisement; rc=%d\n", rc);
-            //    return;
-            //}
+            const char *deviceName;
+            const unsigned int IS_COMPLETE = 1;
+            deviceName = ble_svc_gap_device_name();
+            gapAdvFields.name = (uint8_t*)deviceName; // unable to use static_cast or reinterpret_cast (pointers can go fuck themselves(in game))
+            gapAdvFields.name_len = strlen(deviceName);
+            gapAdvFields.name_is_complete = IS_COMPLETE; // meaning there is no need to send additional adv data packets
+            assert(gapAdvFields.name != 0);
+            assert(gapAdvFields.name_len != 0);
+            assert(gapAdvFields.name_is_complete == IS_COMPLETE);
+            // todo add print device name. will add latert when abstracting fields
+
+            // Initilize all services here. Doing it dynamically involves, malloc/memcpy/free. All services should be static anyway right?
+            // TODO need rework maybe
+            const uint8_t NUM_SERVICES = 1; // requires ble_uuid_t which is an uint8_t;
+            const uint16_t SERVICE_1 = 0;
+            //const uint16_t SERVICE_2 = 1;
+
+            ble_uuid16_t servicesArray[NUM_SERVICES];
+            servicesArray[SERVICE_1] = BLE_UUID16_INIT(GATT_SVR_SVC_ALERT_UUID);
+            //servicesArray[SERVICE_2] = BLE_UUID16_INIT(GATT_SVR_SVC_ATTRI_UUID);
+            gapAdvFields.uuids16 = servicesArray;
+
+            gapAdvFields.num_uuids16 = NUM_SERVICES;
+            gapAdvFields.uuids16_is_complete = 1u; // no need to send additional data packets containing services
+
+            int result;
+            result = ble_gap_adv_set_fields(&gapAdvFields);
+            if (result != 0) 
+            {
+                LOG_FATAL_FMT("Error setting advertisement data! result = %d", result); // this will trigger if adv data exceeds adv packet size limit
+                return;
+            }
+
+
+            // Advertising parameters
+            ble_gap_adv_params gapAdvConfigParams;
+            std::memset(&gapAdvConfigParams, 0, sizeof(gapAdvConfigParams));
+            gapAdvConfigParams.conn_mode = BLE_GAP_CONN_MODE_UND;
+            gapAdvConfigParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
+
+            adv_packet_size(gapAdvFields, gapAdvConfigParams);
+
+            result = ble_gap_adv_start(serverAddrType, NULL, BLE_HS_FOREVER, &gapAdvConfigParams, server_gap_connection_handler, NULL);
+            if (result != 0) {
+                LOG_FATAL_FMT("Error starting advertisement = %d", result);
+                return;
+            }
         }
 
 
     } // namespace
    
-    //CNimble::CNimble() 
-    //{
-    //   
-
-    //    esp_err_t result = nimble_port_init(); //  Initialize controller and NimBLE host stack
-    //    if (result != ESP_OK) {
-    //        return;
-    //    }
-
-    //    ble_hs_cfg.reset_cb = nimble_on_reset_handle; // needs to be static why Christoffer teach me
-    //    ble_hs_cfg.sync_cb = nimble_on_sync_handle; // callback when host and controller become synced
-    //    // - Initilize host configurations before initilizing gap and gatt
-    //    // - security manager is also configured before initilizing gap and gatt
-    //    // - Order is important
-
-    //    // set device name
-    //    const char* p_DEVICE_NAME = "Chainsaw-server";
-    //    result = ble_svc_gap_device_name_set(p_DEVICE_NAME);
-    //    assert(result == 0);
-
-    //    nimble_port_run(); // the callbacks will be called in here
-
-
-    //    //ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
-    //    //ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-    //    //ble_hs_cfg.sm_io_cap = CONFIG_EXAMPLE_IO_TYPE;
-    //    //ble_hs_cfg.sm_bonding = 1;
-    //    //le_hs_cfg.sm_sc = 0;
-
-
-    //    // we have NimBLE (Nordic's Bluetooth Low Energy) stack's store module that is used for:
-    //    // provides a mechanism for persistent storage of various Bluetooth-related information.
-    //    // This information typically includes security-related data, such as keys and pairing information, 
-    //    // as well as other relevant configuration data.
-    //    //ble_store_config_init();
-
-    //}
-
 
     CNimble::CNimble(const char* deviceName) {
 
@@ -239,9 +223,6 @@ namespace nimble
         assert(result == 0);
 
         nimble_port_run(); // Note: the hs_cfg's callbacks are called in here
-
-
-  
 
 
         // we have NimBLE (Nordic's Bluetooth Low Energy) stack's store module that is used for:

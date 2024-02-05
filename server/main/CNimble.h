@@ -39,7 +39,16 @@ namespace nimble
     {
         static void nimble_on_reset_handle(int reason);
         static void nimble_on_sync_handle(void);
-        static void gap_advertise();
+        //static void gap_advertise();
+
+
+        // Question: Do yo usually declare helper function in header?
+        void print_adv_field_flags(const ble_hs_adv_fields& field);
+        void print_adv_field_signal_power(const ble_hs_adv_fields& field);
+        static void server_on_reset_handle(int reason);
+        static void server_on_sync_handle(void);
+        static int server_gap_on_connection_handler(struct ble_gap_event *event, void *arg);
+        static void gap_advertise(void);
 
     } // namespace
 
