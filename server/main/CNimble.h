@@ -7,6 +7,7 @@
 
 /* Project */
 #include "defines.hpp"
+#include "CAdvertiseFields.h"
 
 
 /* BLE */
@@ -15,17 +16,14 @@
 #include "esp_netif_ip_addr.h"
 #include "host/util/util.h"
 #include "services/gap/ble_svc_gap.h"
-#include "host/ble_hs_adv.h" // -> ble_hs_adv_fields
-#include "host/ble_gap.h" // -> ble_gap_adv_params
-#include "host/ble_uuid.h" // BLE_UUID_TYPE_16 undefined
-
+//#include "host/ble_uuid.h" // BLE_UUID_TYPE_16 undefined
 
 
 //#include "freertos/task.h"
 
 
 /* ESP */
-//#include "esp_log.h"
+#include "esp_log.h"
 //#include "nimble/nimble_port_freertos.h"
 
 #include "esp_rom_sys.h"
@@ -51,13 +49,11 @@ namespace nimble
 
     namespace 
     {
-        // Question: Do yo usually declare helper function in header?
-        void print_adv_field_flags(const ble_hs_adv_fields& field);
-        void print_adv_field_signal_power(const ble_hs_adv_fields& field);
         static void server_on_reset_handle(int reason);
         static void server_on_sync_handle(void);
         static int server_gap_on_connection_handler(struct ble_gap_event *event, void *arg); // return value is ignored by the caller i.e No [[NoDiscard]]
         void gap_advertise(); // maybe should be static aswell?
+
         //void server_host_task(void* param);
         
 
@@ -67,16 +63,13 @@ namespace nimble
     {
 
     public:
-        CNimble() = delete;
-        CNimble(const char* deviceName);
+        CNimble();
+        //CNimble(const char* deviceName);
         ~CNimble();
         CNimble(const CNimble& other) = default;
         CNimble(CNimble&& other) = default;
         CNimble& operator=(const CNimble& other) = default;
         CNimble& operator=(CNimble&& other) = default;
-
-    public:
-    
     };
 
 } // namespace nimble

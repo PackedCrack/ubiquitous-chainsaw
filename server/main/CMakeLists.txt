@@ -1,5 +1,9 @@
 idf_component_register(
 	SRCS 
+	"CAdvertiseFields.cpp"
+	"CAdvertiseFields.h"
+	"CAdvertiseParams.cpp"
+	"CAdvertiseParams.h"
 	"CNimble.h"
 	"CNimble.cpp"
 	"CEventGroup.cpp" 

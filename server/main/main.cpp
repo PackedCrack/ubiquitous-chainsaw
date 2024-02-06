@@ -24,7 +24,7 @@ void print_chip_info()
 
 void test_nimble() 
 {
-	const char* p_DEVICE_NAME = "Chainsaw-server";
+	//const char* p_DEVICE_NAME = "Chainsaw-server";
 	// server
 	// server has: nvs, nimble
 	// nimble has host/controller
@@ -37,7 +37,10 @@ void test_nimble()
 	// nimble has host
 	// host has gap and gatt
 
-	nimble::CNimble ble {p_DEVICE_NAME};
+	nimble::CNimble ble {};
+
+
+
 
 }
 
@@ -49,4 +52,5 @@ extern "C" void app_main(void)
 
 	test_nimble();
 	//esp_err_t ret = nimble_port_init();
+	std::printf("I WAS HERE in MAIN");
 }
