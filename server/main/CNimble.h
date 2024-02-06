@@ -1,7 +1,9 @@
 #pragma once
 /* STD */
 #include <cstdio>
-#include <type_traits>
+#include <stdarg.h> // for ESP_LOGI
+#include <inttypes.h>
+#include <stddef.h>
 
 /* Project */
 #include "defines.hpp"
@@ -13,10 +15,22 @@
 #include "esp_netif_ip_addr.h"
 #include "host/util/util.h"
 #include "services/gap/ble_svc_gap.h"
+#include "host/ble_hs_adv.h" // -> ble_hs_adv_fields
+#include "host/ble_gap.h" // -> ble_gap_adv_params
+#include "host/ble_uuid.h" // BLE_UUID_TYPE_16 undefined
+
+
+
+//#include "freertos/task.h"
+
 
 /* ESP */
+//#include "esp_log.h"
+//#include "nimble/nimble_port_freertos.h"
 
-#include "esp_log.h"
+#include "esp_rom_sys.h"
+
+
 //#include "nimble/nimble_port_freertos.h"
 //#include "console/console.h"
 //#include "services/gap/ble_svc_gap.h"
@@ -44,6 +58,8 @@ namespace nimble
         static void server_on_sync_handle(void);
         static int server_gap_on_connection_handler(struct ble_gap_event *event, void *arg); // return value is ignored by the caller i.e No [[NoDiscard]]
         void gap_advertise(); // maybe should be static aswell?
+        //void server_host_task(void* param);
+        
 
     } // namespace
 
@@ -58,8 +74,6 @@ namespace nimble
         CNimble(CNimble&& other) = default;
         CNimble& operator=(const CNimble& other) = default;
         CNimble& operator=(CNimble&& other) = default;
-
-
 
     public:
     

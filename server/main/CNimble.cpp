@@ -1,8 +1,5 @@
 #include "CNimble.h"
-
-
 #include <bitset> // for visual testing
-
 
 namespace nimble
 {
@@ -11,7 +8,7 @@ namespace nimble
     {
 
 
-        #define SERVER_TAG "Chainsaw-server-kkkkkkkkkk" // used for ESP_LOG
+        #define SERVER_TAG "Chainsaw-server" // used for ESP_LOG
         #define GATT_SVR_SVC_ALERT_UUID               0x1811 // https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
         #define GATT_SVR_SVC_ATTRI_UUID                0x1801
 
@@ -52,13 +49,14 @@ namespace nimble
             */
   
             if (field.flags & BLE_HS_ADV_F_DISC_GEN) 
-                ESP_LOGI(SERVER_TAG, "Device Discover Mode: General");
+                LOG_INFO("Device Discover Mode: General");
 
             if (field.flags & BLE_HS_ADV_F_DISC_LTD)
-                ESP_LOGI(SERVER_TAG, "Device Discover Mode: Limited");
+                LOG_INFO("Device Discover Mode: Limited");
 
             if (field.flags & BLE_HS_ADV_F_BREDR_UNSUP)
-                ESP_LOGI(SERVER_TAG, "Device Bluetooth Classic Support: NONE");
+                LOG_INFO("Device Bluetooth Classic Support: NONE");
+
         }
 
         void print_adv_field_signal_power(const ble_hs_adv_fields& field)
@@ -70,15 +68,17 @@ namespace nimble
             if (field.tx_pwr_lvl_is_present == IS_PRESENT) 
             {
                 if (field.tx_pwr_lvl == BLE_HS_ADV_TX_PWR_LVL_AUTO)  
-                    ESP_LOGI(SERVER_TAG, "Device Signal Strength Setting: AUTO");
+                    LOG_INFO("Device Signal Strength Setting: AUTO");
                 else 
                 {
                     const int8_t PWR_LVL = field.tx_pwr_lvl;
-                    ESP_LOGI(SERVER_TAG, "Device Signal Strength Setting: %d", PWR_LVL);
+                    LOG_INFO_FMT("Device Signal Strength Setting: %d", PWR_LVL);
+                    //ESP_LOGI(SERVER_TAG, "Device Signal Strength Setting: %d", PWR_LVL);
                 }
             }
             else 
-               ESP_LOGI(SERVER_TAG, "Device Signal Strength Setting: NOT SET");
+                LOG_INFO("Device Signal Strength Setting: NOT SET");
+
         }
       
         static void server_on_reset_handle(int reason) 
@@ -109,10 +109,10 @@ namespace nimble
 
             // TODO: HOW TO LOG INFO WITH PARAMS?
             if (serverAddrType == RND_ADDR) 
-                ESP_LOGI(SERVER_TAG, "BLE Random Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
-                                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);  // %02x are hexdec placeholders
-            else if (serverAddrType == PUB_ADDR) 
-                ESP_LOGI(SERVER_TAG, "BLE Public Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
+                LOG_INFO_FMT("BLE Random Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], // %02x are hexdec placeholders
+                                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);
+            else if (serverAddrType == PUB_ADDR)
+                LOG_INFO_FMT("BLE Public Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
                                                                                             bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);
 
             gap_advertise();
@@ -163,12 +163,12 @@ namespace nimble
             const uint8_t NUM_SERVICES = 1; // requires ble_uuid_t which is an uint8_t;
             const uint16_t SERVICE_1 = 0;
             //const uint16_t SERVICE_2 = 1;
-
+//
             ble_uuid16_t servicesArray[NUM_SERVICES];
             servicesArray[SERVICE_1] = BLE_UUID16_INIT(GATT_SVR_SVC_ALERT_UUID);
             //servicesArray[SERVICE_2] = BLE_UUID16_INIT(GATT_SVR_SVC_ATTRI_UUID);
             gapAdvFields.uuids16 = servicesArray;
-
+//
             gapAdvFields.num_uuids16 = NUM_SERVICES;
             gapAdvFields.uuids16_is_complete = 1u; // no need to send additional data packets containing services
 
@@ -194,6 +194,16 @@ namespace nimble
             }
         }
 
+
+        //void server_host_task(void* param) 
+        //{
+        //// call nimble_port_stop() // to exit from this func
+        //ESP_LOGI(SERVER_TAG, "BLE Host Task Started");
+        //nimble_port_run(); // Note: the hs_cfg's callbacks are called in here
+        //ESP_LOGI(SERVER_TAG, "BLE Host Task Stopped");
+        //nimble_port_freertos_deinit();
+        //}
+
     } // namespace
    
 
@@ -203,6 +213,9 @@ namespace nimble
         if (result != ESP_OK) {
             return;
         }
+
+        
+
 
         ble_hs_cfg.reset_cb = server_on_reset_handle; // needs to be static why Christoffer teach me
         ble_hs_cfg.sync_cb = server_on_sync_handle; // callback when host and controller become synced
@@ -217,11 +230,14 @@ namespace nimble
         // - Order is important
 
         // set device name
+
         result = ble_svc_gap_device_name_set(deviceName);
         assert(result == 0);
 
-        nimble_port_run(); // Note: the hs_cfg's callbacks are called in here
-
+        ble_svc_gap_init();
+        nimble_port_run();
+        //nimble_port_freertos_init(server_host_task); // does not work for some reason (E (1004) NimBLE: Host not enabled. Dropping the packet!) maybe becasue undefined?
+        //nimble_port_freertos_init();
 
         // we have NimBLE (Nordic's Bluetooth Low Energy) stack's store module that is used for:
         // provides a mechanism for persistent storage of various Bluetooth-related information.
@@ -234,6 +250,10 @@ namespace nimble
 
     CNimble::~CNimble() 
     {
+
+        int errorCode = nimble_port_stop();
+        assert(errorCode == 0);
+
         esp_err_t result = nimble_port_deinit();
         assert(result == ESP_OK);
     }
