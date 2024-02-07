@@ -21,6 +21,8 @@ namespace nimble
         //ESP_LOGI(SERVER_TAG, "BLE Host Task Stopped");
         //nimble_port_freertos_deinit();
         //}
+
+
     void ble_generate_random_device_address() 
     {
         int result;
@@ -43,7 +45,7 @@ namespace nimble
 
         std::printf("I BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
 
-        //LOG_INFO_FMT("BLE Device Address: %s %02x:%02x:%02x:%02x:%02x:%02x", logger::COLOR_GREEN, bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
+        //LOG_INFO_FMT("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
         //                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);
         //ESP_LOGI(SERVER_TAG, "BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
         //                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]); 
@@ -57,8 +59,11 @@ namespace nimble
     void server_on_sync_handler(void) 
     {
         ble_generate_random_device_address(); // do we need to store this?
-        CGapService gap {p_DEVICE_NAME, serverAddrType}; // have this as a memeber of CNimble? But how to access it then?
-        gap.advertise();
+        //CGapService gap {p_DEVICE_NAME, serverAddrType}; // have this as a memeber of CNimble? But how to access it then?
+        //gap.advertise();
+
+        CGattServer gattServer {p_DEVICE_NAME, serverAddrType};
+
     }
 
     void server_gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg) 
@@ -94,6 +99,16 @@ namespace nimble
     CNimble::CNimble() 
     {
     
+        /*
+            Hierarchy (Top Down)
+            --------------------
+        Nimble host/controller stack    
+                 GATT Server
+              GATT/GAP Service
+        
+        */
+
+
         esp_err_t result = nimble_port_init(); //  Initialize controller and NimBLE host stack
         if (result != ESP_OK) {
             return;
@@ -103,7 +118,7 @@ namespace nimble
 
         
         ble_svc_gap_init(); //register gap service to GATT server (service UUID 0x1800)
-        ble_svc_gatt_init(); // register GATT service to GATT server 0x1801
+        ble_svc_gatt_init(); // register GATT service to GATT server (service UUID 0x1801)
         //ble_svc_ans_init();  // register Alert Notification Service (ANS) to GATT server NOT NEEDED ON THIS SERVER
 
         nimble_port_run();

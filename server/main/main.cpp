@@ -55,5 +55,4 @@ extern "C" void app_main(void)
 
 	 
 	nimble::CNimble ble {};
-
 }

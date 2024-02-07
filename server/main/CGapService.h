@@ -66,6 +66,9 @@ namespace nimble
 
     class CGapService {
 
+        // function ptr for gap callback event
+        typedef int (*GapEventHandler)(struct ble_gap_event*, void*arg);
+
         public:
             CGapService() = delete;
             CGapService(const char* deviceName, const uint8_t addrType);
@@ -81,12 +84,11 @@ namespace nimble
         CAdvertiseParams m_params;
 
         public:
-            void advertise();
-
-
+            void advertise(GapEventHandler handler);
+            void test(GapEventHandler handler);
 
         private:
-            static int gap_cb_handler(struct ble_gap_event *event, void *arg);
+            int gap_cb_handler(struct ble_gap_event *event, void *arg);
     };
 
 

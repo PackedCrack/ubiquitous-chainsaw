@@ -45,14 +45,11 @@ namespace nimble
     const ble_hs_adv_fields& CAdvertiseFields::data() const
     { return m_fields; }
 
-
     bool CAdvertiseFields::is_flagged(const uint8_t flag) const
     { return (m_fields.flags & flag); }
 
-
     int CAdvertiseFields::configure_fields() const
     {   return ble_gap_adv_set_fields(&m_fields); }
-
 
     CAdvertiseParams::CAdvertiseParams() 
     : m_params {}
@@ -70,7 +67,6 @@ namespace nimble
     const ble_gap_adv_params& CAdvertiseParams::data() const
     { return m_params; }
 
-
     CGapService::CGapService(const char* deviceName, const uint8_t addrType) 
         : m_bleAddressType {addrType}
         , m_fields {deviceName}
@@ -79,27 +75,33 @@ namespace nimble
     }
 
 
-    void CGapService::advertise() 
+    void CGapService::advertise(GapEventHandler handler) 
     {
         int result;
         result = m_fields.configure_fields();
         if (result != 0) 
-            LOG_FATAL_FMT("Error setting advertisement data! result = %d", result);
+            LOG_FATAL_FMT("Error setting advertisement data!: %d", result);
 
-        result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params.data(), gap_cb_handler, NULL);
+        result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params.data(), handler, NULL);// does advertisement continue during a connection?
         if (result != 0)
-            LOG_FATAL_FMT("Error starting advertisement = %d", result);
+            LOG_FATAL_FMT("Error starting advertisement: %d", result);
     }
 
-    int CGapService::gap_cb_handler(struct ble_gap_event *event, void *arg) 
+
+    void CGapService::test(GapEventHandler handler) 
+    {
+        
+    }
+
+    int CGapService::gap_cb_handler(ble_gap_event* event, void* arg) 
     {
          // docs reference for gap events
         // https://mynewt.apache.org/latest/tutorials/ble/bleprph/bleprph-sections/bleprph-gap-event.html?highlight=ble_gap_event_connect
 
         // No restrictions on NimBLE operations
         // All context data is transient
-        LOG_INFO("Server gap callback was triggered");
-
+        // If advertising results in a connection, the connection inherits this callback as its event-reporting mechanism.
+        //LOG_INFO("Server gap callback was triggered");
         //struct ble_gap_conn_desc desc;
         //int result;
 
@@ -107,16 +109,28 @@ namespace nimble
         switch (event->type) {
             case BLE_GAP_EVENT_CONNECT:
                 LOG_INFO("BLE_GAP_EVENT_CONNECT");
+                // stop advertising
+                int result;
+                //ble_gap_adv_stop();
+                if (result != 0)
+                    LOG_FATAL_FMT("Error Stopping advertising: %d", result);
+                
+                LOG_INFO("Advertising has stopped!");
+            
                 break;
             case BLE_GAP_EVENT_DISCONNECT:
                 LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
+                // start advertising again
+                //advertise(); how to advertise again?..
+                // should the params be stored as a global variable in this translation unit? OOP lovers are crying by that thought..
+                LOG_INFO("Advertising has started!");
                 break;
             case BLE_GAP_EVENT_CONN_UPDATE:
                 LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE");
                 break;
-            case BLE_GAP_EVENT_CONN_UPDATE_REQ:
-                LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE_REQ");
-                break;
+            //case BLE_GAP_EVENT_CONN_UPDATE_REQ:
+            //    LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE_REQ");
+            //    break;
             //case BLE_GAP_EVENT_DISC:
             //    LOG_INFO("BLE_GAP_EVENT_DISC");
             //    break;
