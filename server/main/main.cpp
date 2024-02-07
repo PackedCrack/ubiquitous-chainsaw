@@ -37,12 +37,15 @@ void test_nimble()
 	// nimble has host
 	// host has gap and gatt
 
+	 esp_err_t result = nimble_port_init(); //  Initialize controller and NimBLE host stack
+        if (result != ESP_OK) {
+            return;
+        }
 	nimble::CNimble ble {};
 
-
-
-
+	nimble_port_run();
 }
+
 
 extern "C" void app_main(void)
 
@@ -50,7 +53,7 @@ extern "C" void app_main(void)
 	print_chip_info();
 	storage::CNonVolatileStorage nvs {};
 
-	test_nimble();
-	//esp_err_t ret = nimble_port_init();
-	std::printf("I WAS HERE in MAIN");
+	 
+	nimble::CNimble ble {};
+
 }

@@ -1,39 +1,20 @@
 #pragma once
 /* STD */
 #include <cstdio>
-#include <stdarg.h> // for ESP_LOGI
-#include <inttypes.h>
-#include <stddef.h>
 
 /* Project */
 #include "defines.hpp"
-#include "CAdvertiseFields.h"
-
+#include "CGapService.h"
+#include "CGattServer.h"
 
 /* BLE */
 #include "nimble/nimble_port.h"
-#include "host/ble_hs.h"
-#include "esp_netif_ip_addr.h"
 #include "host/util/util.h"
-#include "services/gap/ble_svc_gap.h"
-//#include "host/ble_uuid.h" // BLE_UUID_TYPE_16 undefined
-
-
-//#include "freertos/task.h"
-
+#include "services/gatt/ble_svc_gatt.h"
+#include "services/ans/ble_svc_ans.h"
 
 /* ESP */
 #include "esp_log.h"
-//#include "nimble/nimble_port_freertos.h"
-
-#include "esp_rom_sys.h"
-
-
-//#include "nimble/nimble_port_freertos.h"
-//#include "console/console.h"
-//#include "services/gap/ble_svc_gap.h"
-
-
 
 namespace nimble 
 {
@@ -49,11 +30,9 @@ namespace nimble
 
     namespace 
     {
-        static void server_on_reset_handle(int reason);
-        static void server_on_sync_handle(void);
-        static int server_gap_on_connection_handler(struct ble_gap_event *event, void *arg); // return value is ignored by the caller i.e No [[NoDiscard]]
-        void gap_advertise(); // maybe should be static aswell?
-
+        void server_on_reset_handle(int reason);
+        void server_on_sync_handler(void);
+        void server_gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg);
         //void server_host_task(void* param);
         
 
@@ -64,13 +43,16 @@ namespace nimble
 
     public:
         CNimble();
-        //CNimble(const char* deviceName);
         ~CNimble();
         CNimble(const CNimble& other) = default;
         CNimble(CNimble&& other) = default;
         CNimble& operator=(const CNimble& other) = default;
         CNimble& operator=(CNimble&& other) = default;
+
+    private:
+        void configure_nimble_stack();
     };
+
 
 } // namespace nimble
 
