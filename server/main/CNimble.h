@@ -1,6 +1,7 @@
 #pragma once
 /* STD */
 #include <cstdio>
+#include <array>
 
 /* Project */
 #include "defines.hpp"
@@ -30,6 +31,7 @@ namespace nimble
 
     namespace 
     {
+        
         void server_on_reset_handle(int reason);
         void server_on_sync_handler(void);
         void server_gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg); // TODO: move to GATT SERVER
@@ -49,6 +51,8 @@ namespace nimble
         CNimble& operator=(const CNimble& other) = default;
         CNimble& operator=(CNimble&& other) = default;
 
+    public:
+    int m_test = 1;
     private:
         void configure_nimble_host();
     };

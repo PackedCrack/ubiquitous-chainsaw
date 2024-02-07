@@ -6,10 +6,8 @@ namespace nimble
     
     namespace 
     {
-
-
         const char* p_DEVICE_NAME = "Chainsaw-server";
-        static uint8_t serverAddrType; // will be 1 or 0 depedning on rnd or pub addr
+        static uint8_t serverAddrType;
         #define SERVER_TAG "Chainsaw-server" // used for ESP_LOG
       
 
@@ -23,13 +21,7 @@ namespace nimble
         //ESP_LOGI(SERVER_TAG, "BLE Host Task Stopped");
         //nimble_port_freertos_deinit();
         //}
-
-    void server_on_reset_handle(int reason) 
-    {
-        LOG_FATAL_FMT("ESP ERROR. Reset due to %d\n", reason);
-    }
-
-    void server_on_sync_handler(void) 
+    void ble_generate_random_device_address() 
     {
         int result;
         const int RND_ADDR = 1;
@@ -43,20 +35,29 @@ namespace nimble
             LOG_FATAL_FMT("No address was able to be inferred %d\n", result);
         }
     
-        uint8_t bleDeviceAddr[6] {};
-        result = ble_hs_id_copy_addr(serverAddrType, bleDeviceAddr, NULL); // serverAddrType is needed for advertisment packages (GAP)
+        std::array<uint8_t, 6> bleDeviceAddr {};
+        result = ble_hs_id_copy_addr(serverAddrType, bleDeviceAddr.data(), NULL); // serverAddrType is needed for advertisment packages (GAP)
         if (result != 0) 
             LOG_FATAL_FMT("Adress was unable to be assigned %d\n", result);
 
-        if (serverAddrType == RND_ADDR) 
-            ESP_LOGI(SERVER_TAG, "BLE Random Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
-                                                                                    bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]); 
-        else if (serverAddrType == PUB_ADDR)
-            LOG_INFO_FMT("BLE Public Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
-                                                                                        bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);
 
-  
-        CGapService gap {p_DEVICE_NAME, serverAddrType};
+        std::printf("I BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
+
+        //LOG_INFO_FMT("BLE Device Address: %s %02x:%02x:%02x:%02x:%02x:%02x", logger::COLOR_GREEN, bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
+        //                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);
+        //ESP_LOGI(SERVER_TAG, "BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
+        //                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]); 
+    }
+
+    void server_on_reset_handle(int reason) 
+    {
+        LOG_FATAL_FMT("ESP ERROR. Reset due to %d\n", reason);
+    }
+
+    void server_on_sync_handler(void) 
+    {
+        ble_generate_random_device_address(); // do we need to store this?
+        CGapService gap {p_DEVICE_NAME, serverAddrType}; // have this as a memeber of CNimble? But how to access it then?
         gap.advertise();
     }
 
