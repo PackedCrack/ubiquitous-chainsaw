@@ -38,19 +38,8 @@ namespace nimble
         assert(m_fields.tx_pwr_lvl_is_present == IS_POWER_PRESENT);
         assert(m_fields.tx_pwr_lvl != 0);
 
-
         // no need to advertise services. since the client will learn them when connecting
-
-        //const uint8_t NUM_SERVICES = 1u; // requires ble_uuid_t which is an uint8_t;
-        //const uint16_t SERVICE = 0;
-        //ble_uuid16_t servicesArray[NUM_SERVICES];
-        //servicesArray[SERVICE] = BLE_UUID16_INIT(GATT_SVR_SVC_ALERT_UUID);
-        //m_fields.uuids16 = servicesArray;
-        //assert(m_fields.uuids16 == servicesArray);
-        //
-        //m_fields.num_uuids16 = NUM_SERVICES;
-        //assert(m_fields.num_uuids16 = NUM_SERVICES);
-        //m_fields.uuids16_is_complete = 1u; // no need to send additional data packets containing services
+        // We need to advertise services if they are a basis for if the client wants to connect or not
     }
 
     const ble_hs_adv_fields& CAdvertiseFields::data() const
@@ -70,9 +59,12 @@ namespace nimble
     {
         static_assert(std::is_trivially_copyable<ble_gap_adv_params>::value);
         std::memset(&m_params, 0, sizeof(m_params));
-        
+        // what else can fuck up with memset and how to check for it?
+
         m_params.conn_mode = BLE_GAP_CONN_MODE_UND;
         m_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+        assert(m_params.conn_mode & BLE_GAP_CONN_MODE_UND);
+        assert(m_params.disc_mode & BLE_GAP_DISC_MODE_GEN);
     }
 
     const ble_gap_adv_params& CAdvertiseParams::data() const
@@ -95,15 +87,13 @@ namespace nimble
             LOG_FATAL_FMT("Error setting advertisement data! result = %d", result);
 
         result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params.data(), gap_cb_handler, NULL);
-        if (result != 0) {
+        if (result != 0)
             LOG_FATAL_FMT("Error starting advertisement = %d", result);
-            return;
-        }
     }
 
     int CGapService::gap_cb_handler(struct ble_gap_event *event, void *arg) 
     {
-                // docs reference for gap events
+         // docs reference for gap events
         // https://mynewt.apache.org/latest/tutorials/ble/bleprph/bleprph-sections/bleprph-gap-event.html?highlight=ble_gap_event_connect
 
         // No restrictions on NimBLE operations
@@ -124,15 +114,15 @@ namespace nimble
             case BLE_GAP_EVENT_CONN_UPDATE:
                 LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE");
                 break;
-            //case BLE_GAP_EVENT_CONN_UPDATE_REQ:
-            //    LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE_REQ");
-            //    break;
+            case BLE_GAP_EVENT_CONN_UPDATE_REQ:
+                LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE_REQ");
+                break;
             //case BLE_GAP_EVENT_DISC:
             //    LOG_INFO("BLE_GAP_EVENT_DISC");
             //    break;
-           //case BLE_GAP_EVENT_DISC_COMPLETE:
-           //    LOG_INFO("BLE_GAP_EVENT_DISC_COMPLETE");
-           //    break;
+            //case BLE_GAP_EVENT_DISC_COMPLETE:
+            //   LOG_INFO("BLE_GAP_EVENT_DISC_COMPLETE");
+            //   break;
             //case BLE_GAP_EVENT_ADV_COMPLETE:
             //    LOG_INFO("BLE_GAP_EVENT_ADV_COMPLETE");
             //    break;

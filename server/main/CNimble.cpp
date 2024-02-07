@@ -38,17 +38,15 @@ namespace nimble
         result = ble_hs_util_ensure_addr(RND_ADDR);
         assert(result == 0);
 
-        result = ble_hs_id_infer_auto(PUB_ADDR, &serverAddrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr() is the addressType needed for otherthings??
+        result = ble_hs_id_infer_auto(PUB_ADDR, &serverAddrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
         if (result != 0) {
-            LOG_FATAL_FMT("No address was able to be infered %d\n", result);
+            LOG_FATAL_FMT("No address was able to be inferred %d\n", result);
         }
     
         uint8_t bleDeviceAddr[6] {};
         result = ble_hs_id_copy_addr(serverAddrType, bleDeviceAddr, NULL); // serverAddrType is needed for advertisment packages (GAP)
         if (result != 0) 
-        {
-            LOG_FATAL_FMT("Adress was unable to be retrieved %d\n", result);
-        }
+            LOG_FATAL_FMT("Adress was unable to be assigned %d\n", result);
 
         if (serverAddrType == RND_ADDR) 
             ESP_LOGI(SERVER_TAG, "BLE Random Address: %02x:%02x:%02x:%02x:%02x:%02x", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
@@ -64,6 +62,7 @@ namespace nimble
 
     void server_gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg) 
     {
+        // TODO: MOVE THSI TO GATT SERVER
         // NIMBLE BLEPRPH EXAMPLE CODE
         char buf[BLE_UUID_STR_LEN];
 
@@ -99,11 +98,11 @@ namespace nimble
             return;
         }
 
-        configure_nimble_stack();
+        configure_nimble_host();
 
         
         ble_svc_gap_init(); //register gap service to GATT server (service UUID 0x1800)
-        ble_svc_gatt_init(); // register GATT service to GATT server0x1801
+        ble_svc_gatt_init(); // register GATT service to GATT server 0x1801
         //ble_svc_ans_init();  // register Alert Notification Service (ANS) to GATT server NOT NEEDED ON THIS SERVER
 
         nimble_port_run();
@@ -121,7 +120,7 @@ namespace nimble
         //nimble_port_freertos_init(server_host_task); 
     }
 
-    void CNimble::configure_nimble_stack() 
+    void CNimble::configure_nimble_host() 
     {
         int result;
         result = ble_svc_gap_device_name_set(p_DEVICE_NAME);
@@ -130,11 +129,12 @@ namespace nimble
         ble_hs_cfg.reset_cb = server_on_reset_handle; 
         ble_hs_cfg.sync_cb = server_on_sync_handler; // entry point for starting advertising
         ble_hs_cfg.gatts_register_cb = server_gatt_svc_register_handle;
-
-        //ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-        //ble_hs_cfg.sm_io_cap = CONFIG_EXAMPLE_IO_TYPE;
-        //ble_hs_cfg.sm_bonding = 1;
-        //le_hs_cfg.sm_sc = 0;
+        ble_hs_cfg.store_status_cb = ble_store_util_status_rr; // handles status updates related to NVS
+        ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
+        ble_hs_cfg.sm_bonding = 1u;
+        ble_hs_cfg.sm_our_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the local device is willing to share the encryption key (ENC) during pairing.
+        ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the remote device is expected to share the encryption key during pairing.
+        ble_hs_cfg.sm_sc = 1u;
     }
 
     CNimble::~CNimble() 

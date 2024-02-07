@@ -32,7 +32,7 @@ namespace nimble
     {
         void server_on_reset_handle(int reason);
         void server_on_sync_handler(void);
-        void server_gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg);
+        void server_gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg); // TODO: move to GATT SERVER
         //void server_host_task(void* param);
         
 
@@ -50,7 +50,7 @@ namespace nimble
         CNimble& operator=(CNimble&& other) = default;
 
     private:
-        void configure_nimble_stack();
+        void configure_nimble_host();
     };
 
 
