@@ -1,10 +1,7 @@
 idf_component_register(
 	SRCS 
 	"CGapService.cpp"
-	"CGapService.h"
 	"CGattServer.cpp"
-	"CGattServer.h"
-	"CNimble.h"
 	"CNimble.cpp"
 	"CEventGroup.cpp" 
 	"CEventLoop.cpp" 

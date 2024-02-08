@@ -1,5 +1,5 @@
 #include "CChip.hpp"
-#include "CNimble.h"
+#include "CNimble.hpp"
 
 #include "CNonVolatileStorage.hpp"
 
@@ -46,6 +46,15 @@ void test_nimble()
 	nimble_port_run();
 }
 
+SemaphoreHandle_t taskSemaphore = NULL;
+
+// Define the task function
+void server_host_task(void* param) {
+    // Task implementation
+    // Make sure to release the semaphore when the task finishes
+    xSemaphoreGive(taskSemaphore);
+}
+
 
 extern "C" void app_main(void)
 
@@ -53,6 +62,20 @@ extern "C" void app_main(void)
 	print_chip_info();
 	storage::CNonVolatileStorage nvs {};
 
-	 
 	nimble::CNimble ble {};
+    nimble_port_freertos_init(ble.task); 
+
+	bool synced = false;
+	while(!synced)
+	{ 
+		synced = ble.isInitilized(); 
+	}
+
+	ble.start();
+	
+    while (true) {
+        // Perform any periodic tasks here
+
+        vTaskDelay(pdMS_TO_TICKS(5000)); // milisecs
+    }
 }
