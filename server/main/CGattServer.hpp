@@ -13,16 +13,20 @@ public:
     CGattServer() = default;
     CGattServer(const std::string_view deviceName, const uint8_t addrType);
     ~CGattServer() = default;
-    CGattServer(const CGattServer& other) = default;
-    CGattServer(CGattServer&& other) = default;
-    CGattServer& operator=(const CGattServer& other) = default;
-    CGattServer& operator=(CGattServer&& other) = default;
+    CGattServer(const CGattServer& other) = default; // Copy constructor:
+    CGattServer(CGattServer&& other) = default; // Move constructor:
+    CGattServer& operator=(const CGattServer& other) = default; // copy assign
+    CGattServer& operator=(CGattServer&& other) = default;  // move assign
+
+    [[NoDiscard]] uint8_t gap_param_is_alive();
 private:
 //static int gap_event_handler(struct ble_gap_event *event, void *arg); 
 //static void gatt_svc_register_handle(struct ble_gatt_register_ctxt *ctxt, void *arg);
+
 private:
 CGapService m_gap;
 //CGattService gatt;
+
 };
 
 }

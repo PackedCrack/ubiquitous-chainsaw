@@ -32,6 +32,10 @@ public:
     void start();
     static void task(void* param);
     bool isInitilized();
+
+    ///
+    [[NoDiscard]] uint8_t gap_param_is_alive();
+
 private:
     void configure_nimble_host();
     static void ble_on_reset_event_handle(int reason);

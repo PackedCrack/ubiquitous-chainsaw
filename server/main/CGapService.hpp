@@ -28,10 +28,14 @@ public:
     CGapService(CGapService&& other) = default;
     CGapService& operator=(const CGapService& other) = default;
     CGapService& operator=(CGapService&& other) = default;
+
+    [[NoDiscard]] uint8_t gap_param_is_alive();
 private:
     static int gap_event_handler(struct ble_gap_event *event, void *arg); // TODO have this in the gattserver and then pass it down
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;
+
+
 };
 } // namespace nimble

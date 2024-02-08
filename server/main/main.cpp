@@ -22,60 +22,27 @@ void print_chip_info()
 	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", sys::min_free_heap());
 }
 
-void test_nimble() 
-{
-	//const char* p_DEVICE_NAME = "Chainsaw-server";
-	// server
-	// server has: nvs, nimble
-	// nimble has host/controller
-	// host has gat and gapp
-	// CNimble
-	// CNimbleHost
-	// CNimbleHostGap -> connections, bonding etc
-	// CNimbleHostGatt -> services, data transfer etc
-
-	// nimble has host
-	// host has gap and gatt
-
-	 esp_err_t result = nimble_port_init(); //  Initialize controller and NimBLE host stack
-        if (result != ESP_OK) {
-            return;
-        }
-	nimble::CNimble ble {};
-
-	nimble_port_run();
-}
-
-SemaphoreHandle_t taskSemaphore = NULL;
-
-// Define the task function
-void server_host_task(void* param) {
-    // Task implementation
-    // Make sure to release the semaphore when the task finishes
-    xSemaphoreGive(taskSemaphore);
-}
-
-
 extern "C" void app_main(void)
 
 {
 	print_chip_info();
-	storage::CNonVolatileStorage nvs {};
+	storage::CNonVolatileStorage nvs{};
 
-	nimble::CNimble ble {};
-    nimble_port_freertos_init(ble.task); 
+	nimble::CNimble ble{};
+	nimble_port_freertos_init(ble.task);
 
 	bool synced = false;
-	while(!synced)
-	{ 
-		synced = ble.isInitilized(); 
+	while (!synced)
+	{
+		synced = ble.isInitilized();
 	}
 
 	ble.start();
-	
-    while (true) {
-        // Perform any periodic tasks here
 
-        vTaskDelay(pdMS_TO_TICKS(5000)); // milisecs
-    }
+	while (true)
+	{
+		// Perform any periodic tasks here
+
+		vTaskDelay(pdMS_TO_TICKS(5000)); // milisecs
+	}
 }

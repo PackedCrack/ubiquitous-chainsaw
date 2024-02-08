@@ -48,15 +48,34 @@ void ble_on_sync_handler(void)
 CNimble::CNimble() 
 : m_initilized{false}
 {
-    esp_err_t result = nimble_port_init(); //  Initialize controller and NimBLE host stack
+    esp_err_t result = nimble_port_init(); //  will fail if called twice
     if (result != ESP_OK) {
         return;
     }
+
+
     configure_nimble_host();
 }
 
+
+[[NoDiscard]] uint8_t CNimble::gap_param_is_alive()
+{
+    return m_gattServer.gap_param_is_alive();
+}
+
 void CNimble::start()
-{ m_gattServer = {deviceName, serverAddrType}; }
+{ 
+    // welcome to bug central
+
+    // dont question it :) (damn RAII)
+    uint8_t paramValueBefore = gap_param_is_alive();
+	assert(paramValueBefore == 0);
+
+    m_gattServer = {deviceName, serverAddrType};  // Custom constructor -> move assignment -> De-construtor // create a new object, move the object into the left hand side, delete the righthand side
+   
+    uint8_t paramValueAfter = gap_param_is_alive();
+	assert(paramValueAfter == 2);
+} 
 
 
 bool CNimble::isInitilized() 

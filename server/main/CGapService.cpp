@@ -76,7 +76,6 @@ CGapService::CGapService(const std::string_view deviceName, const uint8_t addrTy
     : m_bleAddressType {addrType}
     , m_params { make_advertise_params() }
 {
-    
     assert(m_params.conn_mode & BLE_GAP_CONN_MODE_UND);
     assert(m_params.disc_mode & BLE_GAP_DISC_MODE_GEN);
 
@@ -92,6 +91,12 @@ CGapService::CGapService(const std::string_view deviceName, const uint8_t addrTy
     if (result != 0)
         LOG_FATAL_FMT("Error starting advertisement: %d", result);
     
+}
+
+
+[[NoDiscard]] uint8_t CGapService::gap_param_is_alive()
+{
+    return m_params.conn_mode;
 }
 
 
