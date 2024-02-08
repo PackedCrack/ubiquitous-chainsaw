@@ -13,10 +13,10 @@ public:
     CGattServer() = default;
     CGattServer(const std::string_view deviceName, const uint8_t addrType);
     ~CGattServer() = default;
-    CGattServer(const CGattServer& other) = default; // Copy constructor:
-    CGattServer(CGattServer&& other) = default; // Move constructor:
-    CGattServer& operator=(const CGattServer& other) = default; // copy assign
-    CGattServer& operator=(CGattServer&& other) = default;  // move assign
+    CGattServer(const CGattServer& other) = delete; 
+    CGattServer(CGattServer&& other) = default; 
+    CGattServer& operator=(const CGattServer& other) = delete; 
+    CGattServer& operator=(CGattServer&& other) = default;  
 
     [[NoDiscard]] uint8_t gap_param_is_alive();
 private:

@@ -26,7 +26,7 @@ public:
     ~CGapService() = default;
     CGapService(const CGapService& other) = default;
     CGapService(CGapService&& other) = default;
-    CGapService& operator=(const CGapService& other) = default;
+    CGapService& operator=(const CGapService& other) = delete;
     CGapService& operator=(CGapService&& other) = default;
 
     [[NoDiscard]] uint8_t gap_param_is_alive();

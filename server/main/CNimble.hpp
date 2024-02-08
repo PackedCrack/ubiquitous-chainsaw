@@ -24,10 +24,10 @@ class CNimble
 public:
     CNimble();
     ~CNimble();
-    CNimble(const CNimble& other) = default;
-    CNimble(CNimble&& other) = default;
-    CNimble& operator=(const CNimble& other) = default;
-    CNimble& operator=(CNimble&& other) = default;
+    CNimble(const CNimble& other) = delete; // Copy constructor:
+    CNimble(CNimble&& other) = delete; // Move constructor:
+    CNimble& operator=(const CNimble& other) = delete; // copy assign
+    CNimble& operator=(CNimble&& other) = delete; // move assign
 
     void start();
     static void task(void* param);
