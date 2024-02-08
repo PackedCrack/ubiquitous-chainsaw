@@ -46,11 +46,11 @@ void make_field_transmit_power(ble_hs_adv_fields& fields)
 
 [[NoDiscard]] ble_hs_adv_fields make_advertise_fields(const std::string_view deviceName) // NoDiscard directive ignored for deviecName??
 {
+    // from what i can tell by testing a similar scenario in visual studio. The constructor of ble_hs_adv_fields will only be called once, and nothing more
     ble_hs_adv_fields fields {};
     make_field_name(fields, deviceName);
     make_field_flags(fields);
     make_field_transmit_power(fields);
-
     return fields;
 }
 
@@ -71,26 +71,49 @@ void make_field_transmit_power(ble_hs_adv_fields& fields)
 
 }// namespace
 
-
 CGapService::CGapService(const std::string_view deviceName, const uint8_t addrType) 
     : m_bleAddressType {addrType}
     , m_params { make_advertise_params() }
+    , m_isAdvertising {false}
 {
+    std::printf("Custom constructor of GapService called!\n");
     assert(m_params.conn_mode & BLE_GAP_CONN_MODE_UND);
     assert(m_params.disc_mode & BLE_GAP_DISC_MODE_GEN);
 
-    ble_hs_adv_fields fields = make_advertise_fields(deviceName);
+    ble_hs_adv_fields fields = make_advertise_fields(deviceName); // only the constructor for ble_hs_adv_fields will be called here
     int result;
     result = ble_gap_adv_set_fields(&fields);
     if (result != 0) 
         LOG_FATAL_FMT("Error setting advertisement data!: %d", result);
 
+    start_advertise();
+}
 
 
-    result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
+void CGapService::start_advertise()
+{
+    if (m_isAdvertising)
+        LOG_FATAL("Tried to start advertisingwhen it was enabled");
+
+   
+    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
     if (result != 0)
         LOG_FATAL_FMT("Error starting advertisement: %d", result);
     
+    m_isAdvertising = true;
+}
+
+
+void CGapService::stop_advertise()
+{
+    if (!m_isAdvertising)
+        LOG_FATAL("Tried to stop advertising when it wasn't enabled");
+
+    int result = ble_gap_adv_stop();
+    if (result != 0)
+        LOG_FATAL_FMT("Error stopping advertisement: %d", result);
+        
+    m_isAdvertising = false;
 }
 
 

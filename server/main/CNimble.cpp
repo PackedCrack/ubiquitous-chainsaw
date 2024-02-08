@@ -29,7 +29,7 @@ void ble_generate_random_device_address()
     if (result != 0) 
         LOG_FATAL_FMT("Adress was unable to be assigned %d\n", result);
 
-    std::printf("I BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
+    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
     //LOG_INFO_FMT("BLE Device Address: {}:{}:{}:{}:{}:{}", bleDeviceAddr[5], bleDeviceAddr[4], bleDeviceAddr[3], 
     //                                                                            bleDeviceAddr[2], bleDeviceAddr[1], bleDeviceAddr[0]);
 }
@@ -46,8 +46,12 @@ void ble_on_sync_handler(void)
 
 
 CNimble::CNimble() 
-: m_initilized{false}
+//: m_initilized{false}
 {
+    // m_gattServer constructor is also called
+    // the object is constructed but not in a valid state
+    // the reason being that m_gattServer can not be started before host/controller becomes synced
+
     esp_err_t result = nimble_port_init(); //  will fail if called twice
     if (result != ESP_OK) {
         return;
@@ -66,13 +70,15 @@ CNimble::CNimble()
 void CNimble::start()
 { 
     // welcome to bug central
+    assert(isBleInitilized);
 
-    // dont question it :) (damn RAII)
+    // dont question it :) (damn RAII) // dev error code, not for production
     uint8_t paramValueBefore = gap_param_is_alive();
-	assert(paramValueBefore == 0);
+	assert(paramValueBefore != 2);
 
-    m_gattServer = {deviceName, serverAddrType};  // Custom constructor -> move assignment -> De-construtor // create a new object, move the object into the left hand side, delete the righthand side
-   
+    std::printf("Move assignment of CGattServer into m_gattServer\n");
+    m_gattServer = {deviceName, serverAddrType};  // Custom constructor -> move assignment -> De-construtor
+
     uint8_t paramValueAfter = gap_param_is_alive();
 	assert(paramValueAfter == 2);
 } 

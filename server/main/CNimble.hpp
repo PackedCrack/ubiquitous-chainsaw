@@ -41,7 +41,6 @@ private:
     static void ble_on_reset_event_handle(int reason);
     static void ble_gatt_service_register_event_handle(struct ble_gatt_register_ctxt *ctxt, void *arg);
 private:
-    bool m_initilized;
     CGattServer m_gattServer;
 };
 } // namespace nimble
