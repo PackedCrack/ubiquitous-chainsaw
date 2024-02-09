@@ -1,5 +1,6 @@
 #include "CChip.hpp"
 #include "CNimble.hpp"
+#include "CChainsaw.hpp"
 
 #include "CNonVolatileStorage.hpp"
 
@@ -28,8 +29,34 @@ extern "C" void app_main(void)
 	print_chip_info();
 	storage::CNonVolatileStorage nvs{};
 
+	// https://mynewt.apache.org/latest/
+
+	// dont want nmible to "own" our server
+	// our server runs along side it / ontop of it
+	// but nimble should live longer than our server
+	// what happens to our server if nimble crashes?
+	// app_main() will be called
+
+
+	// Initilize nimble host
+	// configre the on sync/reset callbacks
+	// configure Security Manager
+	// configure Store
+	// configure optional callback that gets triggered when a service is added (good during development) 
 	nimble::CNimble ble{};
+
+	// initilize chainsaw server
+	// Initilize Gap service and Gatt service ->     ble_svc_gap_init();     ble_svc_gatt_init();
+	// then add the other GATT services
+	application::CChainsaw chainsaw{};
+
+
 	nimble_port_freertos_init(ble.task);
+
+	// sync callback will now be called
+	// bluetooth device address will be created
+	// bool that synchronization will be set
+	
 
 	bool synced = false;
 	while (!synced)
@@ -37,7 +64,7 @@ extern "C" void app_main(void)
 		synced = ble.isInitilized();
 	}
 
-	ble.start();
+	chainsaw.start();
 
 	while (true)
 	{

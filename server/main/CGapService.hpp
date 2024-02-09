@@ -16,14 +16,15 @@
 #include "host/ble_uuid.h"
 
 
-namespace nimble
+namespace application
 {
 
 class CGapService 
 {
 public:
-    CGapService() = default;
+    CGapService();
     CGapService(const std::string_view, const uint8_t addrType);
+    CGapService(const std::string_view);
     ~CGapService() = default;
     CGapService(const CGapService& other) = default;
     CGapService(CGapService&& other) = default;
@@ -31,9 +32,8 @@ public:
     CGapService& operator=(CGapService&& other) = default;
 
 public:
-    [[NoDiscard]] uint8_t gap_param_is_alive();
-
-    // do it this way or use a pure state machine instead?
+    [[NoDiscard]] uint8_t gap_param_is_alive(); // for testing 
+    void initilize(const std::string_view deviceName, uint8_t addressType);
     void start_advertise();
     void stop_advertise();
 private:

@@ -5,7 +5,6 @@
 
 /* Project */
 #include "defines.hpp"
-#include "CGattServer.hpp"
 
 /* BLE */
 #include "nimble/nimble_port.h"
@@ -14,8 +13,15 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "services/ans/ble_svc_ans.h"
 
+#include "host/ble_hs.h"
+
+
+
+
+
 /* ESP */
 #include "esp_log.h"
+
 
 namespace nimble 
 {
@@ -29,19 +35,15 @@ public:
     CNimble& operator=(const CNimble& other) = delete; // copy assign
     CNimble& operator=(CNimble&& other) = delete; // move assign
 
-    void start();
     static void task(void* param);
     bool isInitilized();
-
-    ///
-    [[NoDiscard]] uint8_t gap_param_is_alive();
 
 private:
     void configure_nimble_host();
     static void ble_on_reset_event_handle(int reason);
     static void ble_gatt_service_register_event_handle(struct ble_gatt_register_ctxt *ctxt, void *arg);
 private:
-    CGattServer m_gattServer;
+    //CGattServer m_gattServer;
 };
 } // namespace nimble
 

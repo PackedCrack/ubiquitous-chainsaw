@@ -1,15 +1,16 @@
+
 #include "CGapService.hpp"
 
 
-namespace nimble
+namespace application
 {
 
 namespace 
 {
 
 // https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
-#define GATT_SVR_SVC_ATTRI_UUID 0x1801
-#define GATT_SVR_SVC_ALERT_UUID 0x1811
+//#define GATT_SVR_SVC_ATTRI_UUID 0x1801
+//#define GATT_SVR_SVC_ALERT_UUID 0x1811
 
 
 void make_field_name(ble_hs_adv_fields& fields, const std::string_view deviceName)
@@ -69,25 +70,55 @@ void make_field_transmit_power(ble_hs_adv_fields& fields)
 }
 
 
+void set_adv_fields(const std::string_view deviceName)
+{
+    ble_hs_adv_fields fields = make_advertise_fields(deviceName); // only the constructor for ble_hs_adv_fields will be called here
+    int result;
+    result = ble_gap_adv_set_fields(&fields);
+    if (result != 0) 
+        LOG_FATAL_FMT("Error setting advertisement data!: %d", result);
+}
+
 }// namespace
 
-CGapService::CGapService(const std::string_view deviceName, const uint8_t addrType) 
-    : m_bleAddressType {addrType}
+
+void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
+{
+    // which one to use? Shoudl we have a bool isInitilized? for saftey
+    assert(m_isAdvertising == false);
+
+    if (m_isAdvertising)
+        return;
+
+    m_bleAddressType = addressType;
+    set_adv_fields(deviceName);
+}
+
+CGapService::CGapService() 
+    : m_bleAddressType {255}
     , m_params { make_advertise_params() }
     , m_isAdvertising {false}
 {
     std::printf("Custom constructor of GapService called!\n");
     assert(m_params.conn_mode & BLE_GAP_CONN_MODE_UND);
     assert(m_params.disc_mode & BLE_GAP_DISC_MODE_GEN);
-
-    ble_hs_adv_fields fields = make_advertise_fields(deviceName); // only the constructor for ble_hs_adv_fields will be called here
-    int result;
-    result = ble_gap_adv_set_fields(&fields);
-    if (result != 0) 
-        LOG_FATAL_FMT("Error setting advertisement data!: %d", result);
-
-    start_advertise();
 }
+
+//CGapService::CGapService(const std::string_view deviceName, const uint8_t addrType) 
+//    : m_bleAddressType {addrType}
+//    , m_params { make_advertise_params() }
+//    , m_isAdvertising {false}
+//{
+//    std::printf("Custom constructor of GapService called!\n");
+//    assert(m_params.conn_mode & BLE_GAP_CONN_MODE_UND);
+//    assert(m_params.disc_mode & BLE_GAP_DISC_MODE_GEN);
+//
+//    //set_adv_fields();
+//
+//
+//
+//    //start_advertise();
+//}
 
 
 void CGapService::start_advertise()
@@ -136,21 +167,12 @@ int CGapService::gap_event_handler(ble_gap_event* event, void* arg)
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
             LOG_INFO("BLE_GAP_EVENT_CONNECT");
-            // stop advertising
-            int result;
-            //ble_gap_adv_stop();
-            if (result != 0)
-                LOG_FATAL_FMT("Error Stopping advertising: %d", result);
-            
-            LOG_INFO("Advertising has stopped!");
+            // it stops advertising automatically here
         
             break;
         case BLE_GAP_EVENT_DISCONNECT:
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            // start advertising again
-            //advertise(); how to advertise again?..
-            // should the params be stored as a global variable in this translation unit? OOP lovers are crying by that thought..
-            LOG_INFO("Advertising has started!");
+            // it does no start advertising automatically
             break;
         case BLE_GAP_EVENT_CONN_UPDATE:
             LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE");
