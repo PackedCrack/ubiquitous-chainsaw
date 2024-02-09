@@ -5,6 +5,7 @@
 #include "defines.hpp"
 #include <cstdio>
 #include <type_traits>
+#include <functional>
 
 /* Project */
 #include "defines.hpp"
@@ -23,25 +24,18 @@ class CGapService
 {
 public:
     CGapService();
-    CGapService(const std::string_view, const uint8_t addrType);
-    CGapService(const std::string_view);
     ~CGapService() = default;
-    CGapService(const CGapService& other) = default;
-    CGapService(CGapService&& other) = default;
+    CGapService(const CGapService& other) = delete;
+    CGapService(CGapService&& other) = delete;
     CGapService& operator=(const CGapService& other) = delete;
-    CGapService& operator=(CGapService&& other) = default;
-
+    CGapService& operator=(CGapService&& other) = delete;
 public:
-    [[NoDiscard]] uint8_t gap_param_is_alive(); // for testing 
-    void configure(const std::string_view deviceName, uint8_t addressType);
-    void start_advertise();
-    void stop_advertise();
+    void initilize(const std::string_view deviceName, uint8_t addressType);
 private:
     static int gap_event_handler(struct ble_gap_event *event, void *arg); // TODO have this in the gattserver and then pass it down
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;
     bool m_isAdvertising;
-    //CGapAdvertise m_advService;
 };
 } // namespace nimble

@@ -39,17 +39,6 @@ uint8_t ble_generate_random_device_address()
 } // namespace
 
 
-void CChainsaw::gap_start_advertise()
-{
-    m_gapService.start_advertise();
-}
-
-
-void CChainsaw::gap_stop_advertise()
-{
-    m_gapService.stop_advertise();
-}
-
 
 void CChainsaw::start()
 {
@@ -57,10 +46,7 @@ void CChainsaw::start()
 
     m_bleAddressType = ble_generate_random_device_address();
     assert(m_bleAddressType != ADDRESS_TYPE_ERROR);
-    m_gapService.configure(deviceName, m_bleAddressType); // todo add functor for callback
-
-    gap_start_advertise();
-
+    m_gapService.initilize(deviceName, m_bleAddressType);
 }
 
 CChainsaw::CChainsaw()

@@ -25,19 +25,11 @@ public:
     CChainsaw(CChainsaw&& other) = delete; // Move constructor:
     CChainsaw& operator=(const CChainsaw& other) = delete; // copy assign
     CChainsaw& operator=(CChainsaw&& other) = delete; // move assign
-
 public:
-    void gap_start_advertise();
-    void gap_stop_advertise();
     void start();
-
 private:
 uint8_t m_bleAddressType;
 CGapService m_gapService;
-
-
-
-
 };
 
 }
