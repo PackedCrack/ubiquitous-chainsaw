@@ -3,7 +3,7 @@
 
 namespace application
 { 
-static constexpr uint8_t ADDRESS_TYPE_ERROR = 255; // moev this to a seperate ChainsawDefines along with related headers???
+static constexpr uint8_t ADDRESS_TYPE_ERROR = 255u; // moev this to a seperate ChainsawDefines along with related headers???
 
 namespace 
 {
@@ -36,13 +36,14 @@ uint8_t ble_generate_random_device_address()
 
     return addrType;
 }
-
 } // namespace
+
 
 void CChainsaw::gap_start_advertise()
 {
     m_gapService.start_advertise();
 }
+
 
 void CChainsaw::gap_stop_advertise()
 {
@@ -56,7 +57,7 @@ void CChainsaw::start()
 
     m_bleAddressType = ble_generate_random_device_address();
     assert(m_bleAddressType != ADDRESS_TYPE_ERROR);
-    m_gapService.initilize(deviceName, m_bleAddressType); // todo add functor for callback
+    m_gapService.configure(deviceName, m_bleAddressType); // todo add functor for callback
 
     gap_start_advertise();
 
@@ -75,7 +76,6 @@ CChainsaw::CChainsaw()
     //ble_svc_gatt_init(); // register GATT service to GATT server (service UUID 0x1801) // is this needed? yes, otherwise we cant add additional gatt services
 
     // init custom gatt services here
-
 }
 
 } // namespace application

@@ -33,7 +33,7 @@ public:
 
 public:
     [[NoDiscard]] uint8_t gap_param_is_alive(); // for testing 
-    void initilize(const std::string_view deviceName, uint8_t addressType);
+    void configure(const std::string_view deviceName, uint8_t addressType);
     void start_advertise();
     void stop_advertise();
 private:

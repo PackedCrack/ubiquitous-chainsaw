@@ -82,7 +82,7 @@ void set_adv_fields(const std::string_view deviceName)
 }// namespace
 
 
-void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
+void CGapService::configure(const std::string_view deviceName, uint8_t addressType)
 {
     // which one to use? Shoudl we have a bool isInitilized? for saftey
     assert(m_isAdvertising == false);
@@ -95,7 +95,7 @@ void CGapService::initilize(const std::string_view deviceName, uint8_t addressTy
 }
 
 CGapService::CGapService() 
-    : m_bleAddressType {255}
+    : m_bleAddressType {255u} // TODO: change this to an application:: lobal defined error code
     , m_params { make_advertise_params() }
     , m_isAdvertising {false}
 {
