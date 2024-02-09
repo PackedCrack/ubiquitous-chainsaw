@@ -444,6 +444,7 @@ FodyWeavers.xsd
 /build-cppcheck
 
 # clion
+/.idea
 /server/.idea
 /client/.idea
 /server/cmake-build-debug-visual-studio

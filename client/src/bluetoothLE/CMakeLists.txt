@@ -1,8 +1,12 @@
-include_directories("windows")
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_subdirectory("windows")
+else ()
+    message(FATAL_ERROR "Operating systems other than windows are not yet implemented")
+endif()
+
 
 SET(BLUETOOTH_SRCS
         common.hpp
-        services.hpp
         CBLEScanner.hpp
 )
 

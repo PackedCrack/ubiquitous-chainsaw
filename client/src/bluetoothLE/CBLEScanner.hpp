@@ -4,7 +4,6 @@
 #pragma once
 #include "windows/CScanner.hpp"
 
-#include <memory>
 
 namespace ble
 {
@@ -24,14 +23,14 @@ private:
     {
     public:
         virtual ~IBase() = default;
+        IBase(const IBase& other) = delete;
+        IBase& operator=(const IBase& other) = delete;
         
         virtual void execute_begin_scan() const = 0;
         virtual void execute_end_scan() const = 0;
     protected:
         IBase() = default;
-        IBase(const IBase& other) = delete;
         IBase(IBase&& other) = default;
-        IBase& operator=(const IBase& other) = delete;
         IBase& operator=(IBase&& other) = default;
     };
     template<typename scanner_t>

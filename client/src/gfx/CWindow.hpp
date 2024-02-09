@@ -1,5 +1,5 @@
 #pragma once
-#include "../defines.hpp"
+#include "defines.hpp"
 // third_party
 #include "SDL3/SDL_video.h"
 

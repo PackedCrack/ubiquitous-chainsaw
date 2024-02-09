@@ -10,6 +10,10 @@
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include <winrt/Windows.Foundation.Collections.h>
 
+#include <iostream>
+#include <coroutine>
+#include "bluetoothLE/CBLEScanner.hpp"
+
 
 namespace
 {
@@ -33,9 +37,7 @@ void process_cmd_line_args(int argc, char** argv)
 }
 }   // namespace
 
-#include <iostream>
-#include <coroutine>
-#include "bluetoothLE/CBLEScanner.hpp"
+
 
 
 
