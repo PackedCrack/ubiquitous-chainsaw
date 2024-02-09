@@ -170,6 +170,32 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
     }
 }
 
+
+
+
+#include <errhandlingapi.h>
+#include <winerror.h>
+#include <powrprof.h>
+#pragma comment(lib, "PowrProf.lib")
+
+void force_hibernate()
+{
+    // https://learn.microsoft.com/en-us/windows/win32/api/powrprof/nf-powrprof-setsuspendstate
+    
+    /*
+     *  BOOLEAN SetSuspendState(
+            [in] BOOLEAN bHibernate,
+            [in] BOOLEAN bForce,
+            [in] BOOLEAN bWakeupEventsDisabled
+        );*/
+    BOOLEAN result = SetSuspendState(true, false, false);
+    if(result == 0)
+    {
+        LOG_ERROR_FMT("SetSuspendState failed with: \"{}\"", GetLastError());
+    }
+}
+
+
 int main(int argc, char** argv)
 {
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
