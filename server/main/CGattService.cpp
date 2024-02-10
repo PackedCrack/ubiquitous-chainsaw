@@ -78,7 +78,7 @@ int tmp_service_callback(uint16_t conn_handle, uint16_t attr_handle,
 }
 
 
-struct ble_gatt_dsc_def descriptors_TEMPLATE[] = 
+struct std::array<ble_gatt_dsc_def, 2> descriptors_TEMPLATE = 
 { 
     make_descriptor( &tmpDescriptorId.u,
                         BLE_ATT_F_READ,
@@ -87,27 +87,24 @@ struct ble_gatt_dsc_def descriptors_TEMPLATE[] =
 };
 
 
-
-struct ble_gatt_chr_def characteristics_TEMPLATE[] = 
+struct std::array<ble_gatt_chr_def, 2> characteristics_TEMPLATE = 
 { 
     make_characteristic(&tmpCharacteristicId.u,
                            tmp_service_callback,
-                           descriptors_TEMPLATE,
+                           descriptors_TEMPLATE.data(),
                            BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
                            &tmpCharacteristicValuehandle)
     , 0
 };
 
 
-struct ble_gatt_svc_def myService_TEMPLATE[] = 
+struct std::array<ble_gatt_svc_def, 2> myService_TEMPLATE = 
 { 
     make_service(BLE_GATT_SVC_TYPE_PRIMARY, 
                     &tmpServiceId.u,
-                    characteristics_TEMPLATE)
+                    characteristics_TEMPLATE.data())
     , 0
 }; 
-
-
 
 } // namespace
 
@@ -117,12 +114,12 @@ CGattService::CGattService()
 
     ble_svc_gatt_init();
 
-    int result = ble_gatts_count_cfg(myService_TEMPLATE);
+    int result = ble_gatts_count_cfg(myService_TEMPLATE.data());
     if (result != 0) {
         LOG_INFO("UNABLE TO COUNT GATT SVCS");
     }
 
-    result = ble_gatts_add_svcs(myService_TEMPLATE);
+    result = ble_gatts_add_svcs(myService_TEMPLATE.data());
     if (result != 0) {
         LOG_INFO("UNABLE TO ADD GATT SVCS");
     }
