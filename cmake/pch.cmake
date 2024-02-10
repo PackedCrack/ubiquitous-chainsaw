@@ -12,6 +12,7 @@ SET(STD_PCH <cstdint>
         <cassert>
         <utility>
         <format>
+        <memory>
         <unordered_map>
         <shared_mutex>
         <functional>

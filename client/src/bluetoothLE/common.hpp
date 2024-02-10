@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "../defines.hpp"
+#include "defines.hpp"
 
 
 namespace ble
