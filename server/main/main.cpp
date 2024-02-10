@@ -1,5 +1,5 @@
 #include "CChip.hpp"
-#include "CNimble.hpp"
+#include "Nimble.hpp"
 #include "CChainsaw.hpp"
 
 #include "CNonVolatileStorage.hpp"
@@ -31,19 +31,15 @@ extern "C" void app_main(void)
 
 	// https://mynewt.apache.org/latest/
 
-	nimble::CNimble ble{};
-	application::CChainsaw chainsaw{};
+	// how you feel about this PackedCrack? im a genius right?.. right?
+	nimble::configure_nimble_host();
+	
+	application::CChainsaw chainsawServer{};
 
-	nimble_port_freertos_init(ble.task);
+	nimble_port_freertos_init(nimble::nimble_host_task);
+	nimble::wait_for_sync(); 
 
-	// todo use atomic
-	bool synced = false;
-	while (!synced)
-	{
-		synced = ble.isInitilized();
-	}
-
-	chainsaw.start();
+	chainsawServer.start();
 
 	while (true)
 	{
