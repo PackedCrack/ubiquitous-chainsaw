@@ -1,16 +1,14 @@
 #pragma once
 /* STD */
-
 #include <array>
 
-
+/* Project */
 #include "CGapService.hpp"
+#include "CGattService.hpp"
 
+/* Nimble */
 #include "nimble/nimble_port.h"
-//#include "nimble/nimble_port_freertos.h"
 #include "host/util/util.h"
-//#include "services/gatt/ble_svc_gatt.h"
-//#include "services/ans/ble_svc_ans.h"
 
 
 namespace application
@@ -28,8 +26,8 @@ public:
 public:
     void start();
 private:
-uint8_t m_bleAddressType;
-CGapService m_gapService;
+    CGapService m_gapService;
+    CGattService m_gattService;
 };
 
 }

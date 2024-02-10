@@ -20,6 +20,10 @@
 namespace application
 {
 
+// Probably not needed to be a class?
+// no "resources" to keep track of really, except     uint8_t m_bleAddressType and ble_gap_adv_params m_params;
+// nothing RAAI related that needs to be destroyed etc..
+
 class CGapService 
 {
 public:
@@ -32,10 +36,7 @@ public:
 public:
     void initilize(const std::string_view deviceName, uint8_t addressType);
 private:
-    static int gap_event_handler(struct ble_gap_event *event, void *arg); // TODO have this in the gattserver and then pass it down
-private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;
-    bool m_isAdvertising;
 };
 } // namespace nimble

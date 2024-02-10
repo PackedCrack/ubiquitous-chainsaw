@@ -9,40 +9,6 @@ namespace
 {
 
 // https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
-//#define GATT_SVR_SVC_ATTRI_UUID 0x1801
-//#define GATT_SVR_SVC_ALERT_UUID 0x1811
-
-//// TODO OUTVARIABLES
-//void make_field_name(ble_hs_adv_fields& fields, const std::string_view deviceName)
-//{
-//    const unsigned int IS_COMPLETE = 1u;
-//    fields.name = (uint8_t*)deviceName.data();
-//    fields.name_len = static_cast<uint8_t>(deviceName.size());
-//    fields.name_is_complete = IS_COMPLETE;
-//    assert(fields.name != 0);
-//    assert(fields.name_len == deviceName.size());
-//    assert(fields.name_is_complete == IS_COMPLETE);
-//}
-//
-//
-// void make_field_flags(ble_hs_adv_fields& fields)
-// {
-//
-//    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-//    assert((fields.flags & BLE_HS_ADV_F_DISC_GEN));
-//    assert((fields.flags & BLE_HS_ADV_F_BREDR_UNSUP));
-// }
-//
-//
-//void make_field_transmit_power(ble_hs_adv_fields& fields)
-//{
-//       // tx_pwr is the transmit power level of the devices radio signal  (not required to set btw)
-//       const unsigned int IS_POWER_PRESENT = 1u;
-//       fields.tx_pwr_lvl_is_present = IS_POWER_PRESENT;
-//       fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO; // set the power level automatically
-//       assert(fields.tx_pwr_lvl_is_present == IS_POWER_PRESENT);
-//       assert(fields.tx_pwr_lvl != 0);
-//}
 
 uint8_t* make_field_name(const std::string_view deviceName)
 { return (uint8_t*)deviceName.data(); }
@@ -107,39 +73,7 @@ void set_adv_fields(const std::string_view deviceName)
 }
 
 
-
-}// namespace
-
-
-CGapService::CGapService() 
-    : m_bleAddressType {255u} // TODO: change this to an application:: lobal defined error code
-    , m_params { make_advertise_params() }
-    , m_isAdvertising {false}
-{
-    std::printf("Custom constructor of GapService called!\n");
-    // move these out
-    assert(m_params.conn_mode & BLE_GAP_CONN_MODE_UND);
-    assert(m_params.disc_mode & BLE_GAP_DISC_MODE_GEN);
-}
-
-
-
-void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
-{
-    // which one to use? Shoudl we have a bool isInitilized? for saftey
-    m_bleAddressType = addressType;
-    set_adv_fields(deviceName);
-
-    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
-    if (result != 0)
-        LOG_INFO_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
-}
-
-
-
-int CGapService::gap_event_handler(ble_gap_event* event, void* arg) 
-{
-
+auto gap_event_handler = [](ble_gap_event* event, void* arg) {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
         {
@@ -205,9 +139,32 @@ int CGapService::gap_event_handler(ble_gap_event* event, void* arg)
             break;
     } // switch
     return 0;
+};
+
+
+}// namespace
+
+
+CGapService::CGapService() 
+    : m_bleAddressType {255u} // TODO: How to use a pre defined variable? include a common header?
+    , m_params { make_advertise_params() }
+{
 }
 
 
+
+void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
+{
+     ble_svc_gap_init();
+     
+    // which one to use? Shoudl we have a bool isInitilized? for saftey
+    m_bleAddressType = addressType;
+    set_adv_fields(deviceName);
+
+    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
+    if (result != 0)
+        LOG_INFO_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
+}
 
     
 } // namespace nimble
