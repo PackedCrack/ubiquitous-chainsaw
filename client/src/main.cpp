@@ -14,6 +14,8 @@
 #include <coroutine>
 #include "bluetoothLE/CBLEScanner.hpp"
 
+#include "defense/defense_mechanism.hpp"
+
 
 namespace
 {
@@ -171,70 +173,12 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
 }
 
 
-
-
-#include <errhandlingapi.h>
-#include <winerror.h>
-#include <synchapi.h>
-#include <powrprof.h>
-#pragma comment(lib, "PowrProf.lib")
-
-void force_hibernate()
-{
-    //
-    
-    /*  https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createwaitabletimerw
-     *  HANDLE CreateWaitableTimerW(
-            [in, optional] LPSECURITY_ATTRIBUTES lpTimerAttributes,
-            [in]           BOOL                  bManualReset,
-            [in, optional] LPCWSTR               lpTimerName
-        );*/
-    HANDLE timer = CreateWaitableTimerW(nullptr, true, nullptr);
-    if(timer == nullptr)
-    {
-        LOG_ERROR_FMT("CreateWaitableTimer failed with: \"{}\"", GetLastError());
-    }
-    
-    
-    LARGE_INTEGER time{};
-    time.QuadPart = -100000000LL;
-    /*  https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-setwaitabletimer
-     *  BOOL SetWaitableTimer(
-            [in]           HANDLE              hTimer,
-            [in]           const LARGE_INTEGER *lpDueTime,
-            [in]           LONG                lPeriod,
-            [in, optional] PTIMERAPCROUTINE    pfnCompletionRoutine,
-            [in, optional] LPVOID              lpArgToCompletionRoutine,
-            [in]           BOOL                fResume
-        );*/
-    if(!SetWaitableTimer(timer, &time, 0, nullptr, nullptr, true))
-    {
-        LOG_ERROR_FMT("SetWaitableTimer failed with: \"{}\"", GetLastError());
-    }
-    
-    
-    /*  https://learn.microsoft.com/en-us/windows/win32/api/powrprof/nf-powrprof-setsuspendstate
-     *  BOOLEAN SetSuspendState(
-            [in] BOOLEAN bHibernate,
-            [in] BOOLEAN bForce,
-            [in] BOOLEAN bWakeupEventsDisabled
-        );*/
-    BOOLEAN result = SetSuspendState(true, false, false);
-    if(result == 0)
-    {
-        LOG_ERROR_FMT("SetSuspendState failed with: \"{}\"", GetLastError());
-    }
-}
-
-
 int main(int argc, char** argv)
 {
-    force_hibernate();
+    defense::auto_wakeup_timer(std::chrono::seconds(5));
+    defense::cowabunga();
     
     return 0;
-    
-    
-    
     
     
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);

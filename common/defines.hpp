@@ -54,9 +54,22 @@ _Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
 		LOG_ASSERT_FMT(msg, __VA_ARGS__); \
 		HW_INTERRUPT;	\
 	}
+
+#ifdef WIN32
+    #define WIN_CHECK(expr) \
+    if(expr){}              \
+    else{ LOG_ERROR_FMT("Win32 failed with error code: \"{}\"", GetLastError()); }
+    
+    #define WIN_ASSERT(expr) ASSERT_FMT(expr, "Win32 failed with error code: {}", GetLastError())
+#endif
 #else
 #define ASSERT(expr, msg)
 #define ASSERT_FMT(expr, msg, ...)
+
+#ifdef WIN32
+    #define WIN_CHECK(expr) expr
+    #define WIN_ASSERT(expr)
+#endif
 #endif // !NDEBUG
 
 
@@ -105,20 +118,20 @@ logger::log_err(__FILE__, __func__, __LINE__, FMT(msg, lwip_strerr(errorCode))) 
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
-	template<typename error_t>
-	constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
+template<typename error_t>
+constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
+{
+	if constexpr (std::is_same_v<error_t, esp_err_t>)
 	{
-		if constexpr (std::is_same_v<error_t, esp_err_t>)
-		{
-			return errorCode == ESP_OK;
-		}
-
-		if constexpr (std::is_same_v<error_t, err_t>)
-		{
-			return errorCode == ERR_OK;
-		}
-
-		// So CPPCHECk stops complaining
-		return 0;
+		return errorCode == ESP_OK;
 	}
+
+	if constexpr (std::is_same_v<error_t, err_t>)
+	{
+		return errorCode == ERR_OK;
+	}
+
+	// So CPPCHECk stops complaining
+	return 0;
+}
 #endif
