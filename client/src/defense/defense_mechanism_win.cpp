@@ -7,6 +7,8 @@
 #include <Windows.h>
 #include <shlobj_core.h>
 #include <pathcch.h>
+#include <sddl.h>
+#include <securitybaseapi.h>
 #include <powrprof.h>
 #pragma comment(lib, "pathcch.lib")
 #pragma comment(lib, "PowrProf.lib")
@@ -40,6 +42,21 @@ void cowabunga()
 
 namespace sys::files
 {
+void restrict_file_permissions(const std::filesystem::path& file)
+{
+    // https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format
+    PSECURITY_DESCRIPTOR pDescriptor = nullptr;
+    // https://learn.microsoft.com/en-us/windows/win32/api/sddl/nf-sddl-convertstringsecuritydescriptortosecuritydescriptorw
+    WIN_CHECK(ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:PAI(A;;FA;;;OW)", SDDL_REVISION_1, &pDescriptor, nullptr));
+    if(pDescriptor != nullptr)
+    {
+        // https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-setfilesecurityw
+        WIN_CHECK(SetFileSecurityW(file.wstring().c_str(), DACL_SECURITY_INFORMATION, pDescriptor));
+    
+        // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree
+        WIN_CHECK(LocalFree(pDescriptor) == nullptr);
+    }
+}
 std::expected<std::filesystem::path, Error> key_location()
 {
     std::array<WCHAR, MAX_PATH> location{ 0 };

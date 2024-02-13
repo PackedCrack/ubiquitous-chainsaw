@@ -20,5 +20,6 @@ void cowabunga();
 
 namespace sys::files
 {
+void restrict_file_permissions(const std::filesystem::path& file);
 [[nodiscard]] std::expected<std::filesystem::path, Error> key_location();
 }   // sys::files
