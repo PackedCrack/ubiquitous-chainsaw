@@ -4,8 +4,21 @@
 #pragma once
 
 
-namespace defense
+namespace sys
+{
+struct Error
+{
+    std::string msg;
+};
+}   // namespace sys
+
+namespace sys::defense
 {
 void auto_wakeup_timer(std::chrono::seconds&& delay);
 void cowabunga();
-}   // defense
+}   // sys::defense
+
+namespace sys::files
+{
+[[nodiscard]] std::expected<std::filesystem::path, Error> key_location();
+}   // sys::files

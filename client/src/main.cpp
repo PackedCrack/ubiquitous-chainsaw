@@ -175,42 +175,36 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
 
 int main(int argc, char** argv)
 {
-    defense::auto_wakeup_timer(std::chrono::seconds(5));
-    defense::cowabunga();
-    
-    return 0;
-    
-    
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
-    CThreadSafeHashMap<std::string, ble::DeviceInfo> cache{};
-    
-    ble::CBLEScanner indScanner = ble::make_scanner(cache);
-    
-    //ble::win::CScanner scanner{ cache };
-    //scanner.begin_scan();
-    
-    //begin_scan(indScanner);
-    indScanner.begin_scan();
-    
-    while(true)
-    {
-        if(cache.size() > 0)
-        {
-            std::vector<ble::DeviceInfo> infos = cache.as_vector();
-            for(const auto& info : infos)
-            {
-                LOG_INFO_FMT("Device in cache.\nAddress: {}\nAddress Type: {}",
-                             ble::hex_addr_to_str(info.address.value()),
-                             ble::address_type_to_str(info.addressType));
-                
-                query_device(info.address.value());
-            }
-            break;
-        }
-        
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
+    //CThreadSafeHashMap<std::string, ble::DeviceInfo> cache{};
+    //
+    //ble::CBLEScanner indScanner = ble::make_scanner(cache);
+    //
+    ////ble::win::CScanner scanner{ cache };
+    ////scanner.begin_scan();
+    //
+    ////begin_scan(indScanner);
+    //indScanner.begin_scan();
+    //
+    //while(true)
+    //{
+    //    if(cache.size() > 0)
+    //    {
+    //        std::vector<ble::DeviceInfo> infos = cache.as_vector();
+    //        for(const auto& info : infos)
+    //        {
+    //            LOG_INFO_FMT("Device in cache.\nAddress: {}\nAddress Type: {}",
+    //                         ble::hex_addr_to_str(info.address.value()),
+    //                         ble::address_type_to_str(info.addressType));
+    //
+    //            query_device(info.address.value());
+    //        }
+    //        break;
+    //    }
+    //
+    //    std::this_thread::sleep_for(std::chrono::seconds(1));
+    //}
     
     
     

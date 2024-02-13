@@ -5,11 +5,14 @@
 #include "defines.hpp"
 // win32
 #include <Windows.h>
+#include <shlobj_core.h>
+#include <pathcch.h>
 #include <powrprof.h>
+#pragma comment(lib, "pathcch.lib")
 #pragma comment(lib, "PowrProf.lib")
 
 
-namespace defense
+namespace sys::defense
 {
 void auto_wakeup_timer(std::chrono::seconds&& delay)
 {
@@ -32,4 +35,30 @@ void cowabunga()
     //  https://learn.microsoft.com/en-us/windows/win32/api/powrprof/nf-powrprof-setsuspendstate
     WIN_CHECK(SetSuspendState(true, false, false) == 0);
 }
-}   // defense
+}   // sys::defense
+
+
+namespace sys::files
+{
+std::expected<std::filesystem::path, Error> key_location()
+{
+    std::array<WCHAR, MAX_PATH> location{ 0 };
+    // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
+    WIN_CHECK_HRESULT(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, NO_FLAGS, location.data()));
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/pathcch/nf-pathcch-pathcchappendex
+    HRESULT result = PathCchAppendEx(location.data(), location.size(), L"Ubiquitous-Chainsaw\\Keys", NO_FLAGS);
+    if(result != S_OK)
+    {
+        if(result == E_OUTOFMEMORY)
+            return std::unexpected{ Error{ .msg = "Failed to append key directory to appdata path because there was not enough free memory!" } };
+        if(result == E_INVALIDARG)
+            return std::unexpected{ Error{ .msg = "Failed to append key directory to appdata path!" } };
+        // This error exists according to the documentation but it is an undefined symbol.. ?
+        //if(result == PATHCCH_E_FILENAME_TOO_LONG)
+        //    return std::unexpected{ Error{ .msg = "Failed to append key directory to appdata path because the final filename was too long!" } };
+    }
+    
+    return std::filesystem::path{ location.data() };
+}
+}   // sys::files

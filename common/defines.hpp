@@ -5,7 +5,7 @@
 #include "lwip/err.h"
 #endif
 
-
+#define NO_FLAGS 0
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
@@ -61,6 +61,10 @@ _Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
     else{ LOG_ERROR_FMT("Win32 failed with error code: \"{}\"", GetLastError()); }
     
     #define WIN_ASSERT(expr) ASSERT_FMT(expr, "Win32 failed with error code: {}", GetLastError())
+
+    #define WIN_CHECK_HRESULT(expr) \
+    if(HRESULT result = expr; result == S_OK){}              \
+    else{ LOG_ERROR_FMT("Win32 failed with HRESULT code: \"{}\"", result); }
 #endif
 #else
 #define ASSERT(expr, msg)
@@ -69,6 +73,7 @@ _Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
 #ifdef WIN32
     #define WIN_CHECK(expr) expr
     #define WIN_ASSERT(expr)
+    #define WIN_CHECK_HRESULT(expr)
 #endif
 #endif // !NDEBUG
 

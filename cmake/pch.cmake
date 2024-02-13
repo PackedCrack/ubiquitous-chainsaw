@@ -16,6 +16,7 @@ SET(STD_PCH <cstdint>
         <unordered_map>
         <shared_mutex>
         <functional>
+        <filesystem>
         <cerrno>)
 
 # --- functions --- #
