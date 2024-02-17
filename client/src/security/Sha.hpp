@@ -5,50 +5,100 @@
 #pragma once
 #include "defines.hpp"
 // third_party
+#define NO_OLD_WC_NAMES
 #include "wolfcrypt/sha256.h"
+#include "wolfssl/wolfcrypt/asn.h"
 
 
 namespace security
 {
-template<typename derived_t>
-class ISha
+template<typename algorithm_t>
+concept HashAlgorithm = requires(algorithm_t alg, std::string_view msg, std::vector<byte>& hashBuf)
 {
-protected:
+    { algorithm_t::HASH_NAME } -> std::convertible_to<std::string_view>;
+    { algorithm_t::HASH_SIZE } -> std::convertible_to<size_t>;
+    { alg.hash(msg, hashBuf) } -> std::convertible_to<int32_t>;
+};
+
+struct Sha1
+{
+    static constexpr std::string_view HASH_NAME = "SHA1";
+    static constexpr size_t HASH_SIZE = WC_SHA_DIGEST_SIZE;
+    [[nodiscard]] static int32_t hash(std::string_view text, std::vector<byte>& buffer);
+};
+struct Sha256
+{
+    static constexpr std::string_view HASH_NAME = "SHA256";
+    static constexpr size_t HASH_SIZE = WC_SHA256_DIGEST_SIZE;
+    [[nodiscard]] static int32_t hash(std::string_view text, std::vector<byte>& buffer);
+};
+struct Sha512
+{
+    static constexpr std::string_view HASH_NAME = "SHA512";
+    static constexpr size_t HASH_SIZE = WC_SHA512_DIGEST_SIZE;
+    [[nodiscard]] static int32_t hash(std::string_view text, std::vector<byte>& buffer);
+};
+
+template<typename algorithm_t> requires HashAlgorithm<algorithm_t>
+class CHash
+{
+private:
+    using hasher = algorithm_t;
     using Result = int32_t;
     enum class ErrorCode : int32_t
     {
         instantiationFailure
     };
 public:
-    ISha(const ISha& other) = default;
-    ISha(ISha&& other) = default;
-    ISha& operator=(const ISha& other) = default;
-    ISha& operator=(ISha&& other) = default;
-protected:
-    ISha() = default;
-    virtual ~ISha() = default;
+    static std::expected<CHash<algorithm_t>, ErrorCode> make_hash(std::string_view text)
+    {
+        try
+        {
+            return CHash<algorithm_t>{ text };
+        }
+        catch(const std::runtime_error& err)
+        {
+            LOG_ERROR_FMT("Could not instantiate {} Hash. Error Message: \"{}\"", hasher::HASH_NAME, err.what());
+            return std::unexpected{ ErrorCode::instantiationFailure };
+        }
+    }
+    ~CHash() = default;
+    CHash(const CHash& other) = default;
+    CHash(CHash&& other) = default;
+    CHash& operator=(const CHash& other) = default;
+    CHash& operator=(CHash&& other) = default;
+private:
+    explicit CHash(std::string_view text)
+            : m_Hash{}
+    {
+        m_Hash.resize(hasher::HASH_SIZE);
+        create_hash(text);
+    };
 public:
     void create_hash(std::string_view text)
     {
         static_assert(alignof(byte) == alignof(decltype(text)::value_type));
-        Result success = static_cast<derived_t*>(this)->impl_create_hash(text);
+        Result success = hasher::hash(text, m_Hash);
         if(success != SUCCESS)
             throw std::runtime_error("wolfssl ShaHash convenient function did not return success");
     }
     [[nodiscard]] std::string as_string() const
     {
-        return make_str_copy<std::string>(static_cast<const derived_t*>(this)->m_Hash);
+        return make_str_copy<std::string>(m_Hash);
     }
     [[nodiscard]] std::u8string as_u8string() const
     {
-        return make_str_copy<std::u8string>(static_cast<const derived_t*>(this)->m_Hash);
+        return make_str_copy<std::u8string>(m_Hash);
     }
     [[nodiscard]] const byte* data() const
     {
-        return static_cast<const derived_t*>(this)->m_Hash.data();
+        return m_Hash.data();
+    }
+    [[nodiscard]] size_t size() const
+    {
+        return m_Hash.size();
     }
 private:
-    [[nodiscard]] virtual Result impl_create_hash(std::string_view text) = 0;
     template<typename string_t>
     [[nodiscard]] string_t make_str_copy(const std::vector<byte>& hash) const
     {
@@ -61,59 +111,6 @@ private:
     }
 private:
     static constexpr Result SUCCESS = 0;
-};
-
-class CSha1 final : public ISha<CSha1>
-{
-    friend class ISha;
-private:
-    explicit CSha1(std::string_view text);
-public:
-    [[nodiscard]] static std::expected<CSha1, ErrorCode> make_sha1(std::string_view text);
-    ~CSha1() override = default;
-    CSha1(const CSha1& other) = default;
-    CSha1(CSha1&& other) = default;
-    CSha1& operator=(const CSha1& other) = default;
-    CSha1& operator=(CSha1&& other) = default;
-private:
-    [[nodiscard]] Result impl_create_hash(std::string_view text) override;
-private:
-    std::vector<byte> m_Hash;
-};
-
-class CSha256 final : public ISha<CSha256>
-{
-    friend class ISha;
-private:
-    explicit CSha256(std::string_view text);
-public:
-    [[nodiscard]] static std::expected<CSha256, ErrorCode> make_sha256(std::string_view text);
-    ~CSha256() override = default;
-    CSha256(const CSha256& other) = default;
-    CSha256(CSha256&& other) = default;
-    CSha256& operator=(const CSha256& other) = default;
-    CSha256& operator=(CSha256&& other) = default;
-private:
-    [[nodiscard]] Result impl_create_hash(std::string_view text) override;
-private:
-    std::vector<byte> m_Hash;
-};
-
-class CSha512 final : public ISha<CSha512>
-{
-    friend class ISha;
-private:
-    explicit CSha512(std::string_view text);
-public:
-    [[nodiscard]] static std::expected<CSha512, ErrorCode> make_sha512(std::string_view text);
-    ~CSha512() override = default;
-    CSha512(const CSha512& other) = default;
-    CSha512(CSha512&& other) = default;
-    CSha512& operator=(const CSha512& other) = default;
-    CSha512& operator=(CSha512&& other) = default;
-private:
-    [[nodiscard]] Result impl_create_hash(std::string_view text) override;
-private:
     std::vector<byte> m_Hash;
 };
 }   // namespace security
