@@ -3,6 +3,14 @@
 #include "gfx/SDL_Defines.hpp"
 #include "gui/CGui.hpp"
 
+#include "wolfssl/options.h"
+#include "wolfssl/wolfcrypt/ecc.h"
+#include "wolfssl/wolfcrypt/asn.h"
+#include "wolfssl/wolfcrypt/random.h"
+#include "wolfssl/wolfcrypt/sha256.h"
+#include "wolfssl/ssl.h"
+#include "wolfssl/wolfcrypt/asn_public.h"
+
 #include <windows.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
@@ -173,6 +181,9 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
 }
 
 
+
+
+
 int main(int argc, char** argv)
 {
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
@@ -209,8 +220,10 @@ int main(int argc, char** argv)
     
     
     // winrt::uninit_apartment();
+
+
     
-    
+
     try
     {
         process_cmd_line_args(argc, argv);

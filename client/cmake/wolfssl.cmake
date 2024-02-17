@@ -42,11 +42,8 @@ add_custom_target(COPY_WOLF_STATIC_LIB ALL DEPENDS "${LIB_OUTPUT_DIR}/${WOLFSSL_
 add_dependencies(${MAIN_PROJECT} COPY_WOLF_STATIC_LIB)
 
 
-
-
-
-# If you want to use the .dll - this will copy the .dll to the executable binary directory
-#add_custom_command(TARGET ${MAIN_PROJECT} POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#    $<TARGET_FILE:${FETCH_DEP_WOLFSSL}>
-#    $<TARGET_FILE_DIR:${MAIN_PROJECT}>)
+# Copies the .so to the executable binary directory
+add_custom_command(TARGET ${MAIN_PROJECT} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:${FETCH_DEP_WOLFSSL}>
+    $<TARGET_FILE_DIR:${MAIN_PROJECT}>)
