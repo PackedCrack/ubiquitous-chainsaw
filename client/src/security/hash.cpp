@@ -1,7 +1,7 @@
 //
 // Created by qwerty on 2024-02-17.
 //
-#include "Sha.hpp"
+#include "hash.hpp"
 
 
 namespace security

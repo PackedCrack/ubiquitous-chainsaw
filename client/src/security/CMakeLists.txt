@@ -1,4 +1,4 @@
 SET(SECURITY_SRCS
-Sha.cpp)
+hash.cpp)
 
 target_sources(${MAIN_PROJECT} PRIVATE ${SECURITY_SRCS})
