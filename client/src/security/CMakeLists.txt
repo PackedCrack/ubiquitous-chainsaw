@@ -1,0 +1,4 @@
+SET(SECURITY_SRCS
+Sha.cpp)
+
+target_sources(${MAIN_PROJECT} PRIVATE ${SECURITY_SRCS})
