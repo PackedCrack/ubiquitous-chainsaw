@@ -1,21 +1,24 @@
 cmake_minimum_required(VERSION 3.20)
 
 
-SET(OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/")
-SET(LIB_OUTPUT_DIR "${CMAKE_BINARY_DIR}/lib/")
+SET(OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+SET(LIB_OUTPUT_DIR "${CMAKE_BINARY_DIR}/lib")
 
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 SET(FOLDER_MAIN "chainsaw")
 SET(FOLDER_TEST "test")
 
+
 SET(MAIN_PROJECT chainsaw)
 SET(TEST_PROJECT TESTS)
 project(${MAIN_PROJECT} LANGUAGES C CXX)
+add_executable(${MAIN_PROJECT})
+#add_dependencies(${MAIN_PROJECT} CPPCHECK)
 
 
 include(FetchContent)
-include(../cmake/dependencies.cmake)
+include(cmake/dependencies.cmake)
 include(../cmake/CompilerWarnings.cmake)
 include(../cmake/pch.cmake)
 include(../cmake/cppcheck.cmake)
@@ -24,14 +27,7 @@ fetch_third_party()
 
 
 
-# Initialize third-party projects
-#add_subdirectory("third-party")
-
-
-add_executable(${MAIN_PROJECT})
-#add_dependencies(${MAIN_PROJECT} CPPCHECK)
 add_subdirectory("src")
-
 # properties
 set_target_properties(${MAIN_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
 set_target_properties(${MAIN_PROJECT} PROPERTIES CXX_STANDARD 23)
@@ -44,11 +40,13 @@ set_target_properties(${MAIN_PROJECT} PROPERTIES FOLDER ${FOLDER_MAIN})
 target_include_directories(${MAIN_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../common")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${SDL_SRC_PATH}/include")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${IMGUI_SRC_PATH}/include")
+target_include_directories(${MAIN_PROJECT} PRIVATE "${WOLFSSL_SRC_PATH}/wolfssl")
 
 #link
 target_link_directories(${MAIN_PROJECT} PRIVATE ${LIB_OUTPUT_DIR})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_SDL})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_IMGUI})
+target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_WOLFSSL})
 
 # compiler settings etc
 apply_compiler_warnings(${MAIN_PROJECT})

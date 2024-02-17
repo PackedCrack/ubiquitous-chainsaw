@@ -36,6 +36,5 @@ private:
     winrt::event_revoker<winrt::Windows::Devices::Bluetooth::Advertisement::IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
     CThreadSafeHashMap<std::string, DeviceInfo>* m_pFoundDevices;
 };
-
 }   // namespace win
 }   // namespace ble

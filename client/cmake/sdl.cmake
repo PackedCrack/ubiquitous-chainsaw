@@ -47,3 +47,30 @@ file(COPY ${SDL_SOURCES} DESTINATION ${SDL_BUILD_PATH}/include/)
 
 set(SDL_SHARED_DEFAULT OFF)
 set(SDL_STATIC_DEFAULT ON)
+
+
+# copy .so
+add_custom_command(TARGET ${MAIN_PROJECT} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:${FETCH_DEP_SDL}>
+        $<TARGET_FILE_DIR:${MAIN_PROJECT}>)
+
+
+# copy .a
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    SET(SDL_LIB_NAME "SDL3.lib")
+else()
+    SET(SDL_LIB_NAME "wolfssl.a")
+endif()
+
+# Copy the .a files to the LIB_OUTPUT_DIR directory - doing this manually because updating runtime output dir doesnt seem to work..
+add_custom_command(OUTPUT "${LIB_OUTPUT_DIR}/${SDL_LIB_NAME}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDL_BUILD_PATH}/${SDL_LIB_NAME}"
+        "${LIB_OUTPUT_DIR}/${SDL_LIB_NAME}"
+        DEPENDS "${SDL_BUILD_PATH}/${SDL_LIB_NAME}")
+
+
+add_custom_target(COPY_SDL_STATIC_LIB ALL DEPENDS "${LIB_OUTPUT_DIR}/${SDL_LIB_NAME}")
+
+add_dependencies(${MAIN_PROJECT} COPY_SDL_STATIC_LIB)
