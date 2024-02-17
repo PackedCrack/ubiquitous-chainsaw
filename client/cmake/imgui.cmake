@@ -54,3 +54,25 @@ target_link_directories(${FETCH_DEP_IMGUI} PRIVATE ${LIB_OUTPUT_DIR})
 target_link_libraries(${FETCH_DEP_IMGUI} PRIVATE ${FETCH_DEP_SDL})
 
 file(COPY ${IMGUI_SOURCES} DESTINATION ${IMGUI_SRC_PATH}/include/imgui/)
+
+
+
+
+# The RUNTIME_OUTPUT_DIR variable isnt updated corrcetly - so copy the final .a file manually
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    SET(IMGUI_LIB_NAME "imgui.lib")
+else()
+    SET(IMGUI_LIB_NAME "imgui.a")
+endif()
+
+# Copy the .a files to the LIB_OUTPUT_DIR directory - doing this manually because updating runtime output dir doesnt seem to work..
+add_custom_command(OUTPUT "${LIB_OUTPUT_DIR}/${IMGUI_LIB_NAME}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_BINARY_DIR}/${IMGUI_LIB_NAME}"
+        "${LIB_OUTPUT_DIR}/${IMGUI_LIB_NAME}"
+        DEPENDS "${CMAKE_BINARY_DIR}/${IMGUI_LIB_NAME}")
+
+
+add_custom_target(COPY_IMGUI_STATIC_LIB ALL DEPENDS "${LIB_OUTPUT_DIR}/${IMGUI_LIB_NAME}")
+
+add_dependencies(${MAIN_PROJECT} COPY_IMGUI_STATIC_LIB)
