@@ -120,7 +120,11 @@ CRandom& CRandom::operator=(CRandom&& other) noexcept
     
     return *this;
 }
-CRandom::operator WC_RNG*()
+WC_RNG& CRandom::wc_struct()
+{
+    return m_Rng;
+}
+WC_RNG* CRandom::wc_struct_p()
 {
     return &m_Rng;
 }

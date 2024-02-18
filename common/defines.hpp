@@ -140,3 +140,12 @@ constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_e
 	return 0;
 }
 #endif
+
+template<typename small_t, typename large_t>
+requires std::integral<std::remove_cvref_t<small_t>> && std::integral<std::remove_cvref_t<large_t>>
+[[nodiscard]] small_t assert_down_cast(large_t&& large)
+{
+    static_assert((std::numeric_limits<small_t>::max)() < (std::numeric_limits<std::remove_cvref_t<large_t>>::max)());
+    ASSERT(large <= (std::numeric_limits<small_t>::max)(), "Overflow or wraparound!");
+    return static_cast<small_t>(large);
+};

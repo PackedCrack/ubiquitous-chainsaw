@@ -29,7 +29,9 @@ public:
 private:
     CRandom();
 public:
-    explicit operator WC_RNG*();
+    // TODO:: need better name for this
+    WC_RNG& wc_struct();
+    WC_RNG* wc_struct_p();
 private:
     WC_RNG m_Rng;
 };

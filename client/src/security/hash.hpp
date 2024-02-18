@@ -39,11 +39,20 @@ struct Sha512
     [[nodiscard]] static int32_t hash(std::string_view text, std::vector<byte>& buffer);
 };
 
+
+template<typename hash_t>
+concept Hash = requires(hash_t hash)
+{
+    { hash.size() } -> std::convertible_to<typename decltype(hash)::size_type>;
+    { hash.data() } -> std::convertible_to<typename decltype(hash)::const_pointer>;
+    { hash.as_string() } -> std::convertible_to<std::string>;
+    { hash.as_u8string() } -> std::convertible_to<std::u8string>;
+};
+
 template<typename algorithm_t> requires HashAlgorithm<algorithm_t>
 class CHash
 {
 private:
-    using hasher = algorithm_t;
     using Result = int32_t;
     enum class ErrorCode : int32_t
     {
@@ -75,6 +84,7 @@ private:
         create_hash(text);
     };
 public:
+    // TODO: should be private?
     void create_hash(std::string_view text)
     {
         static_assert(alignof(byte) == alignof(decltype(text)::value_type));
@@ -112,5 +122,9 @@ private:
 private:
     static constexpr Result SUCCESS = 0;
     std::vector<byte> m_Hash;
+    
+    using const_pointer         = decltype(m_Hash)::const_pointer;
+    using size_type         = decltype(m_Hash)::size_type;
+    using hasher = algorithm_t;
 };
 }   // namespace security
