@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-02-17.
 //
 #include "CRandom.hpp"
-#include "defines.hpp"
+#include "defines_wc.hpp"
 
 
 namespace
@@ -47,24 +47,6 @@ constexpr int32_t SUCCESS = 0;
     
     std::unreachable();
 }
-[[nodiscard]] std::string_view free_err_msg(int32_t code)
-{
-    switch(code)
-    {
-        case RNG_FAILURE_E:
-        {
-            static constexpr std::string_view errMsg = "Failed to deallocated drbg";
-            return errMsg;
-        }
-        case BAD_FUNC_ARG:
-        {
-            static constexpr std::string_view errMsg = "rng or rng->drgb null";
-            return errMsg;
-        }
-    }
-    
-    std::unreachable();
-}
 } // namespace
 
 namespace security
@@ -95,9 +77,8 @@ CRandom::~CRandom()
     if(m_Rng.heap == nullptr)   // has been moved
         return;
     
-    int32_t result = wc_FreeRng(&m_Rng);
-    if(result != SUCCESS)
-        throw std::runtime_error{ free_err_msg(result).data() };
+    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__Random.html#function-wc_freerng
+    WC_CHECK(wc_FreeRng(&m_Rng));
 }
 CRandom::CRandom(CRandom&& other) noexcept
     : m_Rng{ other.m_Rng }

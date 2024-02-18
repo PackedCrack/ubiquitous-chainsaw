@@ -16,8 +16,7 @@ class CRandom
 public:
     enum class Error
     {
-        constructionFailure,
-        destructionFailure
+        constructionFailure
     };
 public:
     [[nodiscard]] static std::expected<CRandom, Error> make_rng();
