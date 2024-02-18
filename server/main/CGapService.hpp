@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <type_traits>
 #include <functional>
+#include <vector>
 
 /* Project */
 #include "defines.hpp"
@@ -15,6 +16,8 @@
 #include "host/ble_gap.h"
 #include "services/gap/ble_svc_gap.h"
 #include "host/ble_uuid.h"
+
+#include "services/gatt/ble_svc_gatt.h"
 
 
 namespace application

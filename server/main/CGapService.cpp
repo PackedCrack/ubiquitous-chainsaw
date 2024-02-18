@@ -8,8 +8,29 @@ namespace application
 namespace 
 {
 
-// https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
 
+struct BleCharacteristic
+{
+    ble_uuid_any_t uuid;
+    uint16_t handle;
+    uint16_t handleValue;
+    uint8_t properties;
+};
+
+
+
+struct BleService 
+{
+    ble_uuid_any_t uuid;
+    uint16_t connHandle;
+    uint16_t handleStart;
+    uint16_t handleEnd;
+    std::vector<BleCharacteristic> characteristics;
+};
+
+std::vector<BleService> foundServices {};
+
+// https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
 uint8_t* make_field_name(const std::string_view deviceName)
 { return (uint8_t*)deviceName.data(); }
 
@@ -73,6 +94,161 @@ void set_adv_fields(const std::string_view deviceName)
 }
 
 
+//auto  descriptor_discovery_event_handler = [](uint16_t conn_handle,
+//                                            const struct ble_gatt_error *error,
+//                                            uint16_t chr_val_handle,
+//                                            const struct ble_gatt_dsc *dsc,
+//                                            void *arg) {
+//    int result = error->status;
+//    if (result != ESP_OK) 
+//    {
+//        LOG_INFO_FMT("Error during descriptor discovery: {}", result);
+//        return 0;
+//    } 
+//
+//    char uuidBuf [128];
+//    std::string_view uuid = ble_uuid_to_str((const ble_uuid_t* )&dsc->uuid, uuidBuf);
+//    LOG_INFO_FMT("Descriptor discovered: handle={}, UUID={}", dsc->handle, uuid);
+//    return 0;
+//};
+
+
+void print_services()
+{
+    if (foundServices.empty())
+        return;
+
+    
+
+    for (auto& service : foundServices)
+    {
+        const int MAX_UUID_LEN = 128;
+        char serviceUuidBuf [MAX_UUID_LEN];
+        std::string_view tmpServiceUuid = ble_uuid_to_str((const ble_uuid_t* )&service.uuid, serviceUuidBuf);
+
+        LOG_INFO_FMT("Service: UUID={} connHandle={} handleStart={} handleEnd={}", tmpServiceUuid, service.connHandle, 
+                                                                                    service.handleStart, service.handleEnd);
+
+        for (auto& characteristic : service.characteristics)
+        {
+            char serviceUuidBuf [MAX_UUID_LEN];
+            std::string_view tmpCharacterUuid = ble_uuid_to_str((const ble_uuid_t* )&characteristic.uuid, serviceUuidBuf);
+            LOG_INFO_FMT("Characteristic: UUID={} handle={} handleValue={} properties={}", tmpCharacterUuid, characteristic.handle, 
+                                                                                            characteristic.handleValue, characteristic.properties);
+        }
+    }
+}
+
+// 3=BLE_HS_EINVAL  invalid argument
+// 10=BLE_HS_EBADDATA   Command from peer is invalid. bad data format etc
+// or 10= BLE_ATT_ERR_ATTR_NOT_FOUND  No attribute found within the given attribute handle range.
+auto characteristic_discovery_event_handler = [](uint16_t conn_handle,
+                                            const struct ble_gatt_error *error,
+                                            const struct ble_gatt_chr *chr,
+                                            void *arg) {
+    int result = error->status;
+    if (result == BLE_HS_EDONE || result == BLE_HS_EINVAL)
+    {
+        // dont know why it wont return BLE_HS_EDONE, but the last thing it does return is BLE_HS_EINVAL for some reason
+        LOG_INFO_FMT("Finished with characteristic discovery: {}", result);
+        print_services();
+        return 0;
+    }
+
+    if (result != ESP_OK) 
+    {
+        LOG_WARN_FMT("Error during characteristic discovery: {}", result);
+        return 1;
+    } 
+
+    // Find the service to which this characteristic belongs to
+    for (auto& service : foundServices)
+    {
+        if (chr->def_handle >= service.handleStart && chr->def_handle <= service.handleEnd)
+        {
+            service.characteristics.emplace_back(
+                BleCharacteristic {
+                    .uuid = chr->uuid,
+                    .handle = chr->def_handle,
+                    .handleValue = chr->val_handle,
+                    .properties = chr->properties
+                }
+            );
+            break;
+        }
+    }
+
+    return 0;
+};
+
+
+void discover_service_characteristics(uint16_t connhandle, uint16_t handleStart, uint16_t handleEnd)
+{
+    if (foundServices.empty())
+        return;
+
+    int result = ble_gattc_disc_all_chrs(connhandle, handleStart, handleEnd, characteristic_discovery_event_handler, NULL);
+    if (result != 0) {
+        LOG_INFO_FMT("Failed to initiate characteristic discovery. Error: {}", result);
+    }
+}
+
+
+auto service_discovery_event_handler = [](uint16_t conn_handle,
+                    const struct ble_gatt_error *error,
+                    const struct ble_gatt_svc *service,
+                    void *arg) {
+
+    int result = error->status;
+    
+    if (result == BLE_HS_EDONE)
+    {
+        LOG_INFO("Discovery Process has ended!");
+        LOG_INFO_FMT("Number of services: {}", foundServices.size());
+        return 0;
+    }
+
+    if (result != ESP_OK)
+    {
+        LOG_WARN_FMT("Discovery Process error: {}", result);
+        return 1; // TODOD CHECK WHAT TO RETURN
+    }
+
+    foundServices.emplace_back(
+        BleService {
+            .uuid = service->uuid,
+            .connHandle = conn_handle,
+            .handleStart = service->start_handle,
+            .handleEnd = service->end_handle,
+            .characteristics {}
+        }
+    );
+
+    discover_service_characteristics(conn_handle, service->start_handle, service->end_handle);
+
+
+    //result = ble_gattc_disc_all_dscs(conn_handle, service->start_handle, service->end_handle, descriptor_discovery_event_handler, NULL);
+    //if (result != 0) {
+    //    LOG_INFO_FMT("Failed to initiate descriptor discovery. Error: {}", result);
+    //}    
+    // 6=BLE_GATT_OP_DISC_ALL_DSCS // so failed to discovery any since there were none there
+    // also 6, BLE_HS_ENOMEM
+
+    // 14=BLE_HS_EDONE
+return 0;
+};
+
+
+
+void discover_client_services(uint16_t connHandler)
+{
+    int result = ble_gattc_disc_all_svcs(connHandler, service_discovery_event_handler, NULL);
+    if (result != 0) 
+    {
+        LOG_INFO_FMT("Failed to start Service Discovery process: {}", result);
+    }
+}
+
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
@@ -89,6 +265,10 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
             //    LOG_INFO_FMT("UNABLE TO TERMINATE CONNECTION. CODE: {}", result);
 
             // when connection happens, it is possible to configure another callback that should be used for that connection
+
+            // unable to have locks in here if new procedures are to be created
+
+            discover_client_services(event->connect.conn_handle);
             break;
         }
         case BLE_GAP_EVENT_DISCONNECT: 
@@ -99,21 +279,25 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
             // Instead of start advertisem,ent here we make a call to try and initiate a connection to a bonded device
             // or do we want the client to be then one always wanting to connect?. Yes.
 
+            foundServices.clear();
+            
+
             break;
         }
 
         case BLE_GAP_EVENT_CONN_UPDATE:
             LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE");
+            
             break;
         //case BLE_GAP_EVENT_CONN_UPDATE_REQ:
         //    LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE_REQ");
         //    break;
-        //case BLE_GAP_EVENT_DISC:
-        //    LOG_INFO("BLE_GAP_EVENT_DISC");
-        //    break;
-        //case BLE_GAP_EVENT_DISC_COMPLETE:
-        //   LOG_INFO("BLE_GAP_EVENT_DISC_COMPLETE");
-        //   break;
+        case BLE_GAP_EVENT_DISC:
+            LOG_INFO("BLE_GAP_EVENT_DISC");
+            break;
+        case BLE_GAP_EVENT_DISC_COMPLETE:
+           LOG_INFO("BLE_GAP_EVENT_DISC_COMPLETE");
+           break;
         //case BLE_GAP_EVENT_ADV_COMPLETE:
         //    LOG_INFO("BLE_GAP_EVENT_ADV_COMPLETE");
         //    break;
@@ -140,6 +324,7 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
     } // switch
     return 0;
 };
+
 
 
 }// namespace

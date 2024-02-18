@@ -67,11 +67,11 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
     case BLE_GATT_ACCESS_OP_WRITE_DSC:
         break;
     default:
+        assert(0); // restarts the device
         break;
     }
 
     // should never trigger
-    assert(0); // restarts the device
     return BLE_ATT_ERR_UNLIKELY;
 }
 
