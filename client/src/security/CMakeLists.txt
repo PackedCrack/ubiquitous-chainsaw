@@ -1,7 +1,7 @@
 SET(SECURITY_SRCS
         CWolfCrypt.cpp
         CRandom.cpp
-        CEccKey.cpp
+        ecc_key.cpp
         CHash.hpp
         sha.hpp)
 

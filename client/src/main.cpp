@@ -7,7 +7,7 @@
 #include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
-#include "security/CEccKey.hpp"
+#include "security/ecc_key.hpp"
 
 
 #include "wolfssl/options.h"
@@ -200,6 +200,7 @@ void test_ecc_sign()
     security::CEccKeyPair keyPair{ rng };
     security::CEccPublicKey pubKey = keyPair.public_key();
     security::CEccPrivateKey privKey = keyPair.private_key();
+    
     
     const char* msg = "Very nice message";
     security::CHash<security::Sha2_256> hash{ msg };

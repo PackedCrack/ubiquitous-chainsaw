@@ -1,21 +1,11 @@
 //
 // Created by qwerty on 2024-02-18.
 //
-#include "CEccKey.hpp"
-#include "common.hpp"
+#include "ecc_key.hpp"
 
 
 namespace
 {
-void invalidate(ecc_key& key)
-{
-    key.heap = nullptr;
-    key.dp = nullptr;
-}
-bool has_been_moved(ecc_key& key)
-{
-    return key.heap == nullptr && key.dp == nullptr;
-}
 [[nodiscard]] std::vector<byte> public_key_to_der(ecc_key& key)
 {
     std::vector<byte> buffer{};
@@ -45,102 +35,69 @@ namespace security
 //////////////////////////////////////
 // CEccPublicKey
 //////////////////////////////////////
-CEccPublicKey::~CEccPublicKey()
-{
-    if(has_been_moved(m_Key))
-        return;
-    
-    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_free
-    WC_CHECK(wc_ecc_free(&m_Key));
-}
+CEccPublicKey::CEccPublicKey(const std::vector<uint8_t>& derData)
+        : IEccKey{ derData }
+{}
 CEccPublicKey::CEccPublicKey(const CEccPublicKey& other)
-        : m_Key{}
+    : IEccKey{ other }
 {
-    *this = other.copy();
-}
-CEccPublicKey::CEccPublicKey(CEccPublicKey&& other) noexcept
-        : m_Key{ other.m_Key }
-{
-    static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
-    invalidate(other.m_Key);
+    copy(other.m_Key);
 }
 CEccPublicKey& CEccPublicKey::operator=(const CEccPublicKey& other)
 {
     if(this != &other)
     {
-        *this = other.copy();
+        copy(other.m_Key);
     }
     
     return *this;
 }
-CEccPublicKey& CEccPublicKey::operator=(CEccPublicKey&& other) noexcept
+void CEccPublicKey::copy(ecc_key cpy)
 {
-    if(this != &other)
-    {
-        static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
-        m_Key = other.m_Key;
-        invalidate(other.m_Key);
-    }
-    
-    return *this;
+    decode(public_key_to_der(cpy));
 }
-CEccPublicKey CEccPublicKey::copy() const
+void CEccPublicKey::decode(const std::vector<uint8_t>& derData)
 {
-    ecc_key cpy = m_Key;
-    return CEccPublicKey{ public_key_to_der(cpy) };
+    word32 index = 0u;
+    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
+    WC_CHECK(wc_EccPublicKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
 }
+
 //////////////////////////////////////
 // CEccPrivateKey
 //////////////////////////////////////
-CEccPrivateKey::~CEccPrivateKey()
-{
-    if(has_been_moved(m_Key))
-        return;
-    
-    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_free
-    WC_CHECK(wc_ecc_free(&m_Key));
-}
+CEccPrivateKey::CEccPrivateKey(const std::vector<uint8_t>& derData)
+    : IEccKey{ derData }
+{}
 CEccPrivateKey::CEccPrivateKey(const CEccPrivateKey& other)
-        : m_Key{}
+        : IEccKey{ other }
 {
-    *this = other.copy();
-}
-CEccPrivateKey::CEccPrivateKey(CEccPrivateKey&& other) noexcept
-        : m_Key{ other.m_Key }
-{
-    static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
-    invalidate(other.m_Key);
+    copy(other.m_Key);
 }
 CEccPrivateKey& CEccPrivateKey::operator=(const CEccPrivateKey& other)
 {
     if(this != &other)
     {
-        *this = other.copy();
+        copy(other.m_Key);
     }
     
     return *this;
 }
-CEccPrivateKey& CEccPrivateKey::operator=(CEccPrivateKey&& other) noexcept
+void CEccPrivateKey::copy(ecc_key cpy)
 {
-    if(this != &other)
-    {
-        static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
-        m_Key = other.m_Key;
-        invalidate(other.m_Key);
-    }
-    
-    return *this;
+    decode(private_key_to_der(cpy));
 }
-CEccPrivateKey CEccPrivateKey::copy() const
+void CEccPrivateKey::decode(const std::vector<uint8_t>& derData)
 {
-    ecc_key cpy = m_Key;
-    return CEccPrivateKey{ private_key_to_der(cpy) };
+    word32 index = 0u;
+    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
+    WC_CHECK(wc_EccPrivateKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
 }
 //////////////////////////////////////
 // EccKeyPair
 //////////////////////////////////////
 CEccKeyPair::CEccKeyPair(CRandom& rng)
-    : m_Key{}
+        : m_Key{}
 {
     // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_init
     WC_CHECK(wc_ecc_init(&m_Key));

@@ -1,42 +1,86 @@
 //
 // Created by qwerty on 2024-02-18.
 //
+
 #pragma once
-#include "common.hpp"
 #include "defines_wc.hpp"
-#include "CRandom.hpp"
 #include "CHash.hpp"
+#include "CRandom.hpp"
 // third_party
 #include "wolfcrypt/ecc.h"
-#include "wolfcrypt/asn.h"
+#include "wolfcrypt/asn_public.h"
 
 
 namespace security
 {
-
-
-class CEccPublicKey
+template<typename derived_t>
+class IEccKey
 {
-public:
-    template<typename buffer_t>
-    requires common::Buffer<std::remove_cvref_t<buffer_t>>
-    CEccPublicKey(buffer_t&& derData)
+protected:
+    explicit IEccKey(const std::vector<uint8_t>& derData)
         : m_Key{}
     {
-        ASSERT_FMT(derData.size() > 0u, "Tried to create EccPublicKey without data!");
+        ASSERT_FMT(!derData.empty(), "Tried to create EccKey without data!");
         
         // https://www.wolfssl.com/documentation/manuals/wolfssl/ecc_8h.html#function-wc_ecc_init
         WC_CHECK(wc_ecc_init(&m_Key));
         
-        word32 index = 0u;
-        // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
-        WC_CHECK(wc_EccPublicKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
+        static_cast<derived_t*>(this)->decode(derData);
+    }
+    virtual ~IEccKey()
+    {
+        if(has_been_moved())
+            return;
+        
+        // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_free
+        WC_CHECK(wc_ecc_free(&m_Key));
     };
-    ~CEccPublicKey();
+    IEccKey(const IEccKey& other) = default;
+    IEccKey(IEccKey&& other) noexcept
+            : m_Key{ other.m_Key }
+    {
+        static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
+        other.invalidate();
+    }
+    IEccKey& operator=(const IEccKey& other) = default;
+    IEccKey& operator=(IEccKey&& other) noexcept
+    {
+        if(this != &other)
+        {
+            static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
+            m_Key = other.m_Key;
+            other.invalidate();
+        }
+        
+        return *this;
+    }
+protected:
+    void invalidate()
+    {
+        m_Key.heap = nullptr;
+        m_Key.dp = nullptr;
+    }
+    [[nodiscard]] bool has_been_moved()
+    {
+        return m_Key.heap == nullptr && m_Key.dp == nullptr;
+    }
+protected:
+    ecc_key m_Key;
+};
+
+/**
+ *
+ */
+class CEccPublicKey : public IEccKey<CEccPublicKey>
+{
+    friend IEccKey<CEccPublicKey>;
+public:
+    explicit CEccPublicKey(const std::vector<uint8_t>& derData);
+    ~CEccPublicKey() override = default;
     CEccPublicKey(const CEccPublicKey& other);
-    CEccPublicKey(CEccPublicKey&& other) noexcept;
+    CEccPublicKey(CEccPublicKey&& other) = default;
     CEccPublicKey& operator=(const CEccPublicKey& other);
-    CEccPublicKey& operator=(CEccPublicKey&& other) noexcept;
+    CEccPublicKey& operator=(CEccPublicKey&& other) = default;
 public:
     template<typename buffer_t, typename hash_t>
     requires common::Buffer<std::remove_cvref_t<buffer_t>> && Hash<std::remove_cvref_t<hash_t>>
@@ -44,7 +88,7 @@ public:
     {
         ASSERT_FMT(source.size() > 0u, "Tried to create verify signature on empty buffer!");
         static constexpr int32_t VALID = 1;
-        
+    
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_verify_hash
         int32_t result{};
         WC_CHECK(wc_ecc_verify_hash(
@@ -57,33 +101,23 @@ public:
         return result == VALID;
     }
 private:
-    [[nodiscard]] CEccPublicKey copy() const;
-private:
-    ecc_key m_Key;
+    void decode(const std::vector<uint8_t>& derData);
+    void copy(ecc_key cpy);
 };
 
-class CEccPrivateKey
+/**
+ *
+ */
+class CEccPrivateKey : public IEccKey<CEccPrivateKey>
 {
+    friend IEccKey<CEccPrivateKey>;
 public:
-    template<typename buffer_t>
-    requires common::Buffer<std::remove_cvref_t<buffer_t>>
-    explicit CEccPrivateKey(buffer_t&& derData)
-            : m_Key{}
-    {
-        ASSERT_FMT(derData.size() > 0u, "Tried to create EccPublicKey without data!");
-        
-        // https://www.wolfssl.com/documentation/manuals/wolfssl/ecc_8h.html#function-wc_ecc_init
-        WC_CHECK(wc_ecc_init(&m_Key));
-        
-        word32 index = 0u;
-        // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccprivatekeydecode
-        WC_CHECK(wc_EccPrivateKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
-    };
-    ~CEccPrivateKey();
+    explicit CEccPrivateKey(const std::vector<uint8_t>& derData);
+    ~CEccPrivateKey() override = default;
     CEccPrivateKey(const CEccPrivateKey& other);
-    CEccPrivateKey(CEccPrivateKey&& other) noexcept;
+    CEccPrivateKey(CEccPrivateKey&& other) = default;
     CEccPrivateKey& operator=(const CEccPrivateKey& other);
-    CEccPrivateKey& operator=(CEccPrivateKey&& other) noexcept;
+    CEccPrivateKey& operator=(CEccPrivateKey&& other) = default;
 public:
     template<typename hash_t> requires Hash<std::remove_cvref_t<hash_t>>
     [[nodiscard]] std::vector<byte> sign_hash(CRandom& rng, hash_t&& hash)
@@ -106,11 +140,13 @@ public:
         return signature;
     }
 private:
-    [[nodiscard]] CEccPrivateKey copy() const;
-private:
-    ecc_key m_Key;
+    void decode(const std::vector<uint8_t>& derData);
+    void copy(ecc_key cpy);
 };
 
+/**
+ *
+ */
 class CEccKeyPair
 {
 public:
