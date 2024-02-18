@@ -2,6 +2,7 @@
 // Created by qwerty on 2024-02-18.
 //
 #include "CEccKey.hpp"
+#include "common.hpp"
 
 
 namespace
@@ -20,7 +21,7 @@ bool has_been_moved(ecc_key& key)
     std::vector<byte> buffer{};
     buffer.resize(1024u);
     // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeytoder
-    WCResult result = wc_EccPublicKeyToDer(&key, buffer.data(), assert_down_cast<word32>(buffer.size()), TRUE);
+    WCResult result = wc_EccPublicKeyToDer(&key, buffer.data(), common::assert_down_cast<word32>(buffer.size()), TRUE);
     assert(result > 0);
     buffer.resize(result);
     
@@ -31,7 +32,7 @@ bool has_been_moved(ecc_key& key)
     std::vector<byte> buffer{};
     buffer.resize(1024u);
     // Can't find doc page for wc_EccPrivateKeyToDer...
-    WCResult result = wc_EccPrivateKeyToDer(&key, buffer.data(), assert_down_cast<word32>(buffer.size()));
+    WCResult result = wc_EccPrivateKeyToDer(&key, buffer.data(), common::assert_down_cast<word32>(buffer.size()));
     assert(result > 0);
     buffer.resize(result);
     

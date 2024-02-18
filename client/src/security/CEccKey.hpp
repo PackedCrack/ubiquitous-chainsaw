@@ -2,9 +2,10 @@
 // Created by qwerty on 2024-02-18.
 //
 #pragma once
+#include "common.hpp"
 #include "defines_wc.hpp"
 #include "CRandom.hpp"
-#include "hash.hpp"
+#include "CHash.hpp"
 // third_party
 #include "wolfcrypt/ecc.h"
 #include "wolfcrypt/asn.h"
@@ -12,17 +13,13 @@
 
 namespace security
 {
-template<typename buffer_t>
-concept Buffer = requires(buffer_t buffer)
-{
-    { buffer.size() } -> std::convertible_to<typename decltype(buffer)::size_type>;
-    { buffer.data() } -> std::convertible_to<typename decltype(buffer)::pointer>;
-};
+
 
 class CEccPublicKey
 {
 public:
-    template<typename buffer_t> requires Buffer<std::remove_cvref_t<buffer_t>>
+    template<typename buffer_t>
+    requires common::Buffer<std::remove_cvref_t<buffer_t>>
     CEccPublicKey(buffer_t&& derData)
         : m_Key{}
     {
@@ -33,7 +30,7 @@ public:
         
         word32 index = 0u;
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
-        WC_CHECK(wc_EccPublicKeyDecode(derData.data(), &index, &m_Key, assert_down_cast<word32>(derData.size())));
+        WC_CHECK(wc_EccPublicKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
     };
     ~CEccPublicKey();
     CEccPublicKey(const CEccPublicKey& other);
@@ -42,7 +39,7 @@ public:
     CEccPublicKey& operator=(CEccPublicKey&& other) noexcept;
 public:
     template<typename buffer_t, typename hash_t>
-    requires Buffer<std::remove_cvref_t<buffer_t>> && Hash<std::remove_cvref_t<hash_t>>
+    requires common::Buffer<std::remove_cvref_t<buffer_t>> && Hash<std::remove_cvref_t<hash_t>>
     bool verify_hash(buffer_t&& source, hash_t&& hash)
     {
         ASSERT_FMT(source.size() > 0u, "Tried to create verify signature on empty buffer!");
@@ -50,7 +47,13 @@ public:
         
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_verify_hash
         int32_t result{};
-        WC_CHECK(wc_ecc_verify_hash(source.data(), source.size(), hash.data(), hash.size(), &result, &m_Key));
+        WC_CHECK(wc_ecc_verify_hash(
+                source.data(),
+                common::assert_down_cast<word32>(source.size()),
+                hash.data(),
+                common::assert_down_cast<word32>(hash.size()),
+                &result,
+                &m_Key));
         return result == VALID;
     }
 private:
@@ -62,7 +65,8 @@ private:
 class CEccPrivateKey
 {
 public:
-    template<typename buffer_t> requires Buffer<std::remove_cvref_t<buffer_t>>
+    template<typename buffer_t>
+    requires common::Buffer<std::remove_cvref_t<buffer_t>>
     explicit CEccPrivateKey(buffer_t&& derData)
             : m_Key{}
     {
@@ -73,7 +77,7 @@ public:
         
         word32 index = 0u;
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccprivatekeydecode
-        WC_CHECK(wc_EccPrivateKeyDecode(derData.data(), &index, &m_Key, assert_down_cast<word32>(derData.size())));
+        WC_CHECK(wc_EccPrivateKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
     };
     ~CEccPrivateKey();
     CEccPrivateKey(const CEccPrivateKey& other);
@@ -88,9 +92,15 @@ public:
         
         std::vector<byte> signature{};
         signature.resize(128u);
-        auto bytesWritten = assert_down_cast<word32>(signature.size());
+        auto bytesWritten = common::assert_down_cast<word32>(signature.size());
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_sign_hash
-        WC_CHECK(wc_ecc_sign_hash(hash.data(), hash.size(), signature.data(), &bytesWritten, rng.wc_struct_p(), &m_Key));
+        WC_CHECK(wc_ecc_sign_hash(
+                hash.data(),
+                common::assert_down_cast<word32>(hash.size()),
+                signature.data(),
+                &bytesWritten,
+                rng.wc_struct_p(),
+                &m_Key));
         signature.resize(bytesWritten);
         
         return signature;
