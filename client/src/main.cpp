@@ -3,7 +3,8 @@
 #include "gfx/SDL_Defines.hpp"
 #include "gui/CGui.hpp"
 
-#include "security/hash.hpp"
+#include "security/CHash.hpp"
+#include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
 #include "security/CEccKey.hpp"
@@ -201,13 +202,13 @@ void test_ecc_sign()
     security::CEccPrivateKey privKey = keyPair.private_key();
     
     const char* msg = "Very nice message";
-    auto hash = security::CHash<security::Sha256>::make_hash(msg).value();
+    security::CHash<security::Sha2_256> hash{ msg };
     std::vector<byte> signature = privKey.sign_hash(rng, hash);
     bool verified = pubKey.verify_hash(signature, hash);
     if (verified) {
-        std::printf("Signature Verified Successfully.\n");
+        std::printf("\nSignature Verified Successfully.\n");
     } else {
-        std::printf("Failed to verify Signature.\n");
+        std::printf("\nFailed to verify Signature.\n");
     }
 }
 
