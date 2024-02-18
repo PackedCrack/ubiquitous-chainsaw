@@ -25,6 +25,7 @@ public:
     CChainsaw& operator=(CChainsaw&& other) = delete; // move assign
 public:
     void start();
+    void rssi();
 private:
     CGapService m_gapService;
     CGattService m_gattService;

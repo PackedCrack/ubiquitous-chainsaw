@@ -45,7 +45,7 @@ uint8_t tmpDescriptorValue;
 const ble_uuid128_t tmpDescriptorId = BLE_UUID128_INIT(0x01, 0x01, 0x01, 0x01, 0x12, 0x12, 0x12, 0x12,
                                                        0x23, 0x23, 0x23, 0x23, 0x34, 0x34, 0x34, 0x34);                 
 
-uint8_t tmpCharacteristicValue;
+uint16_t tmpCharacteristicValue;
 uint16_t tmpCharacteristicValuehandle;
 const ble_uuid128_t tmpCharacteristicId = BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
                                                            0x22, 0x22, 0x22, 0x22, 0x33, 0x33, 0x33, 0x33);
@@ -58,13 +58,69 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
 {
 
     switch (pContext->op) {
-    case BLE_GATT_ACCESS_OP_READ_CHR:
-        break;
+    case BLE_GATT_ACCESS_OP_READ_CHR: 
+    {
+        LOG_INFO("BLE_GATT_ACCESS_OP_READ_CHR");
+    }
+    break;
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    {
+        /*
+            The server determines if the characteristic value is updated or not
+            meaning, no external party can modify the servers internal state
+            (the value doesnt ahev to be updated btw)
+        */
+
+        LOG_INFO("BLE_GATT_ACCESS_OP_WRITE_CHR");
+        const int MAX_UUID_LEN = 128;
+        char uuidBuf [MAX_UUID_LEN];
+        std::string_view charUuid = ble_uuid_to_str((const ble_uuid_t* )&pContext->chr->uuid, uuidBuf);
+
+
+        if (pContext->om == nullptr || pContext->om->om_len < 1)
+        {
+            LOG_INFO("NO DATA WAS WRITTEN!");
+            break;
+        }
+        
+        // Read the data from the buffer, it expects BYTE ARRAY or BYTE, otherwise extra care have to be made if its uint or int or UTF-8 (text)
+        /*
+        writing "hej"
+        Data read[19]: 68 -> 'h'
+        Data read[20]: 65 -> 'e'
+        Data read[21]: 6a -> 'j'
+
+        Writing 999999 UINT 32 (Little Endian)
+        Data read[19]: 00
+        Data read[20]: 0f
+        Data read[21]: 42
+        Data read[22]: 3f
+
+        Writing 999999 UINT 32 (Big Endian)   <---  WE EXPECT Big Endian format
+        Data read[19]: 3f
+        Data read[20]: 42
+        Data read[21]: 0f
+        Data read[22]: 00
+
+        */
+        uint8_t* pDataBuffer = pContext->om->om_databuf;
+
+        const uint16_t DATA_DELIMITER = 19;
+        const uint8_t NUM_DATA = *pDataBuffer;
+        const uint8_t DATA_END = DATA_DELIMITER + NUM_DATA;
+
+        LOG_INFO_FMT("{} bytes was written to characteristic={}", NUM_DATA, charUuid);
+        for (int i = DATA_DELIMITER; i < DATA_END; ++i)
+        {
+            std::printf("Data read[%d]: %02x\n", i, pDataBuffer[i]);
+        }
         break;
+    }
     case BLE_GATT_ACCESS_OP_READ_DSC:
+    LOG_INFO("BLE_GATT_ACCESS_OP_READ_DSC");
         break;
     case BLE_GATT_ACCESS_OP_WRITE_DSC:
+    LOG_INFO("BLE_GATT_ACCESS_OP_WRITE_DSC");
         break;
     default:
         assert(0); // restarts the device

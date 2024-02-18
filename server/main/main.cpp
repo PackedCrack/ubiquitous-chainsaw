@@ -43,7 +43,8 @@ extern "C" void app_main(void)
 
 	while (true)
 	{
+		//chainsawServer.rssi();
 		// Perform any periodic tasks here
-		vTaskDelay(pdMS_TO_TICKS(5000)); // milisecs
+		vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
 	}
 }

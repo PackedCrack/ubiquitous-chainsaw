@@ -19,6 +19,8 @@
 
 #include "services/gatt/ble_svc_gatt.h"
 
+#include "nimble/nimble_port.h"
+
 
 namespace application
 {
@@ -38,6 +40,7 @@ public:
     CGapService& operator=(CGapService&& other) = delete;
 public:
     void initilize(const std::string_view deviceName, uint8_t addressType);
+    void rssi();
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;

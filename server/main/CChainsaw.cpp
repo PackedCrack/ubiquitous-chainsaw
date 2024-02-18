@@ -40,6 +40,11 @@ uint8_t ble_generate_random_device_address()
 } // namespace
 
 
+void CChainsaw::rssi()
+{
+    m_gapService.rssi();
+}
+
 void CChainsaw::start()
 {
     // assert check so that sync is finished

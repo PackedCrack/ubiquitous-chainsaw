@@ -8,6 +8,34 @@ namespace application
 namespace 
 {
 
+constexpr uint16_t INVALID_HANDLE= 65535;  
+uint16_t currentConnectionHandle = INVALID_HANDLE;
+
+
+TimerHandle_t timer_handle;
+
+void timer_callback(TimerHandle_t xTimer) {
+    printf("Timer expired!\n");
+
+    // drop current connection
+    // stop timer
+}
+
+void start_timer() {
+    timer_handle = xTimerCreate("MyTimer", pdMS_TO_TICKS(5000), pdFALSE, NULL, timer_callback);
+    xTimerStart(timer_handle, 0);
+}
+
+void reset_timer() {
+    xTimerReset(timer_handle, 0);
+}
+
+void stop_timer() {
+    xTimerStop(timer_handle, 0);
+    xTimerDelete(timer_handle, 0);
+}
+
+
 
 struct BleCharacteristic
 {
@@ -249,6 +277,7 @@ void discover_client_services(uint16_t connHandler)
     }
 }
 
+
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
@@ -268,20 +297,28 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
             // unable to have locks in here if new procedures are to be created
 
-            discover_client_services(event->connect.conn_handle);
+            //discover_client_services(event->connect.conn_handle);
+
+            // we might not need to discover the clients services
+            // instead we can start a timer, and the client needs to write to us within a certain time, otherwise we will drop him
+            // if that write is not verified, we drop him also
+
+            // or:
+            // client connects, server challenges, client responds, server verifies the client
+            // now the continious auth can continue
+            if(currentConnectionHandle != INVALID_HANDLE)
+                break;
+            
+            currentConnectionHandle = event->connect.conn_handle;
+            LOG_INFO_FMT("Current handle: {}", currentConnectionHandle);
             break;
         }
         case BLE_GAP_EVENT_DISCONNECT: 
         {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            // it does no start advertising automatically
 
-            // Instead of start advertisem,ent here we make a call to try and initiate a connection to a bonded device
-            // or do we want the client to be then one always wanting to connect?. Yes.
-
-            foundServices.clear();
-            
-
+            //foundServices.clear();
+            currentConnectionHandle = INVALID_HANDLE;
             break;
         }
 
@@ -292,12 +329,12 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         //case BLE_GAP_EVENT_CONN_UPDATE_REQ:
         //    LOG_INFO("BLE_GAP_EVENT_CONN_UPDATE_REQ");
         //    break;
-        case BLE_GAP_EVENT_DISC:
-            LOG_INFO("BLE_GAP_EVENT_DISC");
-            break;
-        case BLE_GAP_EVENT_DISC_COMPLETE:
-           LOG_INFO("BLE_GAP_EVENT_DISC_COMPLETE");
-           break;
+        //case BLE_GAP_EVENT_DISC:
+        //    LOG_INFO("BLE_GAP_EVENT_DISC");
+        //    break;
+        //case BLE_GAP_EVENT_DISC_COMPLETE:
+        //   LOG_INFO("BLE_GAP_EVENT_DISC_COMPLETE");
+        //   break;
         //case BLE_GAP_EVENT_ADV_COMPLETE:
         //    LOG_INFO("BLE_GAP_EVENT_ADV_COMPLETE");
         //    break;
@@ -325,8 +362,6 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
     return 0;
 };
 
-
-
 }// namespace
 
 
@@ -337,6 +372,23 @@ CGapService::CGapService()
 }
 
 
+void CGapService::rssi()
+{
+    if(currentConnectionHandle == INVALID_HANDLE)
+        return;
+
+    int8_t rssiValue {};
+    int rssi = ble_gap_conn_rssi(currentConnectionHandle, &rssiValue);
+    if (rssi != 0)
+    {
+        LOG_WARN_FMT("Unable to retrieve rssi value: {}", rssi);
+    }
+    else
+    {
+        LOG_INFO_FMT("RSSI VALUE: {}", rssi);
+    }
+}
+
 
 void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
 {
@@ -346,9 +398,11 @@ void CGapService::initilize(const std::string_view deviceName, uint8_t addressTy
     m_bleAddressType = addressType;
     set_adv_fields(deviceName);
 
+
     int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
     if (result != 0)
         LOG_INFO_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
+
 }
 
     
