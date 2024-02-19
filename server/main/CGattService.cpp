@@ -53,7 +53,7 @@ const ble_uuid128_t tmpCharacteristicId = BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x0
 const ble_uuid128_t tmpServiceId = BLE_UUID128_INIT(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
                                                     0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);  
 
-int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, // attributHandle means both characterisitics and descriptor, depending on who triggered the callback
+int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, // attributeHandle means both characterisitics and descriptor, depending on who triggered the callback
                             struct ble_gatt_access_ctxt* pContext, void* pArg)
 {
 
@@ -68,7 +68,7 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
         /*
             The server determines if the characteristic value is updated or not
             meaning, no external party can modify the servers internal state
-            (the value doesnt ahev to be updated btw)
+            (the value doesnt have to be updated btw)
         */
 
         LOG_INFO("BLE_GATT_ACCESS_OP_WRITE_CHR");
@@ -161,7 +161,7 @@ const struct std::array<ble_gatt_svc_def, 2> myService_TEMPLATE =
 }; 
 
 
-void register_service(const struct ble_gatt_svc_def* pServices)
+void register_services(const struct ble_gatt_svc_def* pServices)
 {
     int result = ble_gatts_count_cfg(myService_TEMPLATE.data());
     if (result != 0) {
@@ -177,15 +177,15 @@ void register_service(const struct ble_gatt_svc_def* pServices)
 } // namespace
 
 
+
 CGattService::CGattService()
 {
 
     ble_svc_gatt_init();
-
-    register_service(myService_TEMPLATE.data());
+    register_services(myService_TEMPLATE.data());
 
     /* Setting a value for the read-only descriptor */
-    tmpDescriptorValue = 0x99; // why are we setting it here? I cant see any difference when changing this value
+    //tmpDescriptorValue = 0x99; // why are we setting it here? I cant see any difference when changing this value
 }
 
 } // application namespace 

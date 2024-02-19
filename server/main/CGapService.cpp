@@ -5,35 +5,35 @@
 namespace application
 {
 
+
 namespace 
 {
 
 constexpr uint16_t INVALID_HANDLE= 65535;  
 uint16_t currentConnectionHandle = INVALID_HANDLE;
 
-
-TimerHandle_t timer_handle;
-
-void timer_callback(TimerHandle_t xTimer) {
-    printf("Timer expired!\n");
-
-    // drop current connection
-    // stop timer
-}
-
-void start_timer() {
-    timer_handle = xTimerCreate("MyTimer", pdMS_TO_TICKS(5000), pdFALSE, NULL, timer_callback);
-    xTimerStart(timer_handle, 0);
-}
-
-void reset_timer() {
-    xTimerReset(timer_handle, 0);
-}
-
-void stop_timer() {
-    xTimerStop(timer_handle, 0);
-    xTimerDelete(timer_handle, 0);
-}
+//TimerHandle_t timer_handle;
+//
+//void timer_callback(TimerHandle_t xTimer) {
+//    printf("Timer expired!\n");
+//
+//    // drop current connection
+//    // stop timer
+//}
+//
+//void start_timer() {
+//    timer_handle = xTimerCreate("MyTimer", pdMS_TO_TICKS(5000), pdFALSE, NULL, timer_callback);
+//    xTimerStart(timer_handle, 0);
+//}
+//
+//void reset_timer() {
+//    xTimerReset(timer_handle, 0);
+//}
+//
+//void stop_timer() {
+//    xTimerStop(timer_handle, 0);
+//    xTimerDelete(timer_handle, 0);
+//}
 
 
 
@@ -279,10 +279,16 @@ void discover_client_services(uint16_t connHandler)
 
 
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
+
+    //static CAdvertiser advertiser{};
+    CGapService* gapService = static_cast<CGapService*>(arg);
+    
+
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
         {
             LOG_INFO("BLE_GAP_EVENT_CONNECT");
+            gapService->end_advertise();
             // it stops advertising automatically here
             //advertiser.end_advertise();
 
@@ -299,13 +305,6 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
             //discover_client_services(event->connect.conn_handle);
 
-            // we might not need to discover the clients services
-            // instead we can start a timer, and the client needs to write to us within a certain time, otherwise we will drop him
-            // if that write is not verified, we drop him also
-
-            // or:
-            // client connects, server challenges, client responds, server verifies the client
-            // now the continious auth can continue
             if(currentConnectionHandle != INVALID_HANDLE)
                 break;
             
@@ -316,6 +315,11 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         case BLE_GAP_EVENT_DISCONNECT: 
         {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
+            gapService->begin_advertise();
+            //uint16_t connectionhandle = event->connect.conn_handle;
+            //int result = ble_gap_terminate(connectionhandle, 5);
+            //if (result != 0)
+            //    LOG_INFO_FMT("UNABLE TO TERMINATE CONNECTION. CODE: {}", result); // error code 7.
 
             //foundServices.clear();
             currentConnectionHandle = INVALID_HANDLE;
@@ -365,12 +369,30 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 }// namespace
 
 
+
 CGapService::CGapService() 
     : m_bleAddressType {255u} // TODO: How to use a pre defined variable? include a common header?
     , m_params { make_advertise_params() }
+    , m_isAdvertising {false}
 {
 }
 
+
+void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
+{
+     ble_svc_gap_init();
+     
+    // which one to use? Shoudl we have a bool isInitilized? for saftey
+    m_bleAddressType = addressType;
+    set_adv_fields(deviceName);
+
+
+    //int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
+    //if (result != 0)
+    //    LOG_INFO_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
+    begin_advertise();
+
+}
 
 void CGapService::rssi()
 {
@@ -385,25 +407,42 @@ void CGapService::rssi()
     }
     else
     {
-        LOG_INFO_FMT("RSSI VALUE: {}", rssi);
+        LOG_INFO_FMT("RSSI VALUE: {}", rssiValue);
     }
 }
 
 
-void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
+void CGapService::begin_advertise()
 {
-     ble_svc_gap_init();
-     
-    // which one to use? Shoudl we have a bool isInitilized? for saftey
-    m_bleAddressType = addressType;
-    set_adv_fields(deviceName);
 
+    if (m_isAdvertising)
+    {
+        LOG_WARN("GAP service is already advertising!");
+        return;
+    }
 
-    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
+    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this);
     if (result != 0)
-        LOG_INFO_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
+    {
+        LOG_WARN_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
+    }
 
+    m_isAdvertising = true;
 }
 
+void CGapService::end_advertise()
+{
+      if (!m_isAdvertising)
+    {
+        LOG_WARN("GAP service isn't advertising!");
+        return;
+    }
+    ble_gap_adv_stop();
+
+     m_isAdvertising = false;
     
-} // namespace nimble
+}
+
+} // namespace application
+
+

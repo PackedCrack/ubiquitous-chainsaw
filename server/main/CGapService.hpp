@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <functional>
 #include <vector>
+#include <atomic>
 
 /* Project */
 #include "defines.hpp"
@@ -19,11 +20,32 @@
 
 #include "services/gatt/ble_svc_gatt.h"
 
-#include "nimble/nimble_port.h"
+//#include "nimble/nimble_port.h"
 
 
 namespace application
 {
+
+
+//class CAdvertiser
+//{
+//public:
+//    CAdvertiser();
+//    ~CAdvertiser();
+//    CAdvertiser(const CAdvertiser& other) = delete;
+//    CAdvertiser(CAdvertiser&& other) = delete;
+//    CAdvertiser& operator=(const CAdvertiser& other) = delete;
+//
+//public:
+//    void begin_advertise();
+//    void end_advertise();
+//
+//private:
+//    ble_gap_adv_params m_params;
+//};
+
+
+
 
 // Probably not needed to be a class?
 // no "resources" to keep track of really, except     uint8_t m_bleAddressType and ble_gap_adv_params m_params;
@@ -41,8 +63,12 @@ public:
 public:
     void initilize(const std::string_view deviceName, uint8_t addressType);
     void rssi();
+
+    void begin_advertise();
+    void end_advertise();
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;
+    std::atomic<bool> m_isAdvertising;
 };
 } // namespace nimble

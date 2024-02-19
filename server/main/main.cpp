@@ -31,13 +31,12 @@ extern "C" void app_main(void)
 
 	// https://mynewt.apache.org/latest/
 
-	// how you feel about this PackedCrack? im a genius right?.. right?
 	nimble::configure_nimble_host();
 	
 	application::CChainsaw chainsawServer{};
 
 	nimble_port_freertos_init(nimble::nimble_host_task);
-	nimble::wait_for_sync(); 
+	nimble::wait_for_sync();  // probable need to change this
 
 	chainsawServer.start();
 
