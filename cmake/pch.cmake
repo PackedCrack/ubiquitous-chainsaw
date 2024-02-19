@@ -4,9 +4,11 @@ SET(STD_PCH <cstdint>
           <chrono>
           <algorithm>
         <concepts>
+        <type_traits>
         <stdexcept>
         <string>
         <string_view>
+        <optional>
         <expected>
         <atomic>
         <cassert>

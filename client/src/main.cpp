@@ -3,6 +3,13 @@
 #include "gfx/SDL_Defines.hpp"
 #include "gui/CGui.hpp"
 
+#include "security/CHash.hpp"
+#include "security/sha.hpp"
+#include "security/CWolfCrypt.hpp"
+#include "security/CRandom.hpp"
+#include "security/ecc_key.hpp"
+
+
 #include "wolfssl/options.h"
 #include "wolfssl/wolfcrypt/ecc.h"
 #include "wolfssl/wolfcrypt/asn.h"
@@ -10,6 +17,7 @@
 #include "wolfssl/wolfcrypt/sha256.h"
 #include "wolfssl/ssl.h"
 #include "wolfssl/wolfcrypt/asn_public.h"
+#include "wolfssl/wolfcrypt/signature.h"
 
 #include <windows.h>
 #include <winrt/Windows.Foundation.h>
@@ -23,6 +31,11 @@
 #include "bluetoothLE/CBLEScanner.hpp"
 
 #include "defense/defense_mechanism.hpp"
+
+
+
+
+
 
 
 namespace
@@ -181,11 +194,33 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
 }
 
 
-
+void test_ecc_sign()
+{
+    security::CRandom rng = security::CRandom::make_rng().value();
+    security::CEccKeyPair keyPair{ rng };
+    security::CEccPublicKey pubKey = keyPair.public_key();
+    security::CEccPrivateKey privKey = keyPair.private_key();
+    
+    
+    const char* msg = "Very nice message";
+    security::CHash<security::Sha2_256> hash{ msg };
+    std::vector<byte> signature = privKey.sign_hash(rng, hash);
+    bool verified = pubKey.verify_hash(signature, hash);
+    if (verified) {
+        std::printf("\nSignature Verified Successfully.\n");
+    } else {
+        std::printf("\nFailed to verify Signature.\n");
+    }
+}
 
 
 int main(int argc, char** argv)
 {
+    auto result = security::CWolfCrypt::instance();
+    test_ecc_sign();
+    return 0;
+    
+    
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
     //CThreadSafeHashMap<std::string, ble::DeviceInfo> cache{};
@@ -218,9 +253,7 @@ int main(int argc, char** argv)
     //}
     
     
-    
     // winrt::uninit_apartment();
-
 
     
 

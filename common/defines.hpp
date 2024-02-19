@@ -140,3 +140,4 @@ constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_e
 	return 0;
 }
 #endif
+
