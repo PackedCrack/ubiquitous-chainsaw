@@ -16,7 +16,8 @@ class CRandom
 public:
     enum class Error
     {
-        constructionFailure
+        construction,
+        blockGeneration
     };
 public:
     [[nodiscard]] static std::expected<CRandom, Error> make_rng();
@@ -28,9 +29,10 @@ public:
 private:
     CRandom();
 public:
+    [[nodiscard]] std::expected<std::vector<uint8_t>, Error> generate_block(size_t size);
     // TODO:: need better name for this
-    WC_RNG& wc_struct();
-    WC_RNG* wc_struct_p();
+    [[nodiscard]] WC_RNG& wc_struct();
+    [[nodiscard]] WC_RNG* wc_struct_p();
 private:
     WC_RNG m_Rng;
 };

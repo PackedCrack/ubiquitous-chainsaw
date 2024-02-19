@@ -2,6 +2,7 @@
 // Created by qwerty on 2024-02-17.
 //
 #include "CRandom.hpp"
+#include "common.hpp"
 #include "defines_wc.hpp"
 
 
@@ -60,7 +61,7 @@ std::expected<CRandom, CRandom::Error> CRandom::make_rng()
     catch(const std::runtime_error& err)
     {
         LOG_ERROR_FMT("Failed to create RNG: \"{}\"", err.what());
-        std::unexpected{ Error::constructionFailure };
+        std::unexpected{ Error::construction };
     }
 }
 CRandom::CRandom()
@@ -100,6 +101,18 @@ CRandom& CRandom::operator=(CRandom&& other) noexcept
     }
     
     return *this;
+}
+std::expected<std::vector<uint8_t>, CRandom::Error> CRandom::generate_block(size_t size)
+{
+    static constexpr WCResult SUCCESS = 0;
+    std::vector<uint8_t> dataBlock{};
+    dataBlock.resize(size);
+    
+    WCResult code = wc_RNG_GenerateBlock(&m_Rng, dataBlock.data(), common::assert_down_cast<word32>(dataBlock.size()));
+    if(code == SUCCESS)
+        return dataBlock;
+    else
+        return std::unexpected{ Error::blockGeneration };
 }
 WC_RNG& CRandom::wc_struct()
 {
