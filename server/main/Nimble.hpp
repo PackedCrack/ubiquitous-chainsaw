@@ -1,3 +1,4 @@
+
 #pragma once
 /* STD */
 #include <cstdio>
@@ -17,38 +18,33 @@
 
 #include "host/ble_hs.h"
 
-
-
-
-
 /* ESP */
 #include "esp_log.h"
 
 
-namespace nimble 
+namespace application 
 {
 
-void configure_nimble_host();
-void wait_for_sync();
-void nimble_host_task(void* param);
+//void nimble_initilize();
+//void nimble_host_task(void* param);
+//void nimble_start();
 
-//class CNimble 
-//{
-//
-//public:
-//    CNimble();
-//    ~CNimble();
-//    CNimble(const CNimble& other) = delete; // Copy constructor:
-//    CNimble(CNimble&& other) = delete; // Move constructor:
-//    CNimble& operator=(const CNimble& other) = delete; // copy assign
-//    CNimble& operator=(CNimble&& other) = delete; // move assign
-//public:
-//    static void task(void* param);
-//	void wait_for_sync();
-//private:
-//    void configure_nimble_host();
-//
-//
-//};
-} // namespace nimble
+class CNimble 
+{
 
+public:
+    CNimble();
+    ~CNimble() = default;
+    CNimble(const CNimble& other) = delete; // Copy constructor:
+    CNimble(CNimble&& other) = delete; // Move constructor:
+    CNimble& operator=(const CNimble& other) = delete; // copy assign
+    CNimble& operator=(CNimble&& other) = delete; // move assign
+public:
+    static void host_task(void* param);
+    void start();
+private:
+    void initilize();
+
+
+};
+} // namespace application

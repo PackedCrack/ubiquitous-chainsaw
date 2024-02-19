@@ -1,10 +1,9 @@
 #include "Nimble.hpp"
 
 
-namespace nimble
+namespace application
 {
 
-    
 namespace 
 {
 
@@ -46,10 +45,16 @@ auto gatt_service_register_event_handle = [](struct ble_gatt_register_ctxt *ctxt
     }
 };
 
-
 } // namespace
 
-void configure_nimble_host() 
+
+CNimble::CNimble()
+{
+    initilize();
+}
+
+
+void CNimble::initilize() 
 {
     esp_err_t result = nimble_port_init(); //  will fail if called twice
     if (result != ESP_OK) {
@@ -68,7 +73,8 @@ void configure_nimble_host()
     //ble_store_config_init(); // which header is this?..
 }
 
-void nimble_host_task(void* param)
+
+void CNimble::host_task(void* param)
 {
     // call nimble_port_stop() // to exit from this func
     LOG_INFO("BLE Host Task Started");
@@ -79,65 +85,13 @@ void nimble_host_task(void* param)
     nimble_port_deinit();
 }
 
-void wait_for_sync()
-{ 
+
+void CNimble::start()
+{
+    nimble_port_freertos_init(host_task);
     syncFuture.get();
 }
 
 
-//CNimble::CNimble() 
-//{
-//    esp_err_t result = nimble_port_init(); //  will fail if called twice
-//    if (result != ESP_OK) {
-//        return;
-//    }
-//
-//    configure_nimble_host();
-//}
-//
-//
-//void CNimble::wait_for_sync()
-//{
-//	sync_future.get();
-//}
-//
-//
-//void CNimble::configure_nimble_host() 
-//{
-//    ble_hs_cfg.reset_cb = on_reset_event_handle; 
-//    ble_hs_cfg.sync_cb = on_sync_event_handler;
-//    ble_hs_cfg.gatts_register_cb = gatt_service_register_event_handle;
-//    ble_hs_cfg.store_status_cb = ble_store_util_status_rr; // NOT THE BEST CALLBACK TO USE FOR PRODUCTION
-//    ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
-//    ble_hs_cfg.sm_bonding = 1u;
-//    ble_hs_cfg.sm_our_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the local device is willing to share the encryption key (ENC) during pairing.
-//    ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the remote device is expected to share the encryption key during pairing.
-//    ble_hs_cfg.sm_sc = 1u;
-//    //ble_store_config_init(); // which header is this?..
-//}
-//
-//
-//void CNimble::task(void* param)
-//{
-//    // call nimble_port_stop() // to exit from this func
-//    LOG_INFO("BLE Host Task Started");
-//    nimble_port_run(); // Note: the hs_cfg's callbacks are called in here
-//    LOG_INFO("BLE Host Task Stopped");
-//    nimble_port_freertos_deinit();
-//}
-//
 
-//CNimble::~CNimble() 
-// {
-//     std::printf("entered deconstrtuctor of CNimble");
-//
-//     //int errorCode = nimble_port_stop();
-//     //assert(errorCode == 0);
-//
-//     //esp_err_t result = nimble_port_deinit();
-//     //assert(result == ESP_OK);
-// }
-} // namespace nimble
-
-
-
+} // namespace application

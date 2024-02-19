@@ -1,15 +1,12 @@
 #pragma once
+
 /* STD */
-#include <array>
+#include <future>
 
 /* Project */
-#include "CGapService.hpp"
-#include "CGattService.hpp"
-
-/* Nimble */
-#include "nimble/nimble_port.h"
-#include "host/util/util.h"
-
+#include "Nimble.hpp"
+#include "CGap.hpp"
+#include "CGatt.hpp"
 
 namespace application
 {
@@ -24,11 +21,11 @@ public:
     CChainsaw& operator=(const CChainsaw& other) = delete; // copy assign
     CChainsaw& operator=(CChainsaw&& other) = delete; // move assign
 public:
-    void start();
     void rssi();
 private:
-    CGapService m_gapService;
-    CGattService m_gattService;
+    CNimble m_nimbleHost;
+    CGap m_gap;
+    CGatt m_gatt;
 };
 
 }

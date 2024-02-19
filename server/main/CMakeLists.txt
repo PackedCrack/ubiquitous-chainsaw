@@ -2,8 +2,8 @@ idf_component_register(
 	SRCS 
 	"Nimble.cpp"
 	"CChainsaw.cpp"
-	"CGapService.cpp"
-	"CGattService.cpp"
+	"CGap.cpp"
+	"CGatt.cpp"
 	"CEventGroup.cpp" 
 	"CEventLoop.cpp" 
 	"CNonVolatileStorage.cpp" 

@@ -7,62 +7,60 @@ namespace application
 namespace 
 {
 
+// TODO: They are only used once, but are still alive rest of the program..
+std::promise<void> syncPromise {};
+std::future<void> syncFuture = syncPromise.get_future();
 
-constexpr std::string_view deviceName {"Chainsaw-server"};
+auto on_sync_event_handler = []() {
+    syncPromise.set_value();
+    LOG_INFO("BLE host/controller has become synced");
+};
 
-uint8_t ble_generate_random_device_address() 
-{
-    int result;
-    const int RND_ADDR = 1;
-    const int PUB_ADDR = 0;
-    const uint8_t INVALID_ADDRESS_TYPE = 255u;
-    uint8_t addrType = INVALID_ADDRESS_TYPE;
 
-    result = ble_hs_util_ensure_addr(RND_ADDR);
-    assert(result == 0);
-    result = ble_hs_id_infer_auto(PUB_ADDR, &addrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
-    if (result != 0) 
-        LOG_FATAL_FMT("No address was able to be inferred %d\n", result);
-    
-    if (addrType == INVALID_ADDRESS_TYPE)
-        LOG_FATAL_FMT("Error address type not determined! %d\n", result);
-    
-    // print the address
-    std::array<uint8_t, 6> bleDeviceAddr {};
-    result = ble_hs_id_copy_addr(addrType, bleDeviceAddr.data(), NULL); 
-    if (result != 0) 
-        LOG_FATAL_FMT("Adress was unable to be assigned %d\n", result);
+auto on_reset_event_handle = [](int reason) {
+    LOG_INFO("BLE HOST SOFT RESET TRIGGERED");
+};
 
-    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
 
-    return addrType;
-}
+auto gatt_service_register_event_handle = [](struct ble_gatt_register_ctxt *ctxt, void *arg) {
+    // NIMBLE BLEPRPH EXAMPLE CODE
+    char buf[BLE_UUID_STR_LEN];
+    switch (ctxt->op) {
+        case BLE_GATT_REGISTER_OP_SVC:
+            LOG_INFO_FMT("registered service {} with handle={}\n",
+                        ble_uuid_to_str(ctxt->svc.svc_def->uuid, buf), ctxt->svc.handle);
+            break;
+        case BLE_GATT_REGISTER_OP_CHR:
+            LOG_INFO_FMT("registering characteristic {} with " "def_handle={} val_handle={}\n",
+                        ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf), ctxt->chr.def_handle, ctxt->chr.val_handle);
+            break;
+        case BLE_GATT_REGISTER_OP_DSC:
+            LOG_INFO_FMT("registering descriptor {} with handle={}\n",
+                        ble_uuid_to_str(ctxt->dsc.dsc_def->uuid, buf),ctxt->dsc.handle);
+            break;
+        default:
+            assert(0);
+            break;
+    }
+};
+
 } // namespace
 
 
 void CChainsaw::rssi()
 {
-    m_gapService.rssi();
+    m_gap.rssi();
 }
 
-void CChainsaw::start()
-{
-    // assert check so that sync is finished
-    m_gapService.initilize(deviceName, ble_generate_random_device_address());
-}
 
 CChainsaw::CChainsaw()
-    : m_gapService {}
-    , m_gattService {}
+    : m_nimbleHost {} // initilize / configure callbacks
+    , m_gap {} // maybe gap should own Gatt since gap also uses gatt?
+    , m_gatt {}
 {
 
-    int result;
-    result = ble_svc_gap_device_name_set(deviceName.data());
-    assert(result == 0);
-
-    //ble_svc_gap_init(); //register gap service to GATT server (service UUID 0x1800m, generic access, Device Name, Appearance READ ONlY for both
-    //ble_svc_gatt_init(); // register GATT service to GATT server (service UUID 0x1801) // is this needed? yes, otherwise we cant add additional gatt services
-
+    m_nimbleHost.start();
+    m_gap.start();
 }
 
 } // namespace application

@@ -1,4 +1,4 @@
-#include "CGattService.hpp"
+#include "CGatt.hpp"
 
 
 namespace application
@@ -178,7 +178,7 @@ void register_services(const struct ble_gatt_svc_def* pServices)
 
 
 
-CGattService::CGattService()
+CGatt::CGatt()
 {
 
     ble_svc_gatt_init();

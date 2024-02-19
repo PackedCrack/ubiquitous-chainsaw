@@ -1,5 +1,5 @@
 
-#include "CGapService.hpp"
+#include "CGap.hpp"
 
 
 namespace application
@@ -9,7 +9,9 @@ namespace application
 namespace 
 {
 
-constexpr uint16_t INVALID_HANDLE= 65535;  
+constexpr std::string_view deviceName = "Chainsaw-server";
+constexpr uint16_t INVALID_HANDLE = 65535u;
+constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
 uint16_t currentConnectionHandle = INVALID_HANDLE;
 
 //TimerHandle_t timer_handle;
@@ -44,8 +46,6 @@ struct BleCharacteristic
     uint16_t handleValue;
     uint8_t properties;
 };
-
-
 
 struct BleService 
 {
@@ -281,14 +281,14 @@ void discover_client_services(uint16_t connHandler)
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
     //static CAdvertiser advertiser{};
-    CGapService* gapService = static_cast<CGapService*>(arg);
+    CGap* gap = static_cast<CGap*>(arg);
     
 
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
         {
             LOG_INFO("BLE_GAP_EVENT_CONNECT");
-            gapService->end_advertise();
+            gap->end_advertise();
             // it stops advertising automatically here
             //advertiser.end_advertise();
 
@@ -315,7 +315,7 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         case BLE_GAP_EVENT_DISCONNECT: 
         {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            gapService->begin_advertise();
+            gap->begin_advertise();
             //uint16_t connectionhandle = event->connect.conn_handle;
             //int result = ble_gap_terminate(connectionhandle, 5);
             //if (result != 0)
@@ -366,35 +366,65 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
     return 0;
 };
 
+
+uint8_t ble_generate_random_device_address() 
+{
+    int result;
+    const int RND_ADDR = 1;
+    const int PUB_ADDR = 0;
+    const uint8_t INVALID_ADDRESS_TYPE = 255u;
+    uint8_t addrType = INVALID_ADDRESS_TYPE;
+
+    result = ble_hs_util_ensure_addr(RND_ADDR);
+    assert(result == 0);
+    result = ble_hs_id_infer_auto(PUB_ADDR, &addrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
+    if (result != 0) 
+        LOG_FATAL_FMT("No address was able to be inferred %d\n", result);
+    
+    if (addrType == INVALID_ADDRESS_TYPE)
+        LOG_FATAL_FMT("Error address type not determined! %d\n", result);
+    
+    // print the address
+    std::array<uint8_t, 6> bleDeviceAddr {};
+    result = ble_hs_id_copy_addr(addrType, bleDeviceAddr.data(), NULL); 
+    if (result != 0) 
+        LOG_FATAL_FMT("Adress was unable to be assigned %d\n", result);
+
+    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
+
+    return addrType;
+}
+
 }// namespace
 
 
 
-CGapService::CGapService() 
-    : m_bleAddressType {255u} // TODO: How to use a pre defined variable? include a common header?
+CGap::CGap() 
+    : m_bleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
     , m_params { make_advertise_params() }
     , m_isAdvertising {false}
+    
 {
 }
 
-
-void CGapService::initilize(const std::string_view deviceName, uint8_t addressType)
+void CGap::start()
 {
-     ble_svc_gap_init();
-     
-    // which one to use? Shoudl we have a bool isInitilized? for saftey
-    m_bleAddressType = addressType;
+    ble_svc_gap_init();
+
+    assert(m_bleAddressType == INVALID_ADDRESS_TYPE);
+    m_bleAddressType = ble_generate_random_device_address();
+    assert(m_bleAddressType != INVALID_ADDRESS_TYPE);
+
+    int result;
+    result = ble_svc_gap_device_name_set(deviceName.data());
+    assert(result == 0);
+
     set_adv_fields(deviceName);
-
-
-    //int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, NULL);
-    //if (result != 0)
-    //    LOG_INFO_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
     begin_advertise();
-
 }
 
-void CGapService::rssi()
+
+void CGap::rssi()
 {
     if(currentConnectionHandle == INVALID_HANDLE)
         return;
@@ -412,9 +442,8 @@ void CGapService::rssi()
 }
 
 
-void CGapService::begin_advertise()
+void CGap::begin_advertise()
 {
-
     if (m_isAdvertising)
     {
         LOG_WARN("GAP service is already advertising!");
@@ -425,21 +454,23 @@ void CGapService::begin_advertise()
     if (result != 0)
     {
         LOG_WARN_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
+        return;
     }
 
     m_isAdvertising = true;
 }
 
-void CGapService::end_advertise()
+
+void CGap::end_advertise()
 {
-      if (!m_isAdvertising)
+    if (!m_isAdvertising)
     {
         LOG_WARN("GAP service isn't advertising!");
         return;
     }
-    ble_gap_adv_stop();
 
-     m_isAdvertising = false;
+    ble_gap_adv_stop();
+    m_isAdvertising = false;
     
 }
 

@@ -1,5 +1,5 @@
 #include "CChip.hpp"
-#include "Nimble.hpp"
+//#include "Nimble.hpp"
 #include "CChainsaw.hpp"
 
 #include "CNonVolatileStorage.hpp"
@@ -31,14 +31,8 @@ extern "C" void app_main(void)
 
 	// https://mynewt.apache.org/latest/
 
-	nimble::configure_nimble_host();
-	
 	application::CChainsaw chainsawServer{};
-
-	nimble_port_freertos_init(nimble::nimble_host_task);
-	nimble::wait_for_sync();  // probable need to change this
-
-	chainsawServer.start();
+	
 
 	while (true)
 	{
