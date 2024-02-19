@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <vector>
 #include <atomic>
+#include <array>
 
 /* Project */
 #include "defines.hpp"

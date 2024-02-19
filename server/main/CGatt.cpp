@@ -105,11 +105,13 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
         */
         uint8_t* pDataBuffer = pContext->om->om_databuf;
 
+        // TODO check if this is always the case! 
         const uint16_t DATA_DELIMITER = 19;
         const uint8_t NUM_DATA = *pDataBuffer;
         const uint8_t DATA_END = DATA_DELIMITER + NUM_DATA;
 
         LOG_INFO_FMT("{} bytes was written to characteristic={}", NUM_DATA, charUuid);
+
         for (int i = DATA_DELIMITER; i < DATA_END; ++i)
         {
             std::printf("Data read[%d]: %02x\n", i, pDataBuffer[i]);
