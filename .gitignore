@@ -473,3 +473,6 @@ FodyWeavers.xsd
 /server/.vscode
 
 /build
+
+
+docs/html
