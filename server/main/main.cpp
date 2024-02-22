@@ -1,7 +1,10 @@
 #include "CChip.hpp"
+#include "Nimble.hpp"
 
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
+#include "CNonVolatileStorage.hpp"
+
+
+
 
 void print_chip_info()
 {
@@ -20,8 +23,27 @@ void print_chip_info()
 }
 
 extern "C" void app_main(void)
+
 {
 	print_chip_info();
+	storage::CNonVolatileStorage nvs{};
 
-	esp_err_t ret = nimble_port_init();
+	// https://mynewt.apache.org/latest/
+	
+	try 
+	{
+        ble::CNimble nimble {};
+		//ble::CNimble nimble1 {}; // will fuck up the advertising aswell
+    } catch (const std::exception& error) {
+		LOG_ERROR_FMT("Caught exception: {}", error.what());
+    } catch (...) {
+		LOG_ERROR("Caught unknown exception");
+    }
+
+	while (true)
+	{
+		//chainsawServer.rssi();
+		// Perform any periodic tasks here
+		vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
+	}
 }
