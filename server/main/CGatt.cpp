@@ -97,6 +97,10 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
 
             return result == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
         }
+        else 
+        {
+            return BLE_ATT_ERR_INVALID_HANDLE;
+        }
     }
     break;
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
