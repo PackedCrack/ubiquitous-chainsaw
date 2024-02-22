@@ -1,7 +1,6 @@
 idf_component_register(
 	SRCS 
 	"Nimble.cpp"
-	"CChainsaw.cpp"
 	"CGap.cpp"
 	"CGatt.cpp"
 	"CEventGroup.cpp" 

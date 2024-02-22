@@ -1,7 +1,9 @@
 #include "CGatt.hpp"
 
+#define BLE_DYNAMIC_SERVICE_DELETE 0
 
-namespace application
+
+namespace ble
 {
 
 namespace
@@ -53,14 +55,48 @@ const ble_uuid128_t tmpCharacteristicId = BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x0
 const ble_uuid128_t tmpServiceId = BLE_UUID128_INIT(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
                                                     0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);  
 
+
+
+
+std::vector<uint8_t> writeOperationData {};
+
 int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, // attributeHandle means both characterisitics and descriptor, depending on who triggered the callback
                             struct ble_gatt_access_ctxt* pContext, void* pArg)
 {
+
+
+    
 
     switch (pContext->op) {
     case BLE_GATT_ACCESS_OP_READ_CHR: 
     {
         LOG_INFO("BLE_GATT_ACCESS_OP_READ_CHR");
+
+
+
+        if (connectionHandle == BLE_HS_CONN_HANDLE_NONE)
+         {
+            LOG_ERROR("NO CONNECTION EXISTS FOR READ CHARACTERISTIC!");
+            return BLE_ATT_ERR_INSUFFICIENT_RES;
+         }
+
+        LOG_INFO_FMT("Characteristic read. conn_handle={} attr_handle={}\n", connectionHandle, attributeHandle);
+
+        if (writeOperationData.empty())
+        {
+            writeOperationData.push_back(69);
+        }
+
+        
+        if (attributeHandle == tmpCharacteristicValuehandle) 
+        {
+            std::printf("length of data: %d", sizeof(writeOperationData));
+            int result = os_mbuf_append(pContext->om,
+                                writeOperationData.data(),
+                                writeOperationData.size());
+
+            return result == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
     }
     break;
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
@@ -70,6 +106,10 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
             meaning, no external party can modify the servers internal state
             (the value doesnt have to be updated btw)
         */
+
+       /*
+       Todo handle errors
+       */
 
         LOG_INFO("BLE_GATT_ACCESS_OP_WRITE_CHR");
         const int MAX_UUID_LEN = 128;
@@ -103,6 +143,7 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
         Data read[22]: 00
 
         */
+        writeOperationData.clear();
         uint8_t* pDataBuffer = pContext->om->om_databuf;
 
         // TODO check if this is always the case! 
@@ -111,10 +152,15 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
         const uint8_t DATA_END = DATA_DELIMITER + NUM_DATA;
 
         LOG_INFO_FMT("{} bytes was written to characteristic={}", NUM_DATA, charUuid);
-
         for (int i = DATA_DELIMITER; i < DATA_END; ++i)
         {
             std::printf("Data read[%d]: %02x\n", i, pDataBuffer[i]);
+        }
+
+        // save the data in a vector
+        for (int i = DATA_DELIMITER; i < DATA_END; ++i) 
+        {
+            writeOperationData.push_back(pDataBuffer[i]);
         }
         break;
     }
@@ -162,9 +208,41 @@ const struct std::array<ble_gatt_svc_def, 2> myService_TEMPLATE =
     , 0
 }; 
 
+int dynamic_service(const uint8_t operation, const struct ble_gatt_svc_def *svcs, const ble_uuid_t *uuid) {
+    int rc = 0;
+    int i = 0;
+    switch(operation) {
+     
+        case 0:
+        int rc;
+        rc = ble_gatts_delete_svc(uuid);
+        if(rc != 0) {
+            /* not able to delete service return immidietely */
+            return rc;
+        }
+        i++;
+        return rc;
+            break;
+    }
+    return rc;
+}
 
-void register_services(const struct ble_gatt_svc_def* pServices)
+} // namespace
+
+
+
+CGatt::CGatt()
 {
+    //throw std::runtime_error("An error occured during Construction of CGatt!");
+
+}
+
+void CGatt::register_services()
+{
+
+    
+    //ble_svc_gatt_init();
+
     int result = ble_gatts_count_cfg(myService_TEMPLATE.data());
     if (result != 0) {
         LOG_INFO("UNABLE TO COUNT GATT SVCS");
@@ -176,18 +254,5 @@ void register_services(const struct ble_gatt_svc_def* pServices)
     }
 }
 
-} // namespace
-
-
-
-CGatt::CGatt()
-{
-
-    ble_svc_gatt_init();
-    register_services(myService_TEMPLATE.data());
-
-    /* Setting a value for the read-only descriptor */
-    //tmpDescriptorValue = 0x99; // why are we setting it here? I cant see any difference when changing this value
-}
 
 } // application namespace 

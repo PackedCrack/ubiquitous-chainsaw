@@ -1,6 +1,5 @@
 #include "CChip.hpp"
-//#include "Nimble.hpp"
-#include "CChainsaw.hpp"
+#include "Nimble.hpp"
 
 #include "CNonVolatileStorage.hpp"
 
@@ -30,9 +29,16 @@ extern "C" void app_main(void)
 	storage::CNonVolatileStorage nvs{};
 
 	// https://mynewt.apache.org/latest/
-
-	application::CChainsaw chainsawServer{};
 	
+	try 
+	{
+        ble::CNimble nimble {};
+		//ble::CNimble nimble1 {}; // will fuck up the advertising aswell
+    } catch (const std::exception& error) {
+		LOG_ERROR_FMT("Caught exception: {}", error.what());
+    } catch (...) {
+		LOG_ERROR("Caught unknown exception");
+    }
 
 	while (true)
 	{

@@ -2,14 +2,14 @@
 #include "CGap.hpp"
 
 
-namespace application
+namespace ble
 {
 
 
 namespace 
 {
 
-constexpr std::string_view deviceName = "Chainsaw-server";
+//constexpr std::string_view deviceName = "Chainsaw-server";
 constexpr uint16_t INVALID_HANDLE = 65535u;
 constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
 uint16_t currentConnectionHandle = INVALID_HANDLE;
@@ -174,6 +174,7 @@ auto characteristic_discovery_event_handler = [](uint16_t conn_handle,
                                             const struct ble_gatt_error *error,
                                             const struct ble_gatt_chr *chr,
                                             void *arg) {
+    // https://mynewt.apache.org/master/network/ble_hs/ble_hs_return_codes.html#return-codes-att                                            
     int result = error->status;
     if (result == BLE_HS_EDONE || result == BLE_HS_EINVAL)
     {
@@ -216,8 +217,11 @@ void discover_service_characteristics(uint16_t connhandle, uint16_t handleStart,
         return;
 
     int result = ble_gattc_disc_all_chrs(connhandle, handleStart, handleEnd, characteristic_discovery_event_handler, NULL);
-    if (result != 0) {
-        LOG_INFO_FMT("Failed to initiate characteristic discovery. Error: {}", result);
+    if (result != 0) 
+    {
+        LOG_WARN_FMT("Failed to initiate characteristic discovery. Error: {}", result);
+    // return 6,  BLE_HS_ENOMEM Operation failed due to resource exhaustion.
+
     }
 }
 
@@ -281,7 +285,7 @@ void discover_client_services(uint16_t connHandler)
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
     //static CAdvertiser advertiser{};
-    CGap* gap = static_cast<CGap*>(arg);
+    CGap* gap = static_cast<CGap*>(arg);// shared ownership?
     
 
     switch (event->type) {
@@ -407,14 +411,22 @@ CGap::CGap()
 {
 }
 
+
+//~CGap::CGap()
+//{
+//    if(m_isAdvertising)
+//        end_advertise();
+//}
+
+
 void CGap::start()
 {
-    ble_svc_gap_init();
-
+    //ble_svc_gap_init(); // will crash if called before nimble_port_init()
     assert(m_bleAddressType == INVALID_ADDRESS_TYPE);
-    m_bleAddressType = ble_generate_random_device_address();
+    m_bleAddressType = ble_generate_random_device_address(); // nimble_port_run(); has to be called before this
     assert(m_bleAddressType != INVALID_ADDRESS_TYPE);
-
+    
+    std::string_view deviceName = "Chainsaw-server";
     int result;
     result = ble_svc_gap_device_name_set(deviceName.data());
     assert(result == 0);
@@ -422,6 +434,8 @@ void CGap::start()
     set_adv_fields(deviceName);
     begin_advertise();
 }
+
+
 
 
 void CGap::rssi()
@@ -450,7 +464,7 @@ void CGap::begin_advertise()
         return;
     }
 
-    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this);
+    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); // shared ownership?
     if (result != 0)
     {
         LOG_WARN_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);

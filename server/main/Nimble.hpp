@@ -4,10 +4,11 @@
 #include <cstdio>
 #include <array>
 #include <future>
-#include <functional>
 
 /* Project */
 #include "defines.hpp"
+#include "CGap.hpp"
+#include "CGatt.hpp"
 
 /* BLE */
 #include "nimble/nimble_port.h"
@@ -22,12 +23,8 @@
 #include "esp_log.h"
 
 
-namespace application 
+namespace ble 
 {
-
-//void nimble_initilize();
-//void nimble_host_task(void* param);
-//void nimble_start();
 
 class CNimble 
 {
@@ -39,11 +36,9 @@ public:
     CNimble(CNimble&& other) = delete; // Move constructor:
     CNimble& operator=(const CNimble& other) = delete; // copy assign
     CNimble& operator=(CNimble&& other) = delete; // move assign
-public:
-    static void host_task(void* param);
-    void start();
 private:
-    void initilize();
+    CGatt m_gatt;
+    CGap m_gap;
 
 
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <vector>
 
 #include "defines.hpp"
 
@@ -10,8 +11,10 @@
 #include "services/ans/ble_svc_ans.h"
 
 
-namespace application
+namespace ble
 {
+
+int dynamic_service(const uint8_t operation, const struct ble_gatt_svc_def *svcs, const ble_uuid_t *uuid);
 
 class CGatt // TODO refactor maybe/probably, have to see after introducing auth protocol etc
 {
@@ -22,6 +25,8 @@ public:
     CGatt(CGatt&& other) = delete; // Move constructor:
     CGatt& operator=(const CGatt& other) = delete; // copy assign
     CGatt& operator=(CGatt&& other) = delete; // move assign
+public:
+    void register_services();
 };
 
 }

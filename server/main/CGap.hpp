@@ -22,7 +22,7 @@
 //#include "nimble/nimble_port.h"
 
 
-namespace application
+namespace ble
 {
 
 class CGap
