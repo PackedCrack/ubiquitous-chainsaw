@@ -97,6 +97,10 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
 
             return result == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
         }
+        else 
+        {
+            return BLE_ATT_ERR_INVALID_HANDLE;
+        }
     }
     break;
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
@@ -210,20 +214,20 @@ const struct std::array<ble_gatt_svc_def, 2> myService_TEMPLATE =
 
 int dynamic_service(const uint8_t operation, const struct ble_gatt_svc_def *svcs, const ble_uuid_t *uuid) {
     int rc = 0;
-    int i = 0;
-    switch(operation) {
-     
-        case 0:
-        int rc;
-        rc = ble_gatts_delete_svc(uuid);
-        if(rc != 0) {
-            /* not able to delete service return immidietely */
-            return rc;
-        }
-        i++;
-        return rc;
-            break;
-    }
+    //int i = 0;
+    //switch(operation) {
+    // 
+    //    case 0:
+    //    int rc;
+    //    rc = ble_gatts_delete_svc(uuid);
+    //    if(rc != 0) {
+    //        /* not able to delete service return immidietely */
+    //        return rc;
+    //    }
+    //    i++;
+    //    return rc;
+    //        break;
+    //}
     return rc;
 }
 

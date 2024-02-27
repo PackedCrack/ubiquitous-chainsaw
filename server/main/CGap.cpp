@@ -2,63 +2,21 @@
 #include "CGap.hpp"
 
 
+
 namespace ble
 {
+
+std::promise<void> syncPromise {};
+std::future<void> syncFuture = syncPromise.get_future();
+
+bool callback_finished = false;
 
 
 namespace 
 {
 
-//constexpr std::string_view deviceName = "Chainsaw-server";
-constexpr uint16_t INVALID_HANDLE = 65535u;
-constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
-uint16_t currentConnectionHandle = INVALID_HANDLE;
-
-//TimerHandle_t timer_handle;
-//
-//void timer_callback(TimerHandle_t xTimer) {
-//    printf("Timer expired!\n");
-//
-//    // drop current connection
-//    // stop timer
-//}
-//
-//void start_timer() {
-//    timer_handle = xTimerCreate("MyTimer", pdMS_TO_TICKS(5000), pdFALSE, NULL, timer_callback);
-//    xTimerStart(timer_handle, 0);
-//}
-//
-//void reset_timer() {
-//    xTimerReset(timer_handle, 0);
-//}
-//
-//void stop_timer() {
-//    xTimerStop(timer_handle, 0);
-//    xTimerDelete(timer_handle, 0);
-//}
-
-
-
-struct BleCharacteristic
-{
-    ble_uuid_any_t uuid;
-    uint16_t handle;
-    uint16_t handleValue;
-    uint8_t properties;
-};
-
-struct BleService 
-{
-    ble_uuid_any_t uuid;
-    uint16_t connHandle;
-    uint16_t handleStart;
-    uint16_t handleEnd;
-    std::vector<BleCharacteristic> characteristics;
-};
-
 std::vector<BleService> foundServices {};
 
-// https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Assigned_Numbers/out/en/Assigned_Numbers.pdf?v=1707124555335
 uint8_t* make_field_name(const std::string_view deviceName)
 { return (uint8_t*)deviceName.data(); }
 
@@ -226,38 +184,54 @@ void discover_service_characteristics(uint16_t connhandle, uint16_t handleStart,
 }
 
 
-auto service_discovery_event_handler = [](uint16_t conn_handle,
+auto service_discovery_event_handler = [](uint16_t connHandle,
                     const struct ble_gatt_error *error,
                     const struct ble_gatt_svc *service,
                     void *arg) {
+    // https://mynewt.apache.org/v1_8_0/network/ble_hs/ble_hs_return_codes.html
+    CConnectionHandle* pConnHandle = static_cast<CConnectionHandle*>(arg);
+    assert(pConnHandle->handle() == connHandle);
 
-    int result = error->status;
-    
-    if (result == BLE_HS_EDONE)
+    int returnedResult = error->status;
+
+    std::printf("callback started");
+
+    if (returnedResult == PROCEDURE_HAS_FINISHED)
     {
-        LOG_INFO("Discovery Process has ended!");
-        LOG_INFO_FMT("Number of services: {}", foundServices.size());
-        return 0;
+        LOG_INFO("Discovery procedure has finished!");
+        
+        callback_finished = true;
+
+        return PROCEDURE_HAS_FINISHED;
     }
 
-    if (result != ESP_OK)
+    if (returnedResult == SUCCESS)
     {
-        LOG_WARN_FMT("Discovery Process error: {}", result);
-        return 1; // TODOD CHECK WHAT TO RETURN
+        std::printf("SUCCESS");
+        pConnHandle->add_service(
+            BleService {
+                    .uuid = service->uuid,
+                    .connHandle = connHandle,
+                    .handleStart = service->start_handle,
+                    .handleEnd = service->end_handle,
+                    .characteristics {}
+            }
+        );
+
+        char serviceUuidBuf [MAX_UUID_LEN];
+        std::string_view serviceUuidToString = ble_uuid_to_str(reinterpret_cast<const ble_uuid_t*>( &pConnHandle->services()[ (pConnHandle->num_services() - 1) ].uuid ), serviceUuidBuf);
+        LOG_INFO_FMT("Added Service UUID={}", serviceUuidToString);
+        return SUCCESS;
     }
 
-    foundServices.emplace_back(
-        BleService {
-            .uuid = service->uuid,
-            .connHandle = conn_handle,
-            .handleStart = service->start_handle,
-            .handleEnd = service->end_handle,
-            .characteristics {}
-        }
-    );
+    if (returnedResult != BLE_HS_EDONE)
+    {
+        LOG_WARN_FMT("Discovery Process error: {}", returnedResult);
+        return BLE_HS_EUNKNOWN; // Unexpected failure; catch all.
+    }
 
-    discover_service_characteristics(conn_handle, service->start_handle, service->end_handle);
 
+    //discover_service_characteristics(conn_handle, service->start_handle, service->end_handle);
 
     //result = ble_gattc_disc_all_dscs(conn_handle, service->start_handle, service->end_handle, descriptor_discovery_event_handler, NULL);
     //if (result != 0) {
@@ -266,42 +240,49 @@ auto service_discovery_event_handler = [](uint16_t conn_handle,
     // 6=BLE_GATT_OP_DISC_ALL_DSCS // so failed to discovery any since there were none there
     // also 6, BLE_HS_ENOMEM
 
-    // 14=BLE_HS_EDONE
-return 0;
+    assert(0);
+    return BLE_HS_EUNKNOWN; // should not be triggered
 };
 
 
 
-void discover_client_services(uint16_t connHandler)
+int discover_client_services(CConnectionHandle& connHandler)
 {
-    int result = ble_gattc_disc_all_svcs(connHandler, service_discovery_event_handler, NULL);
-    if (result != 0) 
-    {
-        LOG_INFO_FMT("Failed to start Service Discovery process: {}", result);
-    }
+    return ble_gattc_disc_all_svcs(connHandler.handle(), service_discovery_event_handler, &connHandler);
 }
 
 
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
-    //static CAdvertiser advertiser{};
-    CGap* gap = static_cast<CGap*>(arg);// shared ownership?
+    CGap* pGap = static_cast<CGap*>(arg);// shared ownership?
     
 
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
         {
             LOG_INFO("BLE_GAP_EVENT_CONNECT");
-            gap->end_advertise();
-            // it stops advertising automatically here
-            //advertiser.end_advertise();
 
-            // This is how to terminate a connection we dont want by reason of authentication failure
-            //https://github.com/espressif/esp-idf/issues/8555
-            //uint16_t connectionhandle = event->connect.conn_handle;
-            //int result = ble_gap_terminate(connectionhandle, 5);
-            //if (result != 0)
-            //    LOG_INFO_FMT("UNABLE TO TERMINATE CONNECTION. CODE: {}", result);
+            pGap->set_connection(event->connect.conn_handle);
+
+            int result = pGap->discover_services();
+            if (result != SUCCESS)
+            {
+                LOG_ERROR_FMT("Service Discovery has failed! ERROR_CODE={}", result);
+            }
+
+            std::printf("i was ehre!\n");
+            //uint16_t handle = pGap->connection_handle();
+            //assert(handle != INVALID_HANDLE_ID);
+
+            //int result = pGap->drop_connection(BLE_ERR_AUTH_FAIL); // will trigger disconnect callback
+            //if (result == BLE_HS_ENOTCONN)
+            //    LOG_ERROR_FMT("Tried to terminate a non existent connection. ERROR_CODE={}", result);
+            //else if (result != 0)
+            //    LOG_ERROR_FMT("Terminating connection failed due to unspecified error. ERROR_CODE={}", result);
+            
+    
+            //int result = discover_client_services(m_current);
+
 
             // when connection happens, it is possible to configure another callback that should be used for that connection
 
@@ -309,24 +290,25 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
             //discover_client_services(event->connect.conn_handle);
 
-            if(currentConnectionHandle != INVALID_HANDLE)
-                break;
-            
-            currentConnectionHandle = event->connect.conn_handle;
-            LOG_INFO_FMT("Current handle: {}", currentConnectionHandle);
+            //if(currentConnectionHandle != INVALID_HANDLE_ID)
+            //    break;
+            //
+            //currentConnectionHandle = event->connect.conn_handle;
+            //LOG_INFO_FMT("Current handle: {}", currentConnectionHandle);
             break;
         }
         case BLE_GAP_EVENT_DISCONNECT: 
         {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            gap->begin_advertise();
+            pGap->reset_connection();
+            pGap->begin_advertise();
             //uint16_t connectionhandle = event->connect.conn_handle;
             //int result = ble_gap_terminate(connectionhandle, 5);
             //if (result != 0)
             //    LOG_INFO_FMT("UNABLE TO TERMINATE CONNECTION. CODE: {}", result); // error code 7.
 
             //foundServices.clear();
-            currentConnectionHandle = INVALID_HANDLE;
+            //currentConnectionHandle = INVALID_HANDLE;
             break;
         }
 
@@ -402,12 +384,79 @@ uint8_t ble_generate_random_device_address()
 }// namespace
 
 
+CConnectionHandle::CConnectionHandle()
+    : m_id { INVALID_HANDLE_ID }
+{
+
+}
+
+
+CConnectionHandle::~CConnectionHandle()
+{
+
+}
+
+
+void CConnectionHandle::set_connection(uint16_t id)
+{ 
+    m_id = id; 
+    if (!m_services.empty())
+    {
+        m_services.clear();
+    }
+
+}
+
+
+uint16_t CConnectionHandle::handle() const
+{ return m_id; }
+
+
+int CConnectionHandle::drop(int reason)
+{
+    // https://mynewt.apache.org/v1_8_0/network/ble_hs/ble_hs_return_codes.html
+    assert(m_id != INVALID_HANDLE_ID);
+    //assert(!m_services.empty());
+
+    int result = ble_gap_terminate(m_id, reason);
+    if (result != ESP_OK)
+    {
+        LOG_ERROR_FMT("ERROR terminating connection! ERROR_CODE={}", result);
+    }
+
+    return result;
+}
+
+
+void CConnectionHandle::reset_connection()
+{
+    assert(m_id != INVALID_HANDLE_ID);
+    //assert(!m_services.empty());
+    m_id = INVALID_HANDLE_ID;
+    m_services.clear();
+}
+
+
+void CConnectionHandle::add_service(const BleService& service)
+{
+    m_services.emplace_back(service);
+
+}
+
+int CConnectionHandle::num_services() const
+{ return m_services.size(); }
+
+
+
+const std::vector<BleService> CConnectionHandle::services() const
+{ return m_services; }
+
 
 CGap::CGap() 
     : m_bleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
     , m_params { make_advertise_params() }
-    , m_isAdvertising {false}
-    
+    //, m_isAdvertising {false}
+    , m_currentConnectionHandle {}
 {
 }
 
@@ -418,6 +467,37 @@ CGap::CGap()
 //        end_advertise();
 //}
 
+int CGap::discover_services()
+{
+    assert(m_currentConnectionHandle.handle() != INVALID_HANDLE_ID);
+    int result = discover_client_services(m_currentConnectionHandle);
+    return result;
+}
+
+
+void CGap::set_connection(const uint16_t id)
+{
+    m_currentConnectionHandle.set_connection(id);
+
+}
+
+uint16_t CGap::connection_handle() const
+{
+    return m_currentConnectionHandle.handle();
+}
+
+
+int CGap::drop_connection(int reason)
+{
+    // if we drop connection manually, ble will start advertising automatically
+    return m_currentConnectionHandle.drop(reason);
+}
+
+void CGap::reset_connection()
+{
+    m_currentConnectionHandle.reset_connection();
+
+}
 
 void CGap::start()
 {
@@ -436,56 +516,46 @@ void CGap::start()
 }
 
 
-
-
 void CGap::rssi()
 {
-    if(currentConnectionHandle == INVALID_HANDLE)
-        return;
-
-    int8_t rssiValue {};
-    int rssi = ble_gap_conn_rssi(currentConnectionHandle, &rssiValue);
-    if (rssi != 0)
-    {
-        LOG_WARN_FMT("Unable to retrieve rssi value: {}", rssi);
-    }
-    else
-    {
-        LOG_INFO_FMT("RSSI VALUE: {}", rssiValue);
-    }
+    //if(currentConnectionHandle == INVALID_HANDLE_ID)
+    //    return;
+//
+    //int8_t rssiValue {};
+    //int rssi = ble_gap_conn_rssi(currentConnectionHandle, &rssiValue);
+    //if (rssi != 0)
+    //{
+    //    LOG_WARN_FMT("Unable to retrieve rssi value: {}", rssi);
+    //}
+    //else
+    //{
+    //    LOG_INFO_FMT("RSSI VALUE: {}", rssiValue);
+    //}
 }
 
 
 void CGap::begin_advertise()
 {
-    if (m_isAdvertising)
-    {
-        LOG_WARN("GAP service is already advertising!");
-        return;
-    }
-
+    //assert(!m_isAdvertising);
+    //m_isAdvertising = true;
     int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); // shared ownership?
-    if (result != 0)
-    {
-        LOG_WARN_FMT("Tried to start advertising. Reason: {}, 2=already started, 6=max num connections already", result);
-        return;
-    }
+    if(result != 0)
+        LOG_ERROR_FMT("ERORR STARTING ADVERTISE! ERROR_CODE={}", result);
 
-    m_isAdvertising = true;
+    assert(result == ESP_OK);
 }
 
 
 void CGap::end_advertise()
 {
-    if (!m_isAdvertising)
-    {
-        LOG_WARN("GAP service isn't advertising!");
-        return;
-    }
+    // NOTE: host will end advertising by itself.. need to test with a second source to make sure
+    //assert(m_isAdvertising);
+    //m_isAdvertising = false;
+    int result = ble_gap_adv_stop();
+    if(result != 0)
+        LOG_ERROR_FMT("ERORR ENDING ADVERTISE! ERROR_CODE={}", result);
 
-    ble_gap_adv_stop();
-    m_isAdvertising = false;
-    
+    //assert(result == ESP_OK);
 }
 
 } // namespace application
