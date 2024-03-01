@@ -18,6 +18,12 @@ namespace ble::win
 class CCharacteristic
 {
 public:
+    enum class State : uint32_t
+    {
+        uninitialized,
+        queryingDescriptors,
+        ready
+    };
     enum class Properties : uint32_t
     {
         none = 0,
@@ -56,6 +62,11 @@ public:
     CCharacteristic(CCharacteristic&& other) = default;
     CCharacteristic& operator=(const CCharacteristic& other) = default;
     CCharacteristic& operator=(CCharacteristic&& other) = default;
+public:
+    [[nodiscard]] std::string uuid_as_str() const;
+    [[nodiscard]] bool ready() const;
+    [[nodiscard]] State state() const;
+    winrt::Windows::Foundation::IAsyncAction query_descriptors();
 private:
     explicit CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic);
     winrt::Windows::Foundation::IAsyncAction init();
@@ -64,5 +75,25 @@ public:
     std::unordered_map<ble::UUID, CDescriptor, ble::UUID::Hasher> m_Descriptors;
     ProtectionLevel m_ProtLevel;
     Properties m_Properties;
+    State m_State;
 };
+
+constexpr const char* gatt_communication_status_to_str(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
+{
+    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+    
+    UNHANDLED_CASE_PROTECTION_ON
+    switch(status)
+    {
+        case GattCommunicationStatus::Unreachable:
+            return "Unreachable";
+        case GattCommunicationStatus::ProtocolError:
+            return "Protocol Error";
+        case GattCommunicationStatus::AccessDenied:
+            return "Access Denied";
+        case GattCommunicationStatus::Success:
+            return "Success";
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+}
 }   // namespace ble::win

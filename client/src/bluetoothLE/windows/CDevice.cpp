@@ -7,27 +7,6 @@
 
 namespace
 {
-void log_service_query_err(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
-{
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    
-    UNHANDLED_CASE_PROTECTION_ON
-    switch(status)
-    {
-        case GattCommunicationStatus::Unreachable:
-            LOG_ERROR("Could not retrieve service result. Reason: Unreachable");
-            break;
-        case GattCommunicationStatus::ProtocolError:
-            LOG_ERROR("Could not retrieve service result. Reason: Protocol error");
-            break;
-        case GattCommunicationStatus::AccessDenied:
-            LOG_ERROR("Could not retrieve service result. Reason: Access was denied");
-            break;
-        case GattCommunicationStatus::Success:
-            std::unreachable();
-    }
-    UNHANDLED_CASE_PROTECTION_OFF
-}
 [[nodiscard]] ble::UUID make_uuid(const winrt::guid& guid)
 {
     ble::UUID uuid{};
@@ -50,6 +29,37 @@ CDevice CDevice::make_device(uint64_t address)
     
     return dev;
 }
+winrt::Windows::Foundation::IAsyncAction CDevice::init(uint64_t address)
+{
+    using namespace winrt::Windows::Devices::Bluetooth;
+    
+    /*
+     * The returned BluetoothLEDevice is set to null if
+     * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
+     * */
+    //BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
+    BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
+    if(dev != nullptr)
+    {
+        m_Device.emplace(std::move(dev));
+        co_await query_services();
+    }
+    else
+    {
+        m_State = State::invalidAddress;
+        LOG_ERROR_FMT("Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
+    }
+}
+uint64_t CDevice::address() const
+{
+    ASSERT(m_State == State::ready && m_Device.has_value(), "Cannot retrieve address until a connection has been established.");
+    
+    return m_Device.value().BluetoothAddress();
+}
+std::string CDevice::address_as_str() const
+{
+    return hex_addr_to_str(address());
+}
 bool CDevice::ready() const
 {
     return m_Device.has_value() && m_State == State::ready;
@@ -62,51 +72,37 @@ const std::unordered_map<UUID, CService, UUID::Hasher>& CDevice::services() cons
 {
     return m_Services;
 }
-winrt::Windows::Foundation::IAsyncAction CDevice::init(uint64_t address)
+winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
 {
-    using namespace winrt::Windows::Devices::Bluetooth;
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace winrt::Windows::Foundation::Collections;
     
-    /*
-     * The returned BluetoothLEDevice is set to null if
-     * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
-     * */
-    //BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
-    BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
-    if(dev != nullptr)
+    
+    m_State = State::queryingServices;
+    m_Services.clear();
+    
+    GattDeviceServicesResult result = co_await m_Device.value().GetGattServicesAsync();
+    if (result.Status() == GattCommunicationStatus::Success)
     {
-        GattDeviceServicesResult result = co_await dev.GetGattServicesAsync();
-        if (result.Status() == GattCommunicationStatus::Success)
-        {
-            IVectorView<GattDeviceService> services = result.Services();
-            m_Services.reserve(services.Size());
+        IVectorView<GattDeviceService> services = result.Services();
+        m_Services.reserve(services.Size());
         
-            for(auto&& service : services)
+        for(auto&& service : services)
+        {
+            auto[iter, emplaced] = m_Services.try_emplace(make_uuid(service.Uuid()), CService::make_service(service));
+            if(!emplaced)
             {
-                auto[iter, emplaced] = m_Services.try_emplace(make_uuid(service.Uuid()), CService::make_service(service));
-                if(!emplaced)
-                {
-                    LOG_ERROR("Failed to emplace service..");
-                }
-                
-                
+                LOG_ERROR_FMT("Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(service.Uuid())));
             }
         }
-        else
-        {
-            log_service_query_err(result.Status());
-        
-            m_State = State::serviceQueryFailed;
-        }
-        
-        m_Device.emplace(std::move(dev));
-        m_State = State::ready;
     }
     else
     {
-        LOG_ERROR_FMT("Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
-        m_State = State::invalidAddress;
+        LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Services from device with address: \"{}\"",
+                      gatt_communication_status_to_str(result.Status()),
+                      hex_addr_to_str(m_Device.value().BluetoothAddress()));
     }
+    
+    m_State = State::ready;
 }
 }   // namespace ble::win

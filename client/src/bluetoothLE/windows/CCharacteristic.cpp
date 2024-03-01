@@ -87,8 +87,6 @@ namespace ble::win
 CCharacteristic CCharacteristic::make_characteristic(
         const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic& characteristic)
 {
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    
     CCharacteristic charac{ characteristic };
     charac.init();
     
@@ -98,11 +96,10 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
         : m_Characteristic{ std::move(characteristic) }
         , m_ProtLevel{}
         , m_Properties{}
+        , m_State{ State::uninitialized }
 {}
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::init()
 {
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    
     std::printf("\nCharacteristic UUID: %ws", to_hstring(m_Characteristic.Uuid()).data());
     
     // Storing this mostly for debug purposes for now..
@@ -118,24 +115,51 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::init()
     // TODO:: Debug print
     std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(m_ProtLevel)).c_str());
     
+    co_await query_descriptors();
+}
+[[nodiscard]] std::string CCharacteristic::uuid_as_str() const
+{
+    return winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid()));
+}
+bool CCharacteristic::ready() const
+{
+    return m_State == State::ready;
+}
+CCharacteristic::State CCharacteristic::state() const
+{
+    return m_State;
+}
+winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
+{
+    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+    using namespace winrt::Windows::Foundation::Collections;
+    
+    
+    m_State = State::queryingDescriptors;
+    m_Descriptors.clear();
     
     GattDescriptorsResult result = co_await m_Characteristic.GetDescriptorsAsync();
     if(result.Status() == GattCommunicationStatus::Success)
     {
-        winrt::Windows::Foundation::Collections::IVectorView<GattDescriptor> descriptors = result.Descriptors();
+        IVectorView<GattDescriptor> descriptors = result.Descriptors();
+        m_Descriptors.reserve(descriptors.Size());
+        
         for(auto&& descriptor : descriptors)
         {
             auto[iter, emplaced] = m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), CDescriptor{ descriptor });
             if(!emplaced)
             {
-                LOG_ERROR("Failed to empalce descriptor");
+                LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
             }
         }
     }
     else
     {
-        LOG_WARN_FMT("failed to get descriptors. Failed with: \"{}\"", std::to_underlying(result.Status()));
+        LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
+                      gatt_communication_status_to_str(result.Status()),
+                      uuid_as_str());
     }
+    
+    m_State = State::ready;
 }
-
 }   // namespace ble::win

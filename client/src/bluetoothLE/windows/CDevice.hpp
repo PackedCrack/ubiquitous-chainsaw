@@ -21,7 +21,7 @@ public:
     {
         uninitialized,
         invalidAddress,
-        serviceQueryFailed,
+        queryingServices,
         ready
     };
 public:
@@ -32,9 +32,12 @@ public:
     CDevice& operator=(const CDevice& other) = default;
     CDevice& operator=(CDevice&& other) = default;
 public:
+    [[nodiscard]] uint64_t address() const;
+    [[nodiscard]] std::string address_as_str() const;
     [[nodiscard]] bool ready() const;
     [[nodiscard]] State state() const;
     [[nodiscard]] const std::unordered_map<ble::UUID, CService, ble::UUID::Hasher>& services() const;
+    winrt::Windows::Foundation::IAsyncAction query_services();
 private:
     CDevice() = default;
     winrt::Windows::Foundation::IAsyncAction init(uint64_t address);

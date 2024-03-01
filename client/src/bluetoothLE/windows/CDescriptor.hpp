@@ -20,11 +20,27 @@ enum class ProtectionLevel : int32_t
     encryptionAndAuthenticationRequired = 3,
 };
 
+class CDescriptor
+{
+public:
+    explicit CDescriptor(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor descriptor);
+    ~CDescriptor() = default;
+    CDescriptor(const CDescriptor& other) = default;
+    CDescriptor(CDescriptor&& other) = default;
+    CDescriptor& operator=(const CDescriptor& other) = default;
+    CDescriptor& operator=(CDescriptor&& other) = default;
+public:
+    [[nodiscard]] std::string uuid_as_str() const;
+private:
+    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor m_Descriptor;
+    ProtectionLevel m_ProtLevel;
+};
+
 [[nodiscard]] constexpr ProtectionLevel prot_level_from_winrt(
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattProtectionLevel level)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-
+    
     UNHANDLED_CASE_PROTECTION_ON
     switch (level)
     {
@@ -62,18 +78,4 @@ enum class ProtectionLevel : int32_t
     
     std::unreachable();
 }
-
-class CDescriptor
-{
-public:
-    explicit CDescriptor(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor descriptor);
-    ~CDescriptor() = default;
-    CDescriptor(const CDescriptor& other) = default;
-    CDescriptor(CDescriptor&& other) = default;
-    CDescriptor& operator=(const CDescriptor& other) = default;
-    CDescriptor& operator=(CDescriptor&& other) = default;
-private:
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor m_Descriptor;
-    ProtectionLevel m_ProtLevel;
-};
 }   // namespace ble::win
