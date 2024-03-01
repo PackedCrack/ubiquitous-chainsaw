@@ -13,7 +13,8 @@ SET(FOLDER_TEST "test")
 SET(MAIN_PROJECT chainsaw)
 SET(TEST_PROJECT TESTS)
 project(${MAIN_PROJECT} LANGUAGES C CXX)
-add_executable(${MAIN_PROJECT})
+add_executable(${MAIN_PROJECT}
+        src/security/CHash.hpp)
 #add_dependencies(${MAIN_PROJECT} CPPCHECK)
 
 
@@ -37,6 +38,7 @@ set_target_properties(${MAIN_PROJECT} PROPERTIES C_STANDARD_REQUIRED ON)
 set_target_properties(${MAIN_PROJECT} PROPERTIES FOLDER ${FOLDER_MAIN})
 
 #include
+target_include_directories(${MAIN_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../external/include")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../common")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${SDL_SRC_PATH}/include")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${IMGUI_SRC_PATH}/include")

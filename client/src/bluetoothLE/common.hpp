@@ -4,6 +4,7 @@
 
 #pragma once
 #include "defines.hpp"
+#include "../common/ble_services.hpp"
 
 
 namespace ble
@@ -15,6 +16,18 @@ template<typename int_t> requires unsigned_integral<int_t>
 [[nodiscard]] uint8_t lsb_of_uint(int_t value)
 {
     return static_cast<uint8_t>(value);
+}
+
+template<typename uuid_t>
+[[nodiscard]] ble::UUID make_uuid(uuid_t&& guid)
+{
+    ble::UUID uuid{};
+    static_assert(std::is_trivially_copyable_v<std::remove_reference_t<decltype(guid)>>);
+    static_assert(std::is_trivially_copy_constructible_v<ble::UUID>);
+    static_assert(sizeof(ble::UUID) == sizeof(std::remove_reference_t<decltype(guid)>));
+    std::memcpy(&uuid, &guid, sizeof(uuid));
+    
+    return uuid;
 }
 
 [[nodiscard]] inline char byte_to_hex_char(size_t index)

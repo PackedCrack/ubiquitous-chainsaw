@@ -2,6 +2,10 @@
 
 SET(WINDOWS_BLE_SRCS
     CScanner.cpp
-    CScanner.hpp)
+        CDevice.hpp
+        CDevice.cpp
+        CService.cpp
+        CCharacteristic.cpp
+        CDescriptor.cpp)
 
 target_sources(${MAIN_PROJECT} PRIVATE ${WINDOWS_BLE_SRCS})
