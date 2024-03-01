@@ -11,17 +11,6 @@ using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 
 namespace
 {
-// TODO:: move this out cause all windows types might have to check it..
-void init_com()
-{
-    static bool init = false;
-    if(!init)
-    {
-        winrt::init_apartment();
-        init = true;
-    }
-}
-
 [[nodiscard]] ble::AddressType address_type(BluetoothAddressType addressTypeWin)
 {
     if(addressTypeWin == BluetoothAddressType::Public)
@@ -43,9 +32,7 @@ CScanner::CScanner(CThreadSafeHashMap<std::string, DeviceInfo>& deviceInfoCache)
     : m_Watcher{}
     , m_ReceivedRevoker{ m_Watcher.Received(winrt::auto_revoke, received_event_handler()) }
     , m_pFoundDevices{ &deviceInfoCache }
-{
-    init_com();
-}
+{}
 CScanner::~CScanner()
 {
     if(m_pFoundDevices == nullptr)
