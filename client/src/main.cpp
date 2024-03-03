@@ -97,33 +97,23 @@ int main(int argc, char** argv)
 {
     //auto result = security::CWolfCrypt::instance();
     
-    
     //test_ecc_sign();
     //return 0;
+
     
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
-    //std::mutex test2{};
-    //auto gayer{std::move(test2)};
-    //std::shared_mutex test{};
-    //auto gay = std::move(test);
     
     ble::win::SystemAPI system{};
     
     ble::CBLEScanner scanner = ble::make_scanner();
-    
-    //ble::win::CScanner scanner{ cache };
-    //scanner.begin_scan();
-    
-    //begin_scan(indScanner);
     scanner.begin_scan();
     
-   
     
     while(true)
     {
         std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-        if(infos.size() > 0)
+        if(!infos.empty())
         {
             
             for(const auto& info : infos)
