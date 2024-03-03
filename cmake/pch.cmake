@@ -23,6 +23,7 @@ SET(STD_PCH <cstdint>
         <variant>
         <ranges>
         <random>
+        <queue>
         <cerrno>)
 
 # --- functions --- #

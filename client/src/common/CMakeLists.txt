@@ -1,7 +1,7 @@
 SET(COMMON_SRCS
         CStopWatch.hpp
         CThreadSafeHashMap.hpp
-        CGenerator.hpp
+        CMutex.hpp
 )
 
 
