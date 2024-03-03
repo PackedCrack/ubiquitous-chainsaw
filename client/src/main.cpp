@@ -1,7 +1,7 @@
 #include "defines.hpp"
 #include "gfx/CRenderer.hpp"
-#include "gfx/SDL_Defines.hpp"
 #include "gui/CGui.hpp"
+
 
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
@@ -10,29 +10,16 @@
 #include "security/ecc_key.hpp"
 
 
-#include "wolfssl/options.h"
-#include "wolfssl/wolfcrypt/ecc.h"
-#include "wolfssl/wolfcrypt/asn.h"
-#include "wolfssl/wolfcrypt/random.h"
-#include "wolfssl/wolfcrypt/sha256.h"
-#include "wolfssl/ssl.h"
-#include "wolfssl/wolfcrypt/asn_public.h"
-#include "wolfssl/wolfcrypt/signature.h"
+#include "taskflow/taskflow.hpp"
 
-#include <windows.h>
+
 #include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
-#include <winrt/Windows.Devices.Bluetooth.h>
-#include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
-#include <winrt/Windows.Foundation.Collections.h>
 
-#include <iostream>
-#include <coroutine>
+
 #include "bluetoothLE/CBLEScanner.hpp"
 #include "bluetoothLE/windows/CDevice.hpp"
 #include "bluetoothLE/windows/SystemAPI.h"
 
-#include "defense/defense_mechanism.hpp"
 
 
 
@@ -91,11 +78,10 @@ void test_ecc_sign()
     }
 }
 
-#include "common/CMutex.hpp"
 
 int main(int argc, char** argv)
 {
-    //auto result = security::CWolfCrypt::instance();
+    auto result = security::CWolfCrypt::instance();
     
     //test_ecc_sign();
     //return 0;
@@ -110,25 +96,31 @@ int main(int argc, char** argv)
     scanner.begin_scan();
     
     
-    while(true)
+    tf::Executor executor{};
+    
+    executor.silent_async([&scanner]()
     {
-        std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-        if(!infos.empty())
+        while(true)
         {
-            
-            for(const auto& info : infos)
+            std::vector<ble::DeviceInfo> infos = scanner.found_devices();
+            if(!infos.empty())
             {
-                LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-                             ble::hex_addr_to_str(info.address.value()),
-                             ble::address_type_to_str(info.addressType));
-    
-                query_device(info.address.value());
+                
+                for(const auto& info : infos)
+                {
+                    LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
+                                 ble::hex_addr_to_str(info.address.value()),
+                                 ble::address_type_to_str(info.addressType));
+                    
+                    query_device(info.address.value());
+                }
+                break;
             }
-            break;
+            
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
+    });
     
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
     
     
 
