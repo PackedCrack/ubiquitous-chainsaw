@@ -22,10 +22,27 @@ template<typename uuid_t>
 [[nodiscard]] ble::UUID make_uuid(uuid_t&& guid)
 {
     ble::UUID uuid{};
-    static_assert(std::is_trivially_copyable_v<std::remove_reference_t<decltype(guid)>>);
-    static_assert(std::is_trivially_copy_constructible_v<ble::UUID>);
-    static_assert(sizeof(ble::UUID) == sizeof(std::remove_reference_t<decltype(guid)>));
-    std::memcpy(&uuid, &guid, sizeof(uuid));
+    
+    uuid.data1 = guid.Data1;
+    uuid.custom = guid.Data2;
+    uuid.data3 = guid.Data3;
+    
+    uuid.data4 = guid.Data4[0];
+    uuid.data4 = uuid.data4 << 8u;
+    uuid.data4 = uuid.data4 | guid.Data4[1];
+    
+    uuid.data5 = guid.Data4[2];
+    uuid.data5 = uuid.data5 << 8u;
+    uuid.data5 = uuid.data5 | guid.Data4[3];
+    
+    uuid.data6 = guid.Data4[4];
+    uuid.data6 = uuid.data6 << 8u;
+    uuid.data6 = uuid.data6 | guid.Data4[5];
+    
+    uuid.data7 = guid.Data4[6];
+    uuid.data7 = uuid.data7 << 8u;
+    uuid.data7 = uuid.data7 | guid.Data4[7];
+    
     
     return uuid;
 }

@@ -67,6 +67,7 @@ void query_device(uint64_t bluetoothAddress)
         .data6 = 0x59a2,
         .data7 = 0x712d
     };
+    
     auto services = device.services();
     auto iter = services.find(uuid);
     if(iter != std::end(services))
@@ -83,15 +84,18 @@ void query_device(uint64_t bluetoothAddress)
         };
         
         auto result = service.characteristic(characteristicUuid);
-        if(result.error() == ble::win::CService::Error::characteristicNotFound)
-        {
-            LOG_ERROR("Failed to find characteristic");
-        }
-        else
+        if(result)
         {
             LOG_INFO("Reading characteristic value!");
             const ble::win::CCharacteristic* pCharacteristic = result.value();
             pCharacteristic->read_value();
+        }
+        else
+        {
+            if(result.error() == ble::win::CService::Error::characteristicNotFound)
+            {
+                LOG_ERROR("Failed to find characteristic");
+            }
         }
     }
     else
