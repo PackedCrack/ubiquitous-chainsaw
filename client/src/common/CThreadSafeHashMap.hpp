@@ -3,18 +3,22 @@
 //
 
 #pragma once
+#include "CMutex.hpp"
 
 
 template<typename hashable_key_t, typename element_t>
 class CThreadSafeHashMap
 {
 public:
-    CThreadSafeHashMap() = default;
+    CThreadSafeHashMap()
+        : m_Container{}
+        , m_Mutex{}
+    {};
     ~CThreadSafeHashMap() = default;
-    CThreadSafeHashMap(const CThreadSafeHashMap& other) = delete;
-    CThreadSafeHashMap(CThreadSafeHashMap&& other) = delete;
-    CThreadSafeHashMap& operator=(const CThreadSafeHashMap& other) = delete;
-    CThreadSafeHashMap& operator=(CThreadSafeHashMap&& other) = delete;
+    CThreadSafeHashMap(const CThreadSafeHashMap& other) = default;
+    CThreadSafeHashMap(CThreadSafeHashMap&& other) = default;
+    CThreadSafeHashMap& operator=(const CThreadSafeHashMap& other) = default;
+    CThreadSafeHashMap& operator=(CThreadSafeHashMap&& other) = default;
 public:
     enum class ErrorCode
     {
@@ -84,5 +88,5 @@ public:
     }
 private:
     std::unordered_map<hashable_key_t, element_t> m_Container;
-    std::shared_mutex m_Mutex;
+    CMutex<std::shared_mutex> m_Mutex;
 };

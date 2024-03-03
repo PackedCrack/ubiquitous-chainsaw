@@ -28,14 +28,14 @@ namespace ble
 {
 namespace win
 {
-CScanner::CScanner(CThreadSafeHashMap<std::string, DeviceInfo>& deviceInfoCache)
+CScanner::CScanner()
     : m_Watcher{}
     , m_ReceivedRevoker{ m_Watcher.Received(winrt::auto_revoke, received_event_handler()) }
-    , m_pFoundDevices{ &deviceInfoCache }
+    , m_FoundDevices{}
 {}
 CScanner::~CScanner()
 {
-    if(m_pFoundDevices == nullptr)
+    if(m_Watcher == nullptr)
         return;
     
     if(m_Watcher.Status() == BluetoothLEAdvertisementWatcherStatus::Started)
@@ -44,31 +44,29 @@ CScanner::~CScanner()
 
 CScanner::CScanner(CScanner&& other) noexcept
         : m_Watcher{}
-        , m_pFoundDevices{ nullptr }
+        , m_FoundDevices{ std::move(other.m_FoundDevices) }
 {
-    other.m_Watcher.Stop(); // TODO:: Should probably wait for this?
-    m_Watcher = std::move(other.m_Watcher);
-    // We must update the event handlers since the this pointer has changed..
-    refresh_received_event_handler();
-    
-    std::swap(m_pFoundDevices, other.m_pFoundDevices);
+    move_impl(other);
 }
 
 CScanner& CScanner::operator=(CScanner&& other) noexcept
 {
     if(this != &other)
     {
-        other.m_Watcher.Stop();
-        m_Watcher = std::move(other.m_Watcher);
-        // We must update the event handlers since the this pointer has changed..
-        refresh_received_event_handler();
-        
-        std::swap(m_pFoundDevices, other.m_pFoundDevices);
+        m_FoundDevices = std::move(other.m_FoundDevices);
+        move_impl(other);
     }
     
     return *this;
 }
-
+void CScanner::move_impl(CScanner& other)
+{
+    other.m_Watcher.Stop(); // TODO:: Should probably wait for this?
+    m_Watcher = std::move(other.m_Watcher);
+    ASSERT(other.m_Watcher == nullptr, "Microsoft's type does not set itself to nullptr after move - do it manually");
+    // We must update the event handlers since the this pointer has changed..
+    refresh_received_event_handler();
+}
 void CScanner::begin_scan() const
 {
     m_Watcher.Start();
@@ -77,7 +75,10 @@ void CScanner::end_scan() const
 {
     m_Watcher.Stop();
 }
-
+std::vector<ble::DeviceInfo> CScanner::found_devices()
+{
+    return m_FoundDevices.as_vector();
+}
 void CScanner::revoke_received_event_handler()
 {
     m_ReceivedRevoker.revoke();
@@ -96,7 +97,6 @@ void CScanner::refresh_received_event_handler()
 
 std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisementReceivedEventArgs)> CScanner::received_event_handler()
 {
-    std::printf("\nADDRESS IS: %p", this);
     return [this](auto&&, BluetoothLEAdvertisementReceivedEventArgs args)
     {
         DeviceInfo devInfo{};
@@ -109,8 +109,8 @@ std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisem
         
         // TODO:: We cant cache on address if the address is optional.
         std::string strAddress = ble::hex_addr_to_str(devInfo.address.value());
-        if(!m_pFoundDevices->contains(strAddress))
-            m_pFoundDevices->insert(std::move(strAddress), std::move(devInfo));
+        if(!m_FoundDevices.contains(strAddress))
+            m_FoundDevices.insert(std::move(strAddress), std::move(devInfo));
     };
 }
 }   // namespace win

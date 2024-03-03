@@ -12,6 +12,7 @@ concept Scanner = requires(implementation_t impl)
 {
     { impl.begin_scan() };
     { impl.end_scan() };
+    { impl.found_devices() } -> std::convertible_to<std::vector<DeviceInfo>>;
 };
 
 class CBLEScanner
@@ -19,6 +20,8 @@ class CBLEScanner
 private:
     friend void begin_scan(const CBLEScanner& scanner) { scanner.m_PlatformScanner->execute_begin_scan(); }
     friend void end_scan(const CBLEScanner& scanner) { scanner.m_PlatformScanner->execute_end_scan(); }
+    [[nodiscard]] friend std::vector<DeviceInfo> found_devices(CBLEScanner& scanner)
+    { return scanner.m_PlatformScanner->execute_found_devices(); }
     class IBase
     {
     public:
@@ -28,6 +31,7 @@ private:
         
         virtual void execute_begin_scan() const = 0;
         virtual void execute_end_scan() const = 0;
+        virtual std::vector<DeviceInfo> execute_found_devices() = 0;
     protected:
         IBase() = default;
         IBase(IBase&& other) = default;
@@ -48,6 +52,7 @@ private:
     public:
         void execute_begin_scan() const override { m_Scanner.begin_scan(); }
         void execute_end_scan() const override { m_Scanner.end_scan(); }
+        [[nodiscard]] std::vector<DeviceInfo> execute_found_devices() override { return m_Scanner.found_devices(); }
     private:
         scanner_t m_Scanner;
     };
@@ -62,9 +67,17 @@ public:
     CBLEScanner& operator=(const CBLEScanner& other) = delete;
     CBLEScanner& operator=(CBLEScanner&& other) = default;
     
-    void begin_scan()
+    void begin_scan() const
     {
         m_PlatformScanner->execute_begin_scan();
+    }
+    void end_scan() const
+    {
+        m_PlatformScanner->execute_end_scan();
+    }
+    [[nodiscard]] std::vector<DeviceInfo> found_devices()
+    {
+        return m_PlatformScanner->execute_found_devices();
     }
 private:
     std::unique_ptr<IBase> m_PlatformScanner;

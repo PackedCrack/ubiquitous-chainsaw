@@ -15,7 +15,7 @@ namespace win
 class CScanner
 {
 public:
-    explicit CScanner(CThreadSafeHashMap<std::string, DeviceInfo>& deviceInfoCache);
+    CScanner();
     ~CScanner();
     CScanner(const CScanner& other) = delete;
     CScanner(CScanner&& other) noexcept;
@@ -24,7 +24,9 @@ public:
 public:
     void begin_scan() const;
     void end_scan() const;
+    [[nodiscard]] std::vector<ble::DeviceInfo> found_devices();
 private:
+    void move_impl(CScanner& other);
     void revoke_received_event_handler();
     void register_received_event_handler();
     void refresh_received_event_handler();
@@ -34,7 +36,7 @@ private:
 private:
     winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher m_Watcher;
     winrt::event_revoker<winrt::Windows::Devices::Bluetooth::Advertisement::IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
-    CThreadSafeHashMap<std::string, DeviceInfo>* m_pFoundDevices;
+    CThreadSafeHashMap<std::string, DeviceInfo> m_FoundDevices;
 };
 }   // namespace win
 }   // namespace ble

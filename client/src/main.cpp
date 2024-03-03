@@ -91,6 +91,7 @@ void test_ecc_sign()
     }
 }
 
+#include "common/CMutex.hpp"
 
 int main(int argc, char** argv)
 {
@@ -100,28 +101,31 @@ int main(int argc, char** argv)
     //test_ecc_sign();
     //return 0;
     
-    
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
+    //std::mutex test2{};
+    //auto gayer{std::move(test2)};
+    //std::shared_mutex test{};
+    //auto gay = std::move(test);
     
     ble::win::SystemAPI system{};
     
-    CThreadSafeHashMap<std::string, ble::DeviceInfo> cache{};
-    ble::CBLEScanner indScanner = ble::make_scanner(cache);
+    ble::CBLEScanner scanner = ble::make_scanner();
     
     //ble::win::CScanner scanner{ cache };
     //scanner.begin_scan();
     
     //begin_scan(indScanner);
-    indScanner.begin_scan();
+    scanner.begin_scan();
     
    
     
     while(true)
     {
-        if(cache.size() > 0)
+        std::vector<ble::DeviceInfo> infos = scanner.found_devices();
+        if(infos.size() > 0)
         {
-            std::vector<ble::DeviceInfo> infos = cache.as_vector();
+            
             for(const auto& info : infos)
             {
                 LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
