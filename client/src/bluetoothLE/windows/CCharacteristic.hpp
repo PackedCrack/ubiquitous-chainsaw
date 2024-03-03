@@ -67,6 +67,7 @@ public:
     [[nodiscard]] bool ready() const;
     [[nodiscard]] State state() const;
     winrt::Windows::Foundation::IAsyncAction query_descriptors();
+    void read_value() const;
 private:
     explicit CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic);
     winrt::Windows::Foundation::IAsyncAction init();

@@ -57,6 +57,47 @@ void query_device(uint64_t bluetoothAddress)
     while(!device.ready())
     {
     }
+    
+    ble::UUID uuid{
+        .data1 = 0x59462f12,
+        .custom = 0x9543,
+        .data3 = 0x9999,
+        .data4 = 0x12c8,
+        .data5 = 0x58b4,
+        .data6 = 0x59a2,
+        .data7 = 0x712d
+    };
+    auto services = device.services();
+    auto iter = services.find(uuid);
+    if(iter != std::end(services))
+    {
+        ble::win::CService& service = iter->second;
+        ble::UUID characteristicUuid{
+                .data1 = 0x33333333,
+                .custom = 0x2222,
+                .data3 = 0x2222,
+                .data4 = 0x1111,
+                .data5 = 0x1111,
+                .data6 = 0x0000,
+                .data7 = 0x0000
+        };
+        
+        auto result = service.characteristic(characteristicUuid);
+        if(result.error() == ble::win::CService::Error::characteristicNotFound)
+        {
+            LOG_ERROR("Failed to find characteristic");
+        }
+        else
+        {
+            LOG_INFO("Reading characteristic value!");
+            const ble::win::CCharacteristic* pCharacteristic = result.value();
+            pCharacteristic->read_value();
+        }
+    }
+    else
+    {
+        LOG_ERROR("Unable to find service with given UUID");
+    }
 }
 
 void test_ecc_sign()
@@ -81,15 +122,10 @@ void test_ecc_sign()
 
 int main(int argc, char** argv)
 {
-    auto result = security::CWolfCrypt::instance();
-    
-    //test_ecc_sign();
-    //return 0;
-
-    
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
     
+    auto result = security::CWolfCrypt::instance();
     ble::win::SystemAPI system{};
     
     ble::CBLEScanner scanner = ble::make_scanner();

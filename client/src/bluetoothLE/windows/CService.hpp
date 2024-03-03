@@ -18,6 +18,10 @@ public:
         queryingCharacteristics,
         ready
     };
+    enum class Error
+    {
+        characteristicNotFound
+    };
 public:
     [[nodiscard]] static CService make_service(
             const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service);
@@ -27,6 +31,7 @@ public:
     CService& operator=(const CService& other) = default;
     CService& operator=(CService&& other) = default;
 public:
+    [[nodiscard]] std::expected<const CCharacteristic*, Error> characteristic(const UUID& uuid) const;
     [[nodiscard]] std::string uuid_as_str() const;
     [[nodiscard]] bool ready() const;
     [[nodiscard]] State state() const;

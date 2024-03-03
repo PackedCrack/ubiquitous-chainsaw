@@ -26,7 +26,15 @@ winrt::Windows::Foundation::IAsyncAction CService::init()
     
     co_await query_characteristics();
 }
-[[nodiscard]] std::string CService::uuid_as_str() const
+std::expected<const CCharacteristic*, CService::Error> CService::characteristic(const UUID& uuid) const
+{
+    auto iter = m_Characteristics.find(uuid);
+    if(iter == std::end(m_Characteristics))
+        return std::unexpected{ Error::characteristicNotFound };
+    
+    return &(iter->second);
+}
+std::string CService::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_Service.Uuid()));
 }

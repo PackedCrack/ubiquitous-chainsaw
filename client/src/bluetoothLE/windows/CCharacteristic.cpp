@@ -6,6 +6,9 @@
 #include "../common.hpp"
 #include "../../common/common.hpp"
 
+#include <winrt/Windows.Storage.Streams.h>
+#include <iostream>
+
 
 #define TO_BOOL(expr) common::enum_to_bool(expr)
 
@@ -161,5 +164,44 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     }
     
     m_State = State::ready;
+}
+void CCharacteristic::read_value() const
+{
+    using namespace winrt;
+    using namespace Windows::Foundation;
+    using namespace Windows::Devices::Bluetooth;
+    using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
+    using namespace Windows::Storage::Streams;
+    
+    IAsyncOperation<GattReadResult> operation = m_Characteristic.ReadValueAsync(BluetoothCacheMode::Uncached);
+    while(operation.Status() != AsyncStatus::Completed)
+    {
+        if(operation.Status() == AsyncStatus::Error)
+            std::cout << "AsyncStatus Error!" << std::endl;
+        if(operation.Status() == AsyncStatus::Started)
+            std::cout << "AsyncStatus Started!" << std::endl;
+        if(operation.Status() == AsyncStatus::Canceled)
+            std::cout << "AsyncStatus Canceled!" << std::endl;
+    }
+    
+    GattReadResult result = operation.GetResults();
+    if (result.Status() == GattCommunicationStatus::Success)
+    {
+        IBuffer buffer = result.Value();
+        std::span<uint8_t> dataView(buffer.data(), buffer.Length());
+        std::vector<uint8_t> data{ std::begin(dataView), std::end(dataView) };
+        std::string str{ std::begin(dataView), std::end(dataView) };
+        
+        LOG_INFO_FMT("Data as str: \"{}\"", str);
+        std::cout << "\nPrinting raw bytes: ";
+        for(uint8_t byte : data)
+            std::cout << byte;
+        std::cout << std::endl;
+        
+    }
+    else
+    {
+        std::cout << "Read failed: " << static_cast<int32_t>(result.Status()) << std::endl;
+    }
 }
 }   // namespace ble::win
