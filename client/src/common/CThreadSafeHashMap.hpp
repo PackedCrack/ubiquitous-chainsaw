@@ -22,7 +22,7 @@ public:
     };
     struct Error
     {
-        std::wstring msg;
+        std::string msg;
         ErrorCode code;
     };
 public:
@@ -50,14 +50,14 @@ public:
     }
     // read
     template<typename key_t>
-    [[nodiscard]] std::expected<element_t, Error> find(key_t&& key)
+    [[nodiscard]] std::expected<element_t* const, Error> find(key_t&& key)
     {
         std::shared_lock lock{ m_Mutex };
         auto it = m_Container.find(std::forward<key_t>(key));
         if(it == std::end(m_Container))
             return std::unexpected{ Error{ .msg = "Unable to find element.", .code = ErrorCode::elementNotFound } };
         
-        return *it;
+        return &(it->second);
     }
     template<typename key_t>
     [[nodiscard]] bool contains(key_t&& key)

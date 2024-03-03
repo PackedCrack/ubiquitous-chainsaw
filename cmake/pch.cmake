@@ -21,6 +21,8 @@ SET(STD_PCH <cstdint>
         <filesystem>
         <future>
         <variant>
+        <ranges>
+        <random>
         <cerrno>)
 
 # --- functions --- #

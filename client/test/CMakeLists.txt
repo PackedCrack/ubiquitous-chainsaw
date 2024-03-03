@@ -28,11 +28,14 @@ project (${TEST_PROJECT})
 
 add_executable(${TEST_PROJECT}
         test.cpp
+        Test_CThreadSafeHashMap.cpp
 )
 
+target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../common")
 
 
-set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD 20)
+
+set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD 23)
 set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_include_directories(${TEST_PROJECT} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googletest/include)
