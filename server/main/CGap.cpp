@@ -5,14 +5,17 @@
 
 namespace ble
 {
-
 std::string_view nimble_error_to_string(int error)
 {
     // TODO WHERE TO PUT THIS?
     switch (error)
     {
+		// bug
         case SUCCESS:
-            return std::string_view("Success"); 
+		{
+			static constexpr std::string_view str{ "Success" };
+			return str;
+		}
         case BLE_HS_EAGAIN:
             return std::string_view {"Temporary failure; try again"};
         case BLE_HS_EALREADY:
@@ -34,7 +37,7 @@ std::string_view nimble_error_to_string(int error)
         case BLE_HS_EBADDATA:
             return std::string_view {"Command from peer is invalid"};
         case BLE_HS_EOS:
-        return std::string_view {"Mynewt OS error"}; 
+        	return std::string_view {"Mynewt OS error"}; 
         case BLE_HS_ECONTROLLER:
             return std::string_view {"Event from controller is invalid"}; 
         case BLE_HS_ETIMEOUT:
@@ -647,7 +650,26 @@ int CGap::begin_advertise()
 { return ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); }
 
 
-int CGap::end_advertise()
-{ return ble_gap_adv_stop(); }
+std::optional<Error> CGap::end_advertise()
+{ 
+	int32_t result = ble_gap_adv_stop(); 
+	if(result == Success)
+		return std::nullopt;
+
+	if(result == SomeError)
+	{
+		return std::optional{ Error{
+			.code = result,
+			.msg = "Some error message"			
+		}};
+	}
+	else
+	{
+		return std::optional{ Error{
+			.code = unknown,
+			.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result)
+		}};
+	}
+}
 
 } // namespace ble

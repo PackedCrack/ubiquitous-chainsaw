@@ -37,7 +37,9 @@ public:
     CNimble& operator=(const CNimble& other) = delete;
     CNimble& operator=(CNimble&& other);
 private:
-    CGatt m_gatt;
+    //CGatt m_gatt;
+
+	std::shared_ptr<CAuthentication> m_pAuthentication;
     CGap m_gap;
 
 

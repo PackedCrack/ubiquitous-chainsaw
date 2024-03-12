@@ -79,6 +79,20 @@ private:
 
 };
 
+
+
+enum class ErrorCode : int32_t
+{
+	success = Success,
+	inProgress = BLE_HS_EALREADY,
+	unknown = INT32_MAX
+};
+struct Error
+{
+	ErrorCode code;
+	std::string msg;
+};
+
 class CGap
 {
 public:
@@ -97,7 +111,7 @@ public:
     [[nodiscard]] int start();
     void rssi();
     [[nodiscard]] int begin_advertise();
-    [[nodiscard]] int end_advertise();
+    [[nodiscard]] std::optional<Error> end_advertise();
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;

@@ -24,6 +24,8 @@ struct BleService
 };
 
 
+
+
 int dynamic_service(const uint8_t operation, const struct ble_gatt_svc_def *svcs, const ble_uuid_t *uuid);
 
 class CGatt // TODO refactor maybe/probably, have to see after introducing auth protocol etc

@@ -144,6 +144,7 @@ CNimble::~CNimble()
     result = m_gap.end_advertise();
     //ASSERT(result == SUCCESS, "Error ending advertising!");
 
+	
     result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
     ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
 
