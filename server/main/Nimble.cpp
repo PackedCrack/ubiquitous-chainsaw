@@ -84,7 +84,7 @@ void configure_nimble_host()
 
 
 CNimble::CNimble()
-    : m_gatt {}
+    : //m_gatt {}
     , m_gap {}
 {
     esp_err_t result = nimble_port_init();
@@ -96,20 +96,20 @@ CNimble::CNimble()
     }
 
     configure_nimble_host();
-    result = m_gatt.register_services();
-    if (result != 0)
-    {
-        if (result == BLE_HS_EBUSY)
-            throw std::runtime_error("GATT server could not be reset due to existing connections or active GAP procedures");
+    //result = m_gatt.register_services();
+    //if (result != 0)
+    //{
+    //    if (result == BLE_HS_EBUSY)
+    //        throw std::runtime_error("GATT server could not be reset due to existing connections or active GAP procedures");
 
-        if (result == BLE_HS_EINVAL)
-            throw std::runtime_error("Services array contains an invalid resource definition");
+    //    if (result == BLE_HS_EINVAL)
+    //        throw std::runtime_error("Services array contains an invalid resource definition");
+    
+    //    if (result == BLE_HS_ENOMEM)
+    //        throw std::runtime_error("heap exhaustion");
 
-        if (result == BLE_HS_ENOMEM)
-            throw std::runtime_error("heap exhaustion");
-
-        throw std::runtime_error("Unknown error");
-    }
+    //    throw std::runtime_error("Unknown error");
+    //}
 
   
     nimble_port_freertos_init(make_host_task());
@@ -145,8 +145,8 @@ CNimble::~CNimble()
     //ASSERT(result == SUCCESS, "Error ending advertising!");
 
 	
-    result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
-    ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
+    //result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
+    //ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
 
     nimble_port_freertos_deinit();
     //result = nimble_port_deinit();
@@ -168,14 +168,12 @@ CNimble::~CNimble()
 
     I dont know what is causing the 530 error code.
     */
-   
 }
 
 
 CNimble::CNimble(CNimble&& other) noexcept
     : m_gatt { std::move(other.m_gatt) }
      ,m_gap { std::move(other.m_gap) } 
-
 {
     // no pointers have been moved
 }

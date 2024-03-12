@@ -39,7 +39,7 @@ public:
 private:
     //CGatt m_gatt;
 
-	std::shared_ptr<CAuthentication> m_pAuthentication;
+	//std::shared_ptr<CAuthentication> m_pAuthentication;
     CGap m_gap;
 
 

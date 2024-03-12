@@ -32,9 +32,9 @@ extern "C" void app_main(void)
 	
 	try 
 	{
-		{
-        ble::CNimble tmp {};
-		}
+		//{
+        //ble::CNimble tmp {};
+		//}
 		ble::CNimble nimble {};
 		//ble::CNimble nimble {std::move(tmp)};
 		//ble::CNimble nimble = std::move(tmp);
