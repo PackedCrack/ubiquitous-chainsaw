@@ -14,6 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <future>
+#include <utility>
 
 /* Project */
 #include "defines.hpp"
@@ -27,81 +28,76 @@
 #include "host/ble_uuid.h"
 #include "host/util/util.h"
 
+
 //#include "nimble/nimble_port.h"
 
 
 namespace ble
 {
 
+struct BleClientCharacteristic
+{
+    ble_uuid_any_t uuid;
+    uint16_t handle;
+    uint16_t handleValue;
+    uint8_t properties;
+};
+
+struct BleClientService 
+{
+    ble_uuid_any_t uuid;
+    uint16_t connHandle;
+    uint16_t handleStart;
+    uint16_t handleEnd;
+    std::vector<BleClientCharacteristic> characteristics;
+};
+
 
 class CConnectionHandle // NOTE: Will this be needed for GATT services???? probably drop connectino if not authenticated
 {
 
-
-//struct BleCharacteristic
-//{
-//    ble_uuid_any_t uuid;
-//    uint16_t handle;
-//    uint16_t handleValue;
-//    uint8_t properties;
-//};
-//
-//struct BleService 
-//{
-//    ble_uuid_any_t uuid;
-//    uint16_t connHandle;
-//    uint16_t handleStart;
-//    uint16_t handleEnd;
-//    std::vector<BleCharacteristic> characteristics;
-//};
-
-
 public:
     CConnectionHandle();
     ~CConnectionHandle();
-    CConnectionHandle(const CConnectionHandle& other) = delete;
-    CConnectionHandle(CConnectionHandle&& other) = delete;
+    CConnectionHandle(const CConnectionHandle& other) = delete; // why shouldnt i be able to copy it?, because if i make i copy, the other one can be droped and then the copy is invalid?
+    CConnectionHandle(CConnectionHandle&& other) noexcept;
     CConnectionHandle& operator=(const CConnectionHandle& other) = delete;
-    CConnectionHandle& operator=(CConnectionHandle&& other) = delete;
+    CConnectionHandle& operator=(CConnectionHandle&& other);
 
 public:
     [[nodiscard]] uint16_t handle() const;
-    [[nodiscard]] int drop(int reason);
     [[nodiscard]] int num_services() const;
-    [[nodiscard]] const std::vector<BleService> services() const;
+    //[[nodiscard]] int num_characteristics(uint16_t handleStart, uint16_t handleEnd) const;
+    [[nodiscard]] std::vector<BleClientService> services() const; // cannot be const because of the discovery process (we add characteristics afterwards)
     void set_connection(uint16_t id);
-    void reset_connection();
-    void add_service(const BleService& service);
-
-
+    [[nodiscard]] int drop(int reason);
+    void reset();
+    void add_service(const BleClientService& service);
 private:
     uint16_t m_id;
-    std::vector<BleService> m_services;
+    std::vector<BleClientService> m_services;
 
 };
-
-
-
 
 class CGap
 {
 public:
     CGap();
-    ~CGap() = default;
+    ~CGap();
     CGap(const CGap& other) = delete;
-    CGap(CGap&& other) = delete;
+    CGap(CGap&& other) noexcept;
     CGap& operator=(const CGap& other) = delete;
-    CGap& operator=(CGap&& other) = delete;
+    CGap& operator=(CGap&& other);
 public:
     [[nodiscard]] uint16_t connection_handle() const ;
     [[nodiscard]] int drop_connection(int reason);
     [[nodiscard]] int discover_services();
     void set_connection(uint16_t id);
     void reset_connection();
-    void start();
+    [[nodiscard]] int start();
     void rssi();
-    void begin_advertise();
-    void end_advertise();
+    [[nodiscard]] int begin_advertise();
+    [[nodiscard]] int end_advertise();
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;

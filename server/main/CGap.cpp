@@ -6,16 +6,85 @@
 namespace ble
 {
 
-std::promise<void> syncPromise {};
-std::future<void> syncFuture = syncPromise.get_future();
-
-bool callback_finished = false;
+std::string_view nimble_error_to_string(int error)
+{
+    // TODO WHERE TO PUT THIS?
+    switch (error)
+    {
+        case SUCCESS:
+            return std::string_view("Success"); 
+        case BLE_HS_EAGAIN:
+            return std::string_view {"Temporary failure; try again"};
+        case BLE_HS_EALREADY:
+            return std::string_view {"Operation already in progress or completed"};
+        case BLE_HS_EINVAL:
+            return std::string_view {"One or more arguments are invalid"};
+        case BLE_HS_EMSGSIZE:
+            return std::string_view {"The provided buffer is too small"};
+        case BLE_HS_ENOENT:
+            return std::string_view {"No entry matching the specified criteria"};
+        case BLE_HS_ENOMEM:
+            return std::string_view {"Operation failed due to resource exhaustion"}; 
+        case BLE_HS_ENOTCONN:
+            return std::string_view {"No open connection with the specified handle"};
+        case BLE_HS_ENOTSUP:
+            return std::string_view {"Operation disabled at compile time"};
+        case BLE_HS_EAPP:
+            return std::string_view {"Application callback behaved unexpectedly"};
+        case BLE_HS_EBADDATA:
+            return std::string_view {"Command from peer is invalid"};
+        case BLE_HS_EOS:
+        return std::string_view {"Mynewt OS error"}; 
+        case BLE_HS_ECONTROLLER:
+            return std::string_view {"Event from controller is invalid"}; 
+        case BLE_HS_ETIMEOUT:
+            return std::string_view {"Operation timed out"}; 
+        case BLE_HS_EDONE:
+            return std::string_view {"Operation completed successfully"}; 
+        case BLE_HS_EBUSY:
+            return std::string_view {"Operation cannot be performed until procedure completes"}; 
+        case BLE_HS_EREJECT:
+            return std::string_view {"Peer rejected a connection parameter update request"}; 
+        case BLE_HS_EUNKNOWN:
+            return std::string_view {"Unexpected failure; catch all"}; 
+        case BLE_HS_EROLE:
+            return std::string_view {"Operation requires different role (e.g., central vs. peripheral)"}; 
+        case BLE_HS_ETIMEOUT_HCI:
+            return std::string_view {"HCI request timed out; controller unresponsiv"}; 
+        case BLE_HS_ENOMEM_EVT:
+            return std::string_view {"Controller failed to send event due to memory exhaustion (combined host-controller only)"}; 
+        case BLE_HS_ENOADDR:
+            return std::string_view {"Operation requires an identity address but none configured"}; 
+        case BLE_HS_ENOTSYNCED:
+            return std::string_view {"Attempt to use the host before it is synced with controller"}; 
+        case BLE_HS_EAUTHEN:
+            return std::string_view {"Insufficient authentication"}; 
+        case BLE_HS_EAUTHOR:
+            return std::string_view {"Insufficient authorization"}; 
+        case BLE_HS_EENCRYPT:
+            return std::string_view {"Insufficient encryption level"}; 
+        case BLE_HS_EENCRYPT_KEY_SZ:
+            return std::string_view {"Insufficient key size"}; 
+        case BLE_HS_ESTORE_CAP:
+            return std::string_view {"Storage at capacity"}; 
+        case BLE_HS_ESTORE_FAIL:
+            return std::string_view {"Storage IO error"}; 
+        case BLE_HS_EPREEMPTED:
+            return std::string_view {"Operation preempted"}; 
+        case BLE_HS_EDISABLED:
+            return std::string_view {"FDisabled feature"}; 
+        case BLE_HS_ESTALLED:
+            return std::string_view {"Operation stalled"}; 
+        default:
+            ASSERT(0, "Default switch case triggered!");
+            return std::string_view {""}; // removes end of function error
+        
+    }
+}
 
 
 namespace 
 {
-
-std::vector<BleService> foundServices {};
 
 uint8_t* make_field_name(const std::string_view deviceName)
 { return (uint8_t*)deviceName.data(); }
@@ -70,13 +139,10 @@ ble_gap_adv_params make_advertise_params()
 }
 
 
-void set_adv_fields(const std::string_view deviceName)
+int set_adv_fields(const std::string_view deviceName)
 {
     ble_hs_adv_fields fields = make_advertise_fields(deviceName); // only the constructor for ble_hs_adv_fields will be called here
-    int result;
-    result = ble_gap_adv_set_fields(&fields);
-    if (result != 0) 
-        LOG_FATAL_FMT("Error setting advertisement data!: %d", result);
+    return ble_gap_adv_set_fields(&fields);
 }
 
 
@@ -99,88 +165,87 @@ void set_adv_fields(const std::string_view deviceName)
 //};
 
 
-void print_services()
-{
-    if (foundServices.empty())
-        return;
 
-    
-
-    for (auto& service : foundServices)
-    {
-        const int MAX_UUID_LEN = 128;
-        char serviceUuidBuf [MAX_UUID_LEN];
-        std::string_view tmpServiceUuid = ble_uuid_to_str((const ble_uuid_t* )&service.uuid, serviceUuidBuf);
-
-        LOG_INFO_FMT("Service: UUID={} connHandle={} handleStart={} handleEnd={}", tmpServiceUuid, service.connHandle, 
-                                                                                    service.handleStart, service.handleEnd);
-
-        for (auto& characteristic : service.characteristics)
-        {
-            char serviceUuidBuf [MAX_UUID_LEN];
-            std::string_view tmpCharacterUuid = ble_uuid_to_str((const ble_uuid_t* )&characteristic.uuid, serviceUuidBuf);
-            LOG_INFO_FMT("Characteristic: UUID={} handle={} handleValue={} properties={}", tmpCharacterUuid, characteristic.handle, 
-                                                                                            characteristic.handleValue, characteristic.properties);
-        }
-    }
-}
-
-// 3=BLE_HS_EINVAL  invalid argument
-// 10=BLE_HS_EBADDATA   Command from peer is invalid. bad data format etc
-// or 10= BLE_ATT_ERR_ATTR_NOT_FOUND  No attribute found within the given attribute handle range.
-auto characteristic_discovery_event_handler = [](uint16_t conn_handle,
+auto characteristic_discovery_event_handler = [](uint16_t connHandle,
                                             const struct ble_gatt_error *error,
-                                            const struct ble_gatt_chr *chr,
+                                            const struct ble_gatt_chr *characteristic,
                                             void *arg) {
-    // https://mynewt.apache.org/master/network/ble_hs/ble_hs_return_codes.html#return-codes-att                                            
-    int result = error->status;
-    if (result == BLE_HS_EDONE || result == BLE_HS_EINVAL)
+
+    // https://mynewt.apache.org/master/network/ble_hs/ble_hs_return_codes.html#return-codes-att    
+
+    CConnectionHandle* pConnHandle = static_cast<CConnectionHandle*>(arg);
+    ASSERT(pConnHandle->handle() == connHandle, "Error casting void* to CConnectionHandle");
+
+    int returnedResult = error->status;
+
+    if (returnedResult == BLE_HS_EINVAL)
     {
-        // dont know why it wont return BLE_HS_EDONE, but the last thing it does return is BLE_HS_EINVAL for some reason
-        LOG_INFO_FMT("Finished with characteristic discovery: {}", result);
-        print_services();
-        return 0;
+        // Need to double check using other clients that this is actually the case. 
+        //From what i can see, i get no specific return value that indicated a finished discovery. it always ends with 3.
+        LOG_INFO("Characteristic discovery has finished");
+        return BLE_HS_EINVAL;
     }
 
-    if (result != ESP_OK) 
-    {
-        LOG_WARN_FMT("Error during characteristic discovery: {}", result);
-        return 1;
-    } 
 
-    // Find the service to which this characteristic belongs to
-    for (auto& service : foundServices)
+    if (returnedResult == BLE_HS_EBADDATA)
     {
-        if (chr->def_handle >= service.handleStart && chr->def_handle <= service.handleEnd)
+        LOG_INFO_FMT("Unrecognized Characteristic found: {}", nimble_error_to_string(returnedResult));
+        return BLE_HS_EBADDATA;
+        //Message: Characteristic: UUID=0x2b3a handle=4 handleValue=5 properties=2                                                                                    
+    }
+
+
+    if (returnedResult != SUCCESS)
+    {
+        LOG_ERROR_FMT("Characteristic discovery error: {}", nimble_error_to_string(returnedResult));
+        return BLE_HS_EUNKNOWN;
+    }
+
+
+    /*  PROPERTIES!!!
+#define BLE_GATT_CHR_PROP_BROADCAST                     0x01
+#define BLE_GATT_CHR_PROP_READ                          0x02
+#define BLE_GATT_CHR_PROP_WRITE_NO_RSP                  0x04
+#define BLE_GATT_CHR_PROP_WRITE                         0x08
+#define BLE_GATT_CHR_PROP_NOTIFY                        0x10
+#define BLE_GATT_CHR_PROP_INDICATE                      0x20
+#define BLE_GATT_CHR_PROP_AUTH_SIGN_WRITE               0x40
+#define BLE_GATT_CHR_PROP_EXTENDED                      0x80
+    */
+
+    // find the correct service and add the characteristic
+    for (auto& service : pConnHandle->services())
+    {
+        if (characteristic->def_handle > service.handleStart && characteristic->def_handle < service.handleEnd)
         {
             service.characteristics.emplace_back(
-                BleCharacteristic {
-                    .uuid = chr->uuid,
-                    .handle = chr->def_handle,
-                    .handleValue = chr->val_handle,
-                    .properties = chr->properties
+                BleClientCharacteristic {
+                    .uuid = characteristic->uuid,
+                    .handle = characteristic->def_handle,
+                    .handleValue = characteristic->val_handle,
+                    .properties = characteristic->properties
                 }
             );
+
+            // print to terminal only
+            const uint8_t CHARACTERISTIC_INDEX = (service.characteristics.size() - 1);
+            const uint16_t CHARACTERISTIC_HANDLE = service.characteristics[ CHARACTERISTIC_INDEX ].handle;
+            const uint16_t HANDLE_VALUE = service.characteristics[ CHARACTERISTIC_INDEX ].handleValue;
+
+            char serviceUuidBuf [MAX_UUID_LEN];
+            std::string_view characteristicUuidToString = ble_uuid_to_str(reinterpret_cast<const ble_uuid_t*>( &service.characteristics[ CHARACTERISTIC_INDEX ].uuid ), serviceUuidBuf);
+            LOG_INFO_FMT("Added New Characteristic: UUID={} handle={} handleValue={}", characteristicUuidToString, CHARACTERISTIC_HANDLE, HANDLE_VALUE);
             break;
         }
     }
 
-    return 0;
+    return SUCCESS;
 };
 
 
-void discover_service_characteristics(uint16_t connhandle, uint16_t handleStart, uint16_t handleEnd)
+int discover_service_characteristics(const uint16_t connhandle, const uint16_t handleStart, const uint16_t handleEnd, CConnectionHandle& connHandler)
 {
-    if (foundServices.empty())
-        return;
-
-    int result = ble_gattc_disc_all_chrs(connhandle, handleStart, handleEnd, characteristic_discovery_event_handler, NULL);
-    if (result != 0) 
-    {
-        LOG_WARN_FMT("Failed to initiate characteristic discovery. Error: {}", result);
-    // return 6,  BLE_HS_ENOMEM Operation failed due to resource exhaustion.
-
-    }
+    return ble_gattc_disc_all_chrs(connhandle, handleStart, handleEnd, characteristic_discovery_event_handler, &connHandler);
 }
 
 
@@ -190,26 +255,29 @@ auto service_discovery_event_handler = [](uint16_t connHandle,
                     void *arg) {
     // https://mynewt.apache.org/v1_8_0/network/ble_hs/ble_hs_return_codes.html
     CConnectionHandle* pConnHandle = static_cast<CConnectionHandle*>(arg);
-    assert(pConnHandle->handle() == connHandle);
+    ASSERT(pConnHandle->handle() == connHandle, "Error casting void* to CConnectionHandle");
+    
 
     int returnedResult = error->status;
 
-    std::printf("callback started");
+    if (returnedResult != PROCEDURE_HAS_FINISHED && returnedResult != SUCCESS)
+    {
+        LOG_ERROR_FMT("Service Discovery Process error: {}", nimble_error_to_string(returnedResult));
+        return BLE_HS_EUNKNOWN; // Unexpected failure; catch all.
+    }
+
 
     if (returnedResult == PROCEDURE_HAS_FINISHED)
     {
         LOG_INFO("Discovery procedure has finished!");
-        
-        callback_finished = true;
-
         return PROCEDURE_HAS_FINISHED;
     }
 
+
     if (returnedResult == SUCCESS)
     {
-        std::printf("SUCCESS");
         pConnHandle->add_service(
-            BleService {
+            BleClientService {
                     .uuid = service->uuid,
                     .connHandle = connHandle,
                     .handleStart = service->start_handle,
@@ -218,29 +286,28 @@ auto service_discovery_event_handler = [](uint16_t connHandle,
             }
         );
 
+        const uint8_t SERVICE_INDEX = (pConnHandle->num_services() - 1);
+        const uint16_t HANDLE_START = pConnHandle->services()[ SERVICE_INDEX ].handleStart;
+        const uint16_t HANDLE_END = pConnHandle->services()[ SERVICE_INDEX ].handleEnd;
+
+        // printing to terminal only
         char serviceUuidBuf [MAX_UUID_LEN];
-        std::string_view serviceUuidToString = ble_uuid_to_str(reinterpret_cast<const ble_uuid_t*>( &pConnHandle->services()[ (pConnHandle->num_services() - 1) ].uuid ), serviceUuidBuf);
-        LOG_INFO_FMT("Added Service UUID={}", serviceUuidToString);
+        std::string_view serviceUuidToString = ble_uuid_to_str(reinterpret_cast<const ble_uuid_t*>( &pConnHandle->services()[ SERVICE_INDEX ].uuid ), serviceUuidBuf);
+        LOG_INFO_FMT("Added New Service: UUID={} handle={} start={} end={}", serviceUuidToString, pConnHandle->handle(), HANDLE_START, HANDLE_END);
+
+        //discover_service_characteristics(&pConnHandle, service->start_handle, service->end_handle);
+        int result = discover_service_characteristics(pConnHandle->handle(), HANDLE_START, HANDLE_END, *pConnHandle);
+        if (result != 0) 
+        {
+            LOG_WARN_FMT("Failed to initiate characteristic discovery. Error: {}", nimble_error_to_string(result));
+            // How to handle? drop existing connection?
+            return BLE_HS_EUNKNOWN;
+        }
+
         return SUCCESS;
     }
 
-    if (returnedResult != BLE_HS_EDONE)
-    {
-        LOG_WARN_FMT("Discovery Process error: {}", returnedResult);
-        return BLE_HS_EUNKNOWN; // Unexpected failure; catch all.
-    }
-
-
-    //discover_service_characteristics(conn_handle, service->start_handle, service->end_handle);
-
-    //result = ble_gattc_disc_all_dscs(conn_handle, service->start_handle, service->end_handle, descriptor_discovery_event_handler, NULL);
-    //if (result != 0) {
-    //    LOG_INFO_FMT("Failed to initiate descriptor discovery. Error: {}", result);
-    //}    
-    // 6=BLE_GATT_OP_DISC_ALL_DSCS // so failed to discovery any since there were none there
-    // also 6, BLE_HS_ENOMEM
-
-    assert(0);
+    ASSERT(0, "End of service_discovery_event_handler() reached!");
     return BLE_HS_EUNKNOWN; // should not be triggered
 };
 
@@ -254,7 +321,7 @@ int discover_client_services(CConnectionHandle& connHandler)
 
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 
-    CGap* pGap = static_cast<CGap*>(arg);// shared ownership?
+    CGap* pGap = static_cast<CGap*>(arg);
     
 
     switch (event->type) {
@@ -267,48 +334,25 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
             int result = pGap->discover_services();
             if (result != SUCCESS)
             {
-                LOG_ERROR_FMT("Service Discovery has failed! ERROR_CODE={}", result);
+                LOG_ERROR_FMT("Service Discovery has failed! ERROR={}", nimble_error_to_string(result));
             }
 
-            std::printf("i was ehre!\n");
-            //uint16_t handle = pGap->connection_handle();
-            //assert(handle != INVALID_HANDLE_ID);
-
-            //int result = pGap->drop_connection(BLE_ERR_AUTH_FAIL); // will trigger disconnect callback
-            //if (result == BLE_HS_ENOTCONN)
-            //    LOG_ERROR_FMT("Tried to terminate a non existent connection. ERROR_CODE={}", result);
-            //else if (result != 0)
-            //    LOG_ERROR_FMT("Terminating connection failed due to unspecified error. ERROR_CODE={}", result);
-            
-    
-            //int result = discover_client_services(m_current);
-
-
             // when connection happens, it is possible to configure another callback that should be used for that connection
-
             // unable to have locks in here if new procedures are to be created
-
-            //discover_client_services(event->connect.conn_handle);
-
-            //if(currentConnectionHandle != INVALID_HANDLE_ID)
-            //    break;
-            //
-            //currentConnectionHandle = event->connect.conn_handle;
-            //LOG_INFO_FMT("Current handle: {}", currentConnectionHandle);
             break;
         }
         case BLE_GAP_EVENT_DISCONNECT: 
         {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            pGap->reset_connection();
-            pGap->begin_advertise();
-            //uint16_t connectionhandle = event->connect.conn_handle;
-            //int result = ble_gap_terminate(connectionhandle, 5);
-            //if (result != 0)
-            //    LOG_INFO_FMT("UNABLE TO TERMINATE CONNECTION. CODE: {}", result); // error code 7.
+            int result;
 
-            //foundServices.clear();
-            //currentConnectionHandle = INVALID_HANDLE;
+            pGap->reset_connection();
+
+            result = pGap->begin_advertise();
+            if(result != 0)
+                LOG_WARN_FMT("ERROR STARTING ADVERTISING! ERROR{}", nimble_error_to_string(result));
+
+                
             break;
         }
 
@@ -353,30 +397,36 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 };
 
 
-uint8_t ble_generate_random_device_address() 
+void print_ble_address()
 {
-    int result;
-    const int RND_ADDR = 1;
-    const int PUB_ADDR = 0;
-    const uint8_t INVALID_ADDRESS_TYPE = 255u;
-    uint8_t addrType = INVALID_ADDRESS_TYPE;
-
-    result = ble_hs_util_ensure_addr(RND_ADDR);
-    assert(result == 0);
-    result = ble_hs_id_infer_auto(PUB_ADDR, &addrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
-    if (result != 0) 
-        LOG_FATAL_FMT("No address was able to be inferred %d\n", result);
-    
-    if (addrType == INVALID_ADDRESS_TYPE)
-        LOG_FATAL_FMT("Error address type not determined! %d\n", result);
-    
-    // print the address
     std::array<uint8_t, 6> bleDeviceAddr {};
-    result = ble_hs_id_copy_addr(addrType, bleDeviceAddr.data(), NULL); 
+    int result;
+    result = ble_hs_id_copy_addr(RANDOM_BLUETOOTH_ADDRESS, bleDeviceAddr.data(), NULL);
+    ASSERT(result == 0, "Unable to retrieve the servers bluetooth address");
+
     if (result != 0) 
-        LOG_FATAL_FMT("Adress was unable to be assigned %d\n", result);
+        LOG_FATAL_FMT("Adress was unable to be retreived {}", nimble_error_to_string(result));
 
     std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
+}
+
+
+uint8_t ble_generate_random_device_address() 
+{
+    
+    int result;
+    uint8_t addrType = INVALID_ADDRESS_TYPE;
+    result = ble_hs_util_ensure_addr(RANDOM_BLUETOOTH_ADDRESS);
+    if (result != 0) 
+        LOG_FATAL_FMT("No address was able to be ensured ERROR={}", nimble_error_to_string(result));
+
+    result = ble_hs_id_infer_auto(PUBLIC_BLUETOOTH_ADDRESS, &addrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
+    if (result != 0) 
+        LOG_FATAL_FMT("No address was able to be inferred ERROR={}", nimble_error_to_string(result));
+
+    ASSERT(addrType == RANDOM_BLUETOOTH_ADDRESS, "Assigned wrong bluetooth address type");
+
+    print_ble_address();
 
     return addrType;
 }
@@ -393,7 +443,35 @@ CConnectionHandle::CConnectionHandle()
 
 CConnectionHandle::~CConnectionHandle()
 {
+    std::printf("CConnectionHandle destructor\n");
+    // Q: how to handle errors in destructors? thinking crash the program is the best since if a destructor fails, something very serious has happened.
+    //int result = drop(BLE_HS_ENOENT);
+//
+    //if (result != SUCCESS && result != BLE_HS_ENOTCONN)
+    //    LOG_ERROR_FMT("ERROR terminating connection! ERROR={}", nimble_error_to_string(result));
+    reset();
+}
 
+
+CConnectionHandle::CConnectionHandle(CConnectionHandle&& other) noexcept 
+    : m_id {other.m_id}
+    , m_services {std::move(other.m_services)}
+{
+}
+
+CConnectionHandle& CConnectionHandle::operator=(CConnectionHandle&& other)
+{
+
+    /*
+        1. Clean up all visible resources
+        2. Transfer the content of other into this
+        3. Leave other in a valid but undefined state
+    */
+    
+    // Check if other exists?
+    m_id = other.m_id;
+    m_services = std::move(other.m_services);
+    return *this;
 }
 
 
@@ -415,32 +493,27 @@ uint16_t CConnectionHandle::handle() const
 int CConnectionHandle::drop(int reason)
 {
     // https://mynewt.apache.org/v1_8_0/network/ble_hs/ble_hs_return_codes.html
-    assert(m_id != INVALID_HANDLE_ID);
-    //assert(!m_services.empty());
-
     int result = ble_gap_terminate(m_id, reason);
-    if (result != ESP_OK)
-    {
-        LOG_ERROR_FMT("ERROR terminating connection! ERROR_CODE={}", result);
-    }
 
+    if (result == SUCCESS)
+        reset();
+
+    ASSERT(m_id == INVALID_HANDLE_ID, "Tried to reset a valid connection!");
     return result;
 }
 
 
-void CConnectionHandle::reset_connection()
+void CConnectionHandle::reset()
 {
-    assert(m_id != INVALID_HANDLE_ID);
-    //assert(!m_services.empty());
     m_id = INVALID_HANDLE_ID;
     m_services.clear();
 }
 
 
-void CConnectionHandle::add_service(const BleService& service)
+void CConnectionHandle::add_service(const BleClientService& service)
 {
+    ASSERT(service.handleStart != 0, "Tried to add a service to an invalid/wrong connection");
     m_services.emplace_back(service);
-
 }
 
 int CConnectionHandle::num_services() const
@@ -448,28 +521,61 @@ int CConnectionHandle::num_services() const
 
 
 
-const std::vector<BleService> CConnectionHandle::services() const
+std::vector<BleClientService> CConnectionHandle::services() const
 { return m_services; }
 
 
 CGap::CGap() 
     : m_bleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
     , m_params { make_advertise_params() }
-    //, m_isAdvertising {false}
     , m_currentConnectionHandle {}
 {
+
 }
 
 
-//~CGap::CGap()
-//{
-//    if(m_isAdvertising)
-//        end_advertise();
-//}
+CGap::~CGap()
+{
+    std::printf("CGap destructor\n");
+    //how to handel errors in destructors?
+    //int result = end_advertise();
+    //if (result != 0)
+    //{
+    //    if (result != BLE_HS_EALREADY)
+    //        LOG_FATAL_FMT("ERROR ENDING ADVERTISE! ERROR={}", nimble_error_to_string(result));
+    //}
+}
+
+
+CGap::CGap(CGap&& other) noexcept
+    : m_bleAddressType {other.m_bleAddressType}
+     ,m_params {std::move(other.m_params)} 
+     ,m_currentConnectionHandle {std::move(other.m_currentConnectionHandle)}
+{
+
+    // no pointers have been moved
+}
+
+
+CGap& CGap::operator=(CGap&& other)
+{
+    /*
+        1. Clean up all visible resources
+        2. Transfer the content of other into this
+        3. Leave other in a valid but undefined state
+    */
+    
+    // Check if other exists?
+    m_bleAddressType = other.m_bleAddressType;
+    m_params = std::move(other.m_params);
+    m_currentConnectionHandle = std::move(other.m_currentConnectionHandle);
+    return *this;
+}
+
 
 int CGap::discover_services()
 {
-    assert(m_currentConnectionHandle.handle() != INVALID_HANDLE_ID);
+    ASSERT(m_currentConnectionHandle.handle() != INVALID_HANDLE_ID, "Tried to intiate 'Service Discovery' on an invalid connection");
     int result = discover_client_services(m_currentConnectionHandle);
     return result;
 }
@@ -495,24 +601,27 @@ int CGap::drop_connection(int reason)
 
 void CGap::reset_connection()
 {
-    m_currentConnectionHandle.reset_connection();
+    m_currentConnectionHandle.reset();
 
 }
 
-void CGap::start()
+int CGap::start()
 {
     //ble_svc_gap_init(); // will crash if called before nimble_port_init()
-    assert(m_bleAddressType == INVALID_ADDRESS_TYPE);
     m_bleAddressType = ble_generate_random_device_address(); // nimble_port_run(); has to be called before this
-    assert(m_bleAddressType != INVALID_ADDRESS_TYPE);
-    
-    std::string_view deviceName = "Chainsaw-server";
-    int result;
-    result = ble_svc_gap_device_name_set(deviceName.data());
-    assert(result == 0);
 
-    set_adv_fields(deviceName);
-    begin_advertise();
+    std::string_view deviceName = "Chainsaw-server";
+    int result = ble_svc_gap_device_name_set(deviceName.data());
+    // how to handle this error?
+    ASSERT(result == 0, "Failed to set device name!");
+
+    result = set_adv_fields(deviceName); // handle this error here or give to caller? return a error code/reason pair?
+    if (result != SUCCESS)
+        return result;
+        
+    
+    return begin_advertise();
+
 }
 
 
@@ -534,30 +643,11 @@ void CGap::rssi()
 }
 
 
-void CGap::begin_advertise()
-{
-    //assert(!m_isAdvertising);
-    //m_isAdvertising = true;
-    int result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); // shared ownership?
-    if(result != 0)
-        LOG_ERROR_FMT("ERORR STARTING ADVERTISE! ERROR_CODE={}", result);
-
-    assert(result == ESP_OK);
-}
+int CGap::begin_advertise()
+{ return ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); }
 
 
-void CGap::end_advertise()
-{
-    // NOTE: host will end advertising by itself.. need to test with a second source to make sure
-    //assert(m_isAdvertising);
-    //m_isAdvertising = false;
-    int result = ble_gap_adv_stop();
-    if(result != 0)
-        LOG_ERROR_FMT("ERORR ENDING ADVERTISE! ERROR_CODE={}", result);
+int CGap::end_advertise()
+{ return ble_gap_adv_stop(); }
 
-    //assert(result == ESP_OK);
-}
-
-} // namespace application
-
-
+} // namespace ble

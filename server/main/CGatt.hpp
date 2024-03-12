@@ -2,6 +2,8 @@
 #include <array>
 #include <vector>
 
+// project
+#include "ServerDefines.hpp"
 #include "defines.hpp"
 
 #include "host/ble_hs.h"
@@ -14,19 +16,29 @@
 namespace ble
 {
 
+struct BleService
+{
+    std::array<ble_gatt_dsc_def, 2> desc;
+    std::array<ble_gatt_chr_def, 2> chr;
+    std::array<ble_gatt_svc_def, 2> svc;
+};
+
+
 int dynamic_service(const uint8_t operation, const struct ble_gatt_svc_def *svcs, const ble_uuid_t *uuid);
 
 class CGatt // TODO refactor maybe/probably, have to see after introducing auth protocol etc
 {
 public:
     CGatt();
-    ~CGatt() = default;
-    CGatt(const CGatt& other) = delete; // Copy constructor:
-    CGatt(CGatt&& other) = delete; // Move constructor:
-    CGatt& operator=(const CGatt& other) = delete; // copy assign
-    CGatt& operator=(CGatt&& other) = delete; // move assign
+    ~CGatt();
+    CGatt(const CGatt& other) = delete;
+    CGatt(CGatt&& other) = default; // TODO need help implementing
+    CGatt& operator=(const CGatt& other) = delete;
+    CGatt& operator=(CGatt&& other) = default; // TODO need help implementing
 public:
-    void register_services();
+    [[nodiscard]] int register_services();
+private:
+    BleService m_services;
 };
 
 }

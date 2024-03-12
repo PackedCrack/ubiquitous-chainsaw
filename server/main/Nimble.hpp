@@ -31,11 +31,11 @@ class CNimble
 
 public:
     CNimble();
-    ~CNimble() = default;
-    CNimble(const CNimble& other) = delete; // Copy constructor:
-    CNimble(CNimble&& other) = delete; // Move constructor:
-    CNimble& operator=(const CNimble& other) = delete; // copy assign
-    CNimble& operator=(CNimble&& other) = delete; // move assign
+    ~CNimble();
+    CNimble(const CNimble& other) = delete;
+    CNimble(CNimble&& other) noexcept;
+    CNimble& operator=(const CNimble& other) = delete;
+    CNimble& operator=(CNimble&& other);
 private:
     CGatt m_gatt;
     CGap m_gap;

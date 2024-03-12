@@ -1,8 +1,5 @@
 #include "CGatt.hpp"
 
-#define BLE_DYNAMIC_SERVICE_DELETE 0
-
-
 namespace ble
 {
 
@@ -10,7 +7,8 @@ namespace
 {
 
 
-[[Nodiscard]] const ble_gatt_dsc_def make_descriptor(const ble_uuid_t* pUuid, uint8_t attributeFlags, ble_gatt_access_fn callbackFunc) 
+
+const ble_gatt_dsc_def make_descriptor(const ble_uuid_t* pUuid, uint8_t attributeFlags, ble_gatt_access_fn callbackFunc) 
 {
     return ble_gatt_dsc_def {
         .uuid = pUuid,
@@ -20,7 +18,7 @@ namespace
 }
 
 
-[[Nodiscard]] const ble_gatt_chr_def make_characteristic(const ble_uuid_t* pUuid, ble_gatt_access_fn callbackFunc,
+const ble_gatt_chr_def make_characteristic(const ble_uuid_t* pUuid, ble_gatt_access_fn callbackFunc,
                                        ble_gatt_dsc_def* pDescriptors, uint8_t flags, uint16_t* pHandle) 
 {
     return ble_gatt_chr_def {
@@ -33,7 +31,7 @@ namespace
 }
 
 
-[[Nodiscard]] const ble_gatt_svc_def make_service(uint8_t serviceType, const ble_uuid_t* pUuid, ble_gatt_chr_def* pCharacteristics) 
+const ble_gatt_svc_def make_service(uint8_t serviceType, const ble_uuid_t* pUuid, ble_gatt_chr_def* pCharacteristics) 
 {
     return ble_gatt_svc_def {
         .type = serviceType,
@@ -43,11 +41,11 @@ namespace
 }
 
 
-uint8_t tmpDescriptorValue; 
+//uint8_t tmpDescriptorValue; 
 const ble_uuid128_t tmpDescriptorId = BLE_UUID128_INIT(0x01, 0x01, 0x01, 0x01, 0x12, 0x12, 0x12, 0x12,
                                                        0x23, 0x23, 0x23, 0x23, 0x34, 0x34, 0x34, 0x34);                 
 
-uint16_t tmpCharacteristicValue;
+//uint16_t tmpCharacteristicValue;
 uint16_t tmpCharacteristicValuehandle;
 const ble_uuid128_t tmpCharacteristicId = BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
                                                            0x22, 0x22, 0x22, 0x22, 0x33, 0x33, 0x33, 0x33);
@@ -63,10 +61,6 @@ std::vector<uint8_t> writeOperationData {};
 int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, // attributeHandle means both characterisitics and descriptor, depending on who triggered the callback
                             struct ble_gatt_access_ctxt* pContext, void* pArg)
 {
-
-
-    
-
     switch (pContext->op) {
     case BLE_GATT_ACCESS_OP_READ_CHR: 
     {
@@ -183,79 +177,168 @@ int tmp_service_callback(uint16_t connectionHandle, uint16_t attributeHandle, //
     return BLE_ATT_ERR_UNLIKELY;
 }
 
-
-struct std::array<ble_gatt_dsc_def, 2> descriptors_TEMPLATE = 
-{ 
-    make_descriptor( &tmpDescriptorId.u,
-                        BLE_ATT_F_READ,
-                        tmp_service_callback)
+BleService tmp = {
+ .desc = {
+     make_descriptor(&tmpDescriptorId.u, BLE_ATT_F_READ, tmp_service_callback)
+     , 0
+ },
+ .chr = {
+     make_characteristic(&tmpCharacteristicId.u, tmp_service_callback, tmp.desc.data(),
+                        BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE, &tmpCharacteristicValuehandle)
+     , 0
+ },
+ .svc = {
+     make_service(BLE_GATT_SVC_TYPE_PRIMARY, &tmpServiceId.u, tmp.chr.data())
     , 0
+ }
 };
 
-
-struct std::array<ble_gatt_chr_def, 2> characteristics_TEMPLATE = 
-{ 
-    make_characteristic(&tmpCharacteristicId.u,
-                           tmp_service_callback,
-                           descriptors_TEMPLATE.data(),
-                           BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
-                           &tmpCharacteristicValuehandle)
-    , 0
-};
-
-
-const struct std::array<ble_gatt_svc_def, 2> myService_TEMPLATE = 
-{ 
-    make_service(BLE_GATT_SVC_TYPE_PRIMARY, 
-                    &tmpServiceId.u,
-                    characteristics_TEMPLATE.data())
-    , 0
-}; 
-
-int dynamic_service(const uint8_t operation, const struct ble_gatt_svc_def *svcs, const ble_uuid_t *uuid) {
-    int rc = 0;
-    //int i = 0;
-    //switch(operation) {
-    // 
-    //    case 0:
-    //    int rc;
-    //    rc = ble_gatts_delete_svc(uuid);
-    //    if(rc != 0) {
-    //        /* not able to delete service return immidietely */
-    //        return rc;
-    //    }
-    //    i++;
-    //    return rc;
-    //        break;
-    //}
-    return rc;
-}
 
 } // namespace
 
 
-
 CGatt::CGatt()
+: m_services {std::move(tmp)} // How to solve this in a better way?
 {
     //throw std::runtime_error("An error occured during Construction of CGatt!");
-
 }
 
-void CGatt::register_services()
+
+CGatt::~CGatt()
+{
+    std::printf("CGatt destructor\n");
+    //int result = ble_gatts_reset(); // BLE_HS_EBUSY 
+    //ASSERT(result == 0, "Unable to deconstruct CGatt due to existing connections or active GAP procedures.");
+}
+
+//CGatt::CGatt(CGatt&& other) noexcept 
+//    : m_services { std::move(other.m_services) }
+//{
+//   
+//    const int NUM_DESC = other.m_services.desc.size();
+//    for (int i = 0; i < NUM_DESC; ++i)
+//    {
+//        other.m_services.desc[i].uuid = nullptr;
+//        other.m_services.desc[i].access_cb = nullptr;
+//        other.m_services.desc[i].arg = nullptr;
+//    }
+//
+//    const int NUM_CHR = other.m_services.chr.size();
+//    for (int i = 0; i < NUM_CHR; ++i)
+//    {
+//        other.m_services.chr[i].uuid = nullptr;
+//        other.m_services.chr[i].access_cb = nullptr;
+//        other.m_services.chr[i].arg = nullptr;
+//        other.m_services.chr[i].descriptors = nullptr;
+//        other.m_services.chr[i].val_handle = nullptr;
+//    }
+//
+//    const int NUM_SVC = other.m_services.svc.size();
+//    for (int i = 0; i < NUM_SVC; ++i)
+//    {
+//        other.m_services.svc[i].uuid = nullptr;
+//        other.m_services.svc[i].includes = nullptr;
+//        other.m_services.svc[i].characteristics = nullptr;
+//    }
+//};
+//
+//
+//CGatt& CGatt::operator=(CGatt&& other)
+//{
+//
+//    // clean up visible resources
+//    const int NUM_DESC = m_services.desc.size();
+//    for (int i = 0; i < NUM_DESC; ++i)
+//    {
+//        delete m_services.desc[i].uuid;
+//    }
+//
+//    const int NUM_CHR = m_services.chr.size();
+//    for (int i = 0; i < NUM_CHR; ++i)
+//    {
+//        delete m_services.chr[i].uuid;
+//        delete m_services.chr[i].descriptors;
+//        delete m_services.chr[i].val_handle;
+//    }
+//
+//    const int NUM_SVC = m_services.svc.size();
+//    for (int i = 0; i < NUM_SVC; ++i)
+//    {
+//        delete m_services.svc[i].uuid;
+//        delete m_services.svc[i].includes;
+//        delete m_services.svc[i].characteristics;
+//    }
+//    
+//    // transfer contents
+//    m_services = std::move(other.m_services);
+//
+//    // nullify ptr's in other
+//    for (int i = 0; i < NUM_DESC; ++i)
+//    {
+//        other.m_services.desc[i].uuid = nullptr;
+//        other.m_services.desc[i].access_cb = nullptr;
+//        other.m_services.desc[i].arg = nullptr;
+//    }
+//
+//    for (int i = 0; i < NUM_CHR; ++i)
+//    {
+//        other.m_services.chr[i].uuid = nullptr;
+//        other.m_services.chr[i].access_cb = nullptr;
+//        other.m_services.chr[i].arg = nullptr;
+//        other.m_services.chr[i].descriptors = nullptr;
+//        other.m_services.chr[i].val_handle = nullptr;
+//    }
+//
+//    for (int i = 0; i < NUM_SVC; ++i)
+//    {
+//        other.m_services.svc[i].uuid = nullptr;
+//        other.m_services.svc[i].includes = nullptr;
+//        other.m_services.svc[i].characteristics = nullptr;
+//    }
+//
+//    return *this;
+//}
+
+
+// This does not work. Soft reset is triggered
+//CGatt::CGatt()
+//{
+//    //throw std::runtime_error("An error occured during Construction of CGatt!");
+//
+//   BleService tmp = {
+//    .desc = {
+//        make_descriptor(&tmpDescriptorId.u, BLE_ATT_F_READ, tmp_service_callback)
+//        , 0
+//    },
+//    .chr = {
+//        make_characteristic(&tmpCharacteristicId.u, tmp_service_callback, tmp.desc.data(),
+//                           BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE, &tmpCharacteristicValuehandle)
+//        , 0
+//    },
+//    .svc = {
+//        make_service(BLE_GATT_SVC_TYPE_PRIMARY, &tmpServiceId.u, tmp.chr.data())
+//    , 0
+//    }
+//};
+//
+//m_services[0] = std::move(tmp);
+//}
+
+
+int CGatt::register_services()
 {
 
-    
     //ble_svc_gatt_init();
 
-    int result = ble_gatts_count_cfg(myService_TEMPLATE.data());
-    if (result != 0) {
-        LOG_INFO("UNABLE TO COUNT GATT SVCS");
-    }
+    int result = ble_gatts_reset(); // BLE_HS_EBUSY 
+    if (result != SUCCESS)
+        return result;
+    
+    result = ble_gatts_count_cfg(m_services.svc.data()); // BLE_HS_EINVAL 
+    if (result != SUCCESS) 
+        return result;
 
-    result = ble_gatts_add_svcs(myService_TEMPLATE.data());
-    if (result != 0) {
-        LOG_INFO("UNABLE TO ADD GATT SVCS");
-    }
+    return ble_gatts_add_svcs(m_services.svc.data()); // BLE_HS_ENOMEM 
 }
 
 

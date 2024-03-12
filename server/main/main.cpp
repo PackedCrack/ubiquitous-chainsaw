@@ -32,13 +32,12 @@ extern "C" void app_main(void)
 	
 	try 
 	{
-        ble::CNimble nimble {};
-		//ble::CNimble nimble1 {}; // will fuck up the advertising aswell
-    } catch (const std::exception& error) {
-		LOG_ERROR_FMT("Caught exception: {}", error.what());
-    } catch (...) {
-		LOG_ERROR("Caught unknown exception");
-    }
+		{
+        ble::CNimble tmp {};
+		}
+		ble::CNimble nimble {};
+		//ble::CNimble nimble {std::move(tmp)};
+		//ble::CNimble nimble = std::move(tmp);
 
 	while (true)
 	{
@@ -46,4 +45,14 @@ extern "C" void app_main(void)
 		// Perform any periodic tasks here
 		vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
 	}
+
+	
+    } catch (const std::exception& error) {
+		LOG_ERROR_FMT("Caught exception: {}", error.what());
+		esp_restart();
+    } catch (...) {
+		LOG_ERROR("Caught unknown exception");
+		esp_restart();
+    }
+
 }
