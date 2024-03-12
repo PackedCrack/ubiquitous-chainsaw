@@ -19,6 +19,11 @@ SET(STD_PCH <cstdint>
         <shared_mutex>
         <functional>
         <filesystem>
+        <future>
+        <variant>
+        <ranges>
+        <random>
+        <queue>
         <cerrno>)
 
 # --- functions --- #

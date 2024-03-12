@@ -5,7 +5,8 @@
 #pragma once
 #include "common.hpp"
 // third-party
-#include "wolfcrypt/types.h"
+#define NOMINMAX
+#include "wolfcrypt/types.h"    // wolfcrypt brings in windows.h defines? -> this screws up taskflow
 
 
 namespace security

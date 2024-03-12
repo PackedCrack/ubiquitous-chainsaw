@@ -4,6 +4,7 @@
 
 #pragma once
 #include "defines.hpp"
+#include "../common/ble_services.hpp"
 
 
 namespace ble
@@ -15,6 +16,35 @@ template<typename int_t> requires unsigned_integral<int_t>
 [[nodiscard]] uint8_t lsb_of_uint(int_t value)
 {
     return static_cast<uint8_t>(value);
+}
+
+template<typename uuid_t>
+[[nodiscard]] ble::UUID make_uuid(uuid_t&& guid)
+{
+    ble::UUID uuid{};
+    
+    uuid.data1 = guid.Data1;
+    uuid.custom = guid.Data2;
+    uuid.data3 = guid.Data3;
+    
+    uuid.data4 = guid.Data4[0];
+    uuid.data4 = uuid.data4 << 8u;
+    uuid.data4 = uuid.data4 | guid.Data4[1];
+    
+    uuid.data5 = guid.Data4[2];
+    uuid.data5 = uuid.data5 << 8u;
+    uuid.data5 = uuid.data5 | guid.Data4[3];
+    
+    uuid.data6 = guid.Data4[4];
+    uuid.data6 = uuid.data6 << 8u;
+    uuid.data6 = uuid.data6 | guid.Data4[5];
+    
+    uuid.data7 = guid.Data4[6];
+    uuid.data7 = uuid.data7 << 8u;
+    uuid.data7 = uuid.data7 | guid.Data4[7];
+    
+    
+    return uuid;
 }
 
 [[nodiscard]] inline char byte_to_hex_char(size_t index)

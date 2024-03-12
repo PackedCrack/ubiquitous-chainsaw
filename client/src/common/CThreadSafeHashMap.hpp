@@ -3,18 +3,22 @@
 //
 
 #pragma once
+#include "CMutex.hpp"
 
 
 template<typename hashable_key_t, typename element_t>
 class CThreadSafeHashMap
 {
 public:
-    CThreadSafeHashMap() = default;
+    CThreadSafeHashMap()
+        : m_Container{}
+        , m_Mutex{}
+    {};
     ~CThreadSafeHashMap() = default;
-    CThreadSafeHashMap(const CThreadSafeHashMap& other) = delete;
-    CThreadSafeHashMap(CThreadSafeHashMap&& other) = delete;
-    CThreadSafeHashMap& operator=(const CThreadSafeHashMap& other) = delete;
-    CThreadSafeHashMap& operator=(CThreadSafeHashMap&& other) = delete;
+    CThreadSafeHashMap(const CThreadSafeHashMap& other) = default;
+    CThreadSafeHashMap(CThreadSafeHashMap&& other) = default;
+    CThreadSafeHashMap& operator=(const CThreadSafeHashMap& other) = default;
+    CThreadSafeHashMap& operator=(CThreadSafeHashMap&& other) = default;
 public:
     enum class ErrorCode
     {
@@ -22,7 +26,7 @@ public:
     };
     struct Error
     {
-        std::wstring msg;
+        std::string msg;
         ErrorCode code;
     };
 public:
@@ -50,14 +54,14 @@ public:
     }
     // read
     template<typename key_t>
-    [[nodiscard]] std::expected<element_t, Error> find(key_t&& key)
+    [[nodiscard]] std::expected<element_t* const, Error> find(key_t&& key)
     {
         std::shared_lock lock{ m_Mutex };
         auto it = m_Container.find(std::forward<key_t>(key));
         if(it == std::end(m_Container))
             return std::unexpected{ Error{ .msg = "Unable to find element.", .code = ErrorCode::elementNotFound } };
         
-        return *it;
+        return &(it->second);
     }
     template<typename key_t>
     [[nodiscard]] bool contains(key_t&& key)
@@ -84,5 +88,5 @@ public:
     }
 private:
     std::unordered_map<hashable_key_t, element_t> m_Container;
-    std::shared_mutex m_Mutex;
+    CMutex<std::shared_mutex> m_Mutex;
 };

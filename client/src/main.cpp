@@ -1,7 +1,7 @@
 #include "defines.hpp"
 #include "gfx/CRenderer.hpp"
-#include "gfx/SDL_Defines.hpp"
 #include "gui/CGui.hpp"
+
 
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
@@ -10,27 +10,16 @@
 #include "security/ecc_key.hpp"
 
 
-#include "wolfssl/options.h"
-#include "wolfssl/wolfcrypt/ecc.h"
-#include "wolfssl/wolfcrypt/asn.h"
-#include "wolfssl/wolfcrypt/random.h"
-#include "wolfssl/wolfcrypt/sha256.h"
-#include "wolfssl/ssl.h"
-#include "wolfssl/wolfcrypt/asn_public.h"
-#include "wolfssl/wolfcrypt/signature.h"
+#include "taskflow/taskflow.hpp"
 
-#include <windows.h>
+
 #include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
-#include <winrt/Windows.Devices.Bluetooth.h>
-#include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
-#include <winrt/Windows.Foundation.Collections.h>
 
-#include <iostream>
-#include <coroutine>
+
 #include "bluetoothLE/CBLEScanner.hpp"
+#include "bluetoothLE/windows/CDevice.hpp"
+#include "bluetoothLE/windows/SystemAPI.h"
 
-#include "defense/defense_mechanism.hpp"
 
 
 
@@ -62,137 +51,58 @@ void process_cmd_line_args(int argc, char** argv)
 
 
 
-
-
-winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
+void query_device(uint64_t bluetoothAddress)
 {
-    using namespace winrt::Windows::Devices::Bluetooth;
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    
-    auto bluetoothLeDevice = co_await BluetoothLEDevice::FromBluetoothAddressAsync(bluetoothAddress);
-    // Further operations on bluetoothLeDevice
-    
-    // Discover services because lmfao
-    auto servicesResult = co_await bluetoothLeDevice.GetGattServicesAsync();
-    
-    
-    if (servicesResult.Status() == GattCommunicationStatus::Success)
+    ble::win::CDevice device = ble::win::CDevice::make_device(bluetoothAddress);
+    while(!device.ready())
     {
-        auto services = servicesResult.Services();
-        for(auto&& service : services)
+    }
+    
+    ble::UUID uuid{
+        .data1 = 0x59462f12,
+        .custom = 0x9543,
+        .data3 = 0x9999,
+        .data4 = 0x12c8,
+        .data5 = 0x58b4,
+        .data6 = 0x59a2,
+        .data7 = 0x712d
+    };
+    
+    auto services = device.services();
+    auto iter = services.find(uuid);
+    if(iter != std::end(services))
+    {
+        ble::win::CService& service = iter->second;
+        ble::UUID characteristicUuid{
+                .data1 = 0x33333333,
+                .custom = 0x2222,
+                .data3 = 0x2222,
+                .data4 = 0x1111,
+                .data5 = 0x1111,
+                .data6 = 0x0000,
+                .data7 = 0x0000
+        };
+        
+        auto result = service.characteristic(characteristicUuid);
+        if(result)
         {
-            std::printf("\n\n------------------");
-            
-            std::printf("\nService UUID: %ws", to_hstring(service.Uuid()).data());
-            
-            // characteristics
-            auto characteristicsResults = co_await service.GetCharacteristicsAsync();
-            if(characteristicsResults.Status() == GattCommunicationStatus::Success)
+            LOG_INFO("Reading characteristic value!");
+            const ble::win::CCharacteristic* pCharacteristic = result.value();
+            pCharacteristic->read_value();
+        }
+        else
+        {
+            if(result.error() == ble::win::CService::Error::characteristicNotFound)
             {
-                auto characteristics = characteristicsResults.Characteristics();
-                for(auto&& characteristic : characteristics)
-                {
-                    std::printf("\nCharacteristic UUID: %ws", to_hstring(characteristic.Uuid()).data());
-                    // User firendly descrition
-                    std::printf("\nUser friendly description: %ws", characteristic.UserDescription().data());
-                    
-                    // Protection level
-                    auto level = characteristic.ProtectionLevel();
-                    switch(level)
-                    {
-                        case GattProtectionLevel::AuthenticationRequired:
-                            std::printf("\nProtection level: Authentication Required");
-                            break;
-                        case GattProtectionLevel::EncryptionAndAuthenticationRequired:
-                            std::printf("\nProtection level: Encryption And Authentication Required");
-                            break;
-                        case GattProtectionLevel::EncryptionRequired:
-                            std::printf("\nProtection level: Encryption Required");
-                            break;
-                        case GattProtectionLevel::Plain:
-                            std::printf("\nProtection level: Plain");
-                            break;
-                    }
-                    
-                    // Properties
-                    auto properties = characteristic.CharacteristicProperties();
-                    std::string props{ "\nProperties level:"};
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::AuthenticatedSignedWrites))
-                        props += " Authenticated Signed Writes,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::Broadcast))
-                        props += " Broadcast,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::ExtendedProperties))
-                        props += " Extended Properties,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::Indicate))
-                        props += " Indicate,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::None))
-                        props += " None,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::Notify))
-                        props += " Notify,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::Read))
-                        props += " Read,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::ReliableWrites))
-                        props += " Reliable Writes,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::WritableAuxiliaries))
-                        props += " Writable Auxiliaries,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::Write))
-                        props += " Write,";
-                    if(std::to_underlying(properties) & std::to_underlying(GattCharacteristicProperties::WriteWithoutResponse))
-                        props += " Write Without Response,";
-                    
-                    if(props.ends_with(','))
-                        props.pop_back();
-                    
-                    std::printf("%s", props.c_str());
-                    
-                    
-                    
-                    // Descriptors
-                    
-                    auto descriptorResults = co_await characteristic.GetDescriptorsAsync();
-                    if(descriptorResults.Status() == GattCommunicationStatus::Success)
-                    {
-                        auto descriptors = descriptorResults.Descriptors();
-                        for(auto&& descriptor : descriptors)
-                        {
-                            std::printf("\nDescriptor UUID: %ws", to_hstring(descriptor.Uuid()).data());
-                            
-                            auto protLevel = descriptor.ProtectionLevel();
-                            switch(protLevel)
-                            {
-                                case GattProtectionLevel::AuthenticationRequired:
-                                    std::printf("\nProtection level: Authentication Required");
-                                    break;
-                                case GattProtectionLevel::EncryptionAndAuthenticationRequired:
-                                    std::printf("\nProtection level: Encryption And Authentication Required");
-                                    break;
-                                case GattProtectionLevel::EncryptionRequired:
-                                    std::printf("\nProtection level: Encryption Required");
-                                    break;
-                                case GattProtectionLevel::Plain:
-                                    std::printf("\nProtection level: Plain");
-                                    break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        LOG_WARN_FMT("failed to get descriptors. Failed with: \"{}\"", std::to_underlying(descriptorResults.Status()));
-                    }
-                }
-            }
-            else
-            {
-                LOG_WARN_FMT("failed to get characteristics. Failed with: \"{}\"", std::to_underlying(characteristicsResults.Status()));
+                LOG_ERROR("Failed to find characteristic");
             }
         }
     }
     else
     {
-        LOG_WARN_FMT("failed to get service. Failed with: \"{}\"", std::to_underlying(servicesResult.Status()));
+        LOG_ERROR("Unable to find service with given UUID");
     }
 }
-
 
 void test_ecc_sign()
 {
@@ -216,45 +126,42 @@ void test_ecc_sign()
 
 int main(int argc, char** argv)
 {
-    auto result = security::CWolfCrypt::instance();
-    test_ecc_sign();
-    return 0;
-    
-    
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
-    //CThreadSafeHashMap<std::string, ble::DeviceInfo> cache{};
-    //
-    //ble::CBLEScanner indScanner = ble::make_scanner(cache);
-    //
-    ////ble::win::CScanner scanner{ cache };
-    ////scanner.begin_scan();
-    //
-    ////begin_scan(indScanner);
-    //indScanner.begin_scan();
-    //
-    //while(true)
-    //{
-    //    if(cache.size() > 0)
-    //    {
-    //        std::vector<ble::DeviceInfo> infos = cache.as_vector();
-    //        for(const auto& info : infos)
-    //        {
-    //            LOG_INFO_FMT("Device in cache.\nAddress: {}\nAddress Type: {}",
-    //                         ble::hex_addr_to_str(info.address.value()),
-    //                         ble::address_type_to_str(info.addressType));
-    //
-    //            query_device(info.address.value());
-    //        }
-    //        break;
-    //    }
-    //
-    //    std::this_thread::sleep_for(std::chrono::seconds(1));
-    //}
+    
+    auto result = security::CWolfCrypt::instance();
+    ble::win::SystemAPI system{};
+    
+    ble::CBLEScanner scanner = ble::make_scanner();
+    scanner.begin_scan();
     
     
-    // winrt::uninit_apartment();
-
+    tf::Executor executor{};
+    
+    executor.silent_async([&scanner]()
+    {
+        while(true)
+        {
+            std::vector<ble::DeviceInfo> infos = scanner.found_devices();
+            if(!infos.empty())
+            {
+                
+                for(const auto& info : infos)
+                {
+                    LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
+                                 ble::hex_addr_to_str(info.address.value()),
+                                 ble::address_type_to_str(info.addressType));
+                    
+                    query_device(info.address.value());
+                }
+                break;
+            }
+            
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    });
+    
+    
     
 
     try
