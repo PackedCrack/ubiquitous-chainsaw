@@ -47,13 +47,13 @@ struct CharsCallbackArgs
 };
 
 template<typename invocable_t>
-requires std::invocable<invocable_t, CharsCallbackArgs>
+requires std::is_invocable_r_v<int32_t, invocable_t, uint16_t, uint16_t, ble_gatt_access_ctxt*, void*>
 class CGattCharacteristic
 {
 public:
 	template<typename... property_flag_t>
 	CGattCharacteristic(uint16_t uuid, invocable_t&& callback, property_flag_t&&... flags)
-		: m_pUUID{ make_ble_uuid_128(uuid) }
+		: m_UUID{ make_ble_uuid128(uuid) }
 		, m_Callback{ std::forward<invocable_t>(callback) }
 		, m_Args{}
 		, m_Flags{}
@@ -64,8 +64,8 @@ public:
 	explicit operator ble_gatt_chr_def()
 	{
 		return ble_gatt_chr_def{
-			.uuid = m_pUUID.get(),
-			.ble_gatt_access_fn = &m_Callback,
+			.uuid = &(m_UUID.u),
+			.access_cb = m_Callback,
 			.arg = static_cast<void*>(&m_Args),
 			.descriptors = nullptr,
 			.flags = static_cast<ble_gatt_chr_flags>(m_Flags),
@@ -73,14 +73,15 @@ public:
 			.val_handle = &m_ValueHandle
 		};
 	}
-	[[nodiscard]] ble_gatt_chr_def to_nimble_api()
+	[[nodiscard]] ble_gatt_chr_def to_nimble_t()
 	{
 		return static_cast<ble_gatt_chr_def>(*this);
 	}
 private:
-	std::unique_ptr<ble_uuid128_t> m_pUUID;
+	//std::unique_ptr<ble_uuid128_t> m_pUUID;
+	ble_uuid128_t m_UUID;
 	invocable_t m_Callback;
-	CharsCallbackArgs m_Args;
+	CharsCallbackArgs m_Args;	// needed at all?
 	CharsPropertyFlag m_Flags;
 	uint16_t m_ValueHandle;
 };
@@ -89,7 +90,7 @@ private:
 template<typename characteristic_t>
 concept GattCharacteristicDefine = requires(characteristic_t characteristic)
 {
-	{ characteristic.to_nimble() } -> std::convertible_to<ble_gatt_chr_def>;
+	{ characteristic.to_nimble_t() } -> std::convertible_to<ble_gatt_chr_def>;
 	{ static_cast<ble_gatt_chr_def>(characteristic) } -> std::convertible_to<ble_gatt_chr_def>;
 };
 
@@ -101,7 +102,7 @@ class Concept
 public:
 	virtual ~Concept() = default;
 public:
-	virtual ble_gatt_chr_def exec_to_nimble() const = 0;
+	virtual ble_gatt_chr_def exec_to_nimble_t() = 0;
 protected:
 	Concept() = default;
 	Concept(const Concept& other) = default;
@@ -114,16 +115,18 @@ requires GattCharacteristicDefine<characteristic_t>
 class Model : public Concept
 {
 public:
-	Model() = default;
+	Model(characteristic_t&& characteristic)
+		: m_Characteristic{ std::forward<characteristic_t>(characteristic) }
+	{};
 	~Model() override = default;
 	Model(const Model& other) = default;
 	Model(Model&& other) = default;
 	Model& operator=(const Model& other) = default;
 	Model& operator=(Model&& other) = default;
 public:
-	[[nodiscard]] ble_gatt_chr_def exec_to_nimble() const override
+	[[nodiscard]] ble_gatt_chr_def exec_to_nimble_t() override
 	{
-		return m_Characteristic.to_nimble();
+		return m_Characteristic.to_nimble_t();
 	}
 private:
 	characteristic_t m_Characteristic;
@@ -139,13 +142,13 @@ public:
 	CCharacteristic& operator=(const CCharacteristic& other) = default;
 	CCharacteristic& operator=(CCharacteristic&& other) = default;
 public:
-	[[nodiscard]] ble_gatt_chr_def to_nimble() const
+	[[nodiscard]] ble_gatt_chr_def to_nimble_t()
 	{
-		return m_pCharacteristic->exec_to_nimble();
+		return m_pCharacteristic->exec_to_nimble_t();
 	}
 	explicit operator ble_gatt_chr_def()
 	{
-		return m_pCharacteristic->exec_to_nimble();
+		return m_pCharacteristic->exec_to_nimble_t();
 	}
 private:
 	std::unique_ptr<Concept> m_pCharacteristic;
@@ -154,6 +157,6 @@ private:
 template<typename... ctor_args_t>
 [[nodiscard]] CCharacteristic make_characteristic(ctor_args_t... args)
 {
-	return CCharacteristic{ std::forward<ctor_args_t>(args)... };
+	return CCharacteristic{ CGattCharacteristic{ std::forward<ctor_args_t>(args)... }};
 }
 }	// namespace ble

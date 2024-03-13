@@ -16,9 +16,10 @@ public:
 public:
 
 private:
+	[[nodiscard]] std::vector<CCharacteristic> make_characteristics() const;
 	void register_service();
 private:
-	CGattService m_Service;
 	std::vector<CCharacteristic> m_Characteristics;
+	CGattService m_Service;
 };
 }	// namespace ble

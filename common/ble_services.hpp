@@ -89,4 +89,5 @@ static constexpr UUID BaseUID
 };
 
 static constexpr uint16_t ID_SERVICE_WHOAMI = 0xAAAA;
+static constexpr uint16_t ID_CHARS_SIGNED_MAC = 0xAAAB;
 }   // namespace ble

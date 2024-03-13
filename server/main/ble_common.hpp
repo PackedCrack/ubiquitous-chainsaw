@@ -8,7 +8,7 @@
 
 namespace ble
 {
-ble_uuid128_t make_ble_uuid_128(uint16_t uniqueValue)
+ble_uuid128_t make_ble_uuid128(uint16_t uniqueValue)
 {
 	ble_uuid128_t uuid{};
 	uuid.u.type = BLE_UUID_TYPE_128;
