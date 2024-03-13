@@ -1,9 +1,7 @@
 #pragma once
+#include "ble_common.hpp"
 // std
 #include <memory>
-// nimnble
-#include "host/ble_uuid.h"
-#include "host/ble_gatt.h"
 
 
 namespace ble
@@ -44,25 +42,9 @@ enum class CharsPropertyFlag : uint16_t
 }
 
 
-
-std::unique_ptr<ble_uuid128_t> make_ble_uuid_128(uint16_t uniqueValue)
-{
-	UUID uuid = BaseUID;
-	uuid.custom = uniqueValue;
-
-	auto m_pNimbleUUID = std::make_unique<ble_uuid128_t>();
-	m_pNimbleUUID->u = BLE_UUID_TYPE_128;
-	static_assert(std::is_trivially_copyable_v<decltype(uuid)>);
-	static_assert(ARRAY_SIZE(m_pNumbleUUID->value) == sizeof(decltype(uuid)));
-	std::memcpy(&(m_pNumbleUUID->value[0]), &uuid, ARRAY_SIZE(m_pNumbleUUID->value));
-
-	return m_pNimbleUUID;
-}
-
-
 struct CharsCallbackArgs
 {
-}
+};
 
 template<typename invocable_t>
 requires std::invocable<invocable_t, CharsCallbackArgs>
@@ -75,13 +57,13 @@ public:
 		, m_Callback{ std::forward<invocable_t>(callback) }
 		, m_Args{}
 		, m_Flags{}
-		, m_ValHandle{}
+		, m_ValueHandle{}
 	{
 		m_Flags = (flags | ...);
 	}
 	explicit operator ble_gatt_chr_def()
 	{
-		return ble_gett_char_def{
+		return ble_gatt_chr_def{
 			.uuid = m_pUUID.get(),
 			.ble_gatt_access_fn = &m_Callback,
 			.arg = static_cast<void*>(&m_Args),
@@ -91,14 +73,14 @@ public:
 			.val_handle = &m_ValueHandle
 		};
 	}
-	[[nodiscard]] ble_gatt_chr_def_t to_nimble_api()
+	[[nodiscard]] ble_gatt_chr_def to_nimble_api()
 	{
-		return static_cast<ble_gatt_chr_def_t>(*this);
+		return static_cast<ble_gatt_chr_def>(*this);
 	}
 private:
 	std::unique_ptr<ble_uuid128_t> m_pUUID;
-	invokable_t m_Callback;
-	CharsCbArgs m_Args;
+	invocable_t m_Callback;
+	CharsCallbackArgs m_Args;
 	CharsPropertyFlag m_Flags;
 	uint16_t m_ValueHandle;
 };

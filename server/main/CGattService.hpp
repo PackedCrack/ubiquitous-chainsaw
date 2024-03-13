@@ -17,7 +17,7 @@ public:
 	explicit operator ble_gatt_svc_def();
 private:
 	CGattService() = default;
-	[[nodiscard]] CGattService copy(CGattService& source) const;
+	[[nodiscard]] CGattService copy(const CGattService& source) const;
 private:
 	std::unique_ptr<ble_uuid128_t> m_pUUID;
 	std::vector<ble_gatt_chr_def> m_Characteristics;

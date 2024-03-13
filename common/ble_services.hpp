@@ -1,4 +1,7 @@
 #pragma once
+// std
+#include <cstdint>
+#include <concepts>
 
 
 namespace ble
@@ -50,11 +53,11 @@ struct UUID
     }
     struct Hasher
     {
-        [[nodiscard]]std::size_t operator()(const UUID& uuid) const
+        [[nodiscard]] std::size_t operator()(const UUID& uuid) const
         {
-            static constexpr size_t prime = 31u;
+            static constexpr std::size_t prime = 31u;
             
-            size_t hash = 1u;
+            std::size_t hash = 1u;
             hash = (hash * prime) + (uuid.data1 ^ lower_end_bits(uuid.data1));
             hash = (hash * prime) + (uuid.custom ^ lower_end_bits(uuid.custom));
             hash = (hash * prime) + (uuid.data3 ^ lower_end_bits(uuid.data3));
@@ -67,7 +70,7 @@ struct UUID
         }
     private:
         template<typename integer_t> requires std::integral<integer_t>
-        [[nodiscard]] size_t lower_end_bits(integer_t val) const
+        [[nodiscard]] std::size_t lower_end_bits(integer_t val) const
         {
             return val >> (sizeof(decltype(data1)) / 2);
         }
