@@ -8,6 +8,9 @@ idf_component_register(
 	"CNonVolatileStorage.cpp" 
 	"CChip.cpp" 
 	"main.cpp"
+	"CGattCharacteristic.hpp"
+	"CGattService.cpp"
+	"CAuthentication.cpp"
 	
 	INCLUDE_DIRS 
 	"${CMAKE_SOURCE_DIR}/../external/include"
