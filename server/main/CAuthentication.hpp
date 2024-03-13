@@ -19,6 +19,6 @@ private:
 	void register_service();
 private:
 	CGattService m_Service;
-	std::vector<CGattCharacteristic> m_Characteristics;
-}
+	std::vector<CCharacteristic> m_Characteristics;
+};
 }	// namespace ble

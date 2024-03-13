@@ -23,7 +23,7 @@ namespace
 
 namespace ble
 {
-CGattService::CGattService(std::vector<CGattCharacteristic>& characteristics)
+CGattService::CGattService(std::vector<CCharacteristic>& characteristics)
 	: m_pUUID{ std::make_unique<ble_uuid128_t>(/* stuff */) }
 	, m_Characteristics{}
 {
@@ -57,11 +57,11 @@ CGattService CGattService::copy(const CGattService& source) const
 	cpy.m_Characteristics = source.m_Characteristics;
 	return cpy;
 }
-CGattService::operator ble_gatt_svc_def()
+CGattService::operator ble_gatt_svc_def() const
 {
 	return ble_gatt_svc_def{
 		.type = BLE_GATT_SVC_TYPE_PRIMARY,
-		.uuid = m_pUUID.get(),
+		.uuid = &(m_pUUID->u),
 		.includes = nullptr, // for now
 		.characteristics = m_Characteristics.data()
 	};

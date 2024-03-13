@@ -84,4 +84,76 @@ private:
 	CharsPropertyFlag m_Flags;
 	uint16_t m_ValueHandle;
 };
+
+
+template<typename characteristic_t>
+concept GattCharacteristicDefine = requires(characteristic_t characteristic)
+{
+	{ characteristic.to_nimble() } -> std::convertible_to<ble_gatt_chr_def>;
+	{ static_cast<ble_gatt_chr_def>(characteristic) } -> std::convertible_to<ble_gatt_chr_def>;
+};
+
+class CCharacteristic
+{
+	// todo: friend functions
+class Concept
+{
+public:
+	virtual ~Concept() = default;
+public:
+	virtual ble_gatt_chr_def exec_to_nimble() const = 0;
+protected:
+	Concept() = default;
+	Concept(const Concept& other) = default;
+	Concept(Concept&& other) = default;
+	Concept& operator=(const Concept& other) = default;
+	Concept& operator=(Concept&& other) = default;
+};
+template<typename characteristic_t>
+requires GattCharacteristicDefine<characteristic_t>
+class Model : public Concept
+{
+public:
+	Model() = default;
+	~Model() override = default;
+	Model(const Model& other) = default;
+	Model(Model&& other) = default;
+	Model& operator=(const Model& other) = default;
+	Model& operator=(Model&& other) = default;
+public:
+	[[nodiscard]] ble_gatt_chr_def exec_to_nimble() const override
+	{
+		return m_Characteristic.to_nimble();
+	}
+private:
+	characteristic_t m_Characteristic;
+};
+public:
+	template<typename characteristic_t>
+	explicit CCharacteristic(characteristic_t&& characteristic) requires GattCharacteristicDefine<characteristic_t>
+		: m_pCharacteristic{ std::make_unique<Model<characteristic_t>>(std::forward<characteristic_t>(characteristic)) }
+	{}
+	~CCharacteristic() = default;
+	CCharacteristic(const CCharacteristic& other) = default;
+	CCharacteristic(CCharacteristic&& other) = default;
+	CCharacteristic& operator=(const CCharacteristic& other) = default;
+	CCharacteristic& operator=(CCharacteristic&& other) = default;
+public:
+	[[nodiscard]] ble_gatt_chr_def to_nimble() const
+	{
+		return m_pCharacteristic->exec_to_nimble();
+	}
+	explicit operator ble_gatt_chr_def()
+	{
+		return m_pCharacteristic->exec_to_nimble();
+	}
+private:
+	std::unique_ptr<Concept> m_pCharacteristic;
+};
+
+template<typename... ctor_args_t>
+[[nodiscard]] CCharacteristic make_characteristic(ctor_args_t... args)
+{
+	return CCharacteristic{ std::forward<ctor_args_t>(args)... };
+}
 }	// namespace ble
