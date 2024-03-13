@@ -3,6 +3,7 @@
 #include <memory>
 // nimnble
 #include "host/ble_uuid.h"
+#include "host/ble_gatt.h"
 
 
 namespace ble
@@ -24,22 +25,22 @@ enum class CharsPropertyFlag : uint16_t
 	writeEnc = BLE_GATT_CHR_F_WRITE_ENC,
 	writeAuthen = BLE_GATT_CHR_F_WRITE_ENC,
 	writeAuthor = BLE_GATT_CHR_F_WRITE_AUTHOR
-}
+};
 [[nodiscard]] constexpr CharsPropertyFlag operator&(CharsPropertyFlag lhs, CharsPropertyFlag rhs)
 {
-	return CharsPropertyFlag{ static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs) };
+	return CharsPropertyFlag{ static_cast<uint16_t>(static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs)) };
 }
 [[nodiscard]] constexpr CharsPropertyFlag operator|(CharsPropertyFlag lhs, CharsPropertyFlag rhs)
 {
-	return CharsPropertyFlag{ static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs) };
+	return CharsPropertyFlag{ static_cast<uint16_t>(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs)) };
 }
 [[nodiscard]] constexpr CharsPropertyFlag operator^(CharsPropertyFlag lhs, CharsPropertyFlag rhs)
 {
-	return CharsPropertyFlag{ static_cast<uint16_t>(lhs) ^ static_cast<uint16_t>(rhs) };
+	return CharsPropertyFlag{ static_cast<uint16_t>(static_cast<uint16_t>(lhs) ^ static_cast<uint16_t>(rhs)) };
 }
 [[nodiscard]] constexpr CharsPropertyFlag operator~(CharsPropertyFlag value)
 {
-	return CharsPropertyFlag{ ~static_cast<uint16_t>(value) };
+	return CharsPropertyFlag{ static_cast<uint16_t>(~static_cast<uint16_t>(value)) };
 }
 
 
