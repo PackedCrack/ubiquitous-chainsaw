@@ -105,11 +105,10 @@ public:
 
 public:
     [[nodiscard]] uint16_t handle() const;
-    [[nodiscard]] int num_services() const;
-    //[[nodiscard]] int num_characteristics(uint16_t handleStart, uint16_t handleEnd) const;
-    [[nodiscard]] std::vector<BleClientService> services() const; // cannot be const because of the discovery process (we add characteristics afterwards)
+    [[nodiscard]] int32_t num_services() const;
+    [[nodiscard]] std::vector<BleClientService> services() const;
     void set_connection(uint16_t id);
-    [[nodiscard]] std::optional<Error> drop(int32_t reason);
+    [[nodiscard]] std::optional<Error> drop(ErrorCode reason);
     void reset();
     void add_service(const BleClientService& service);
 private:
@@ -129,19 +128,18 @@ public:
     CGap& operator=(const CGap& other) = delete;
     CGap& operator=(CGap&& other);
 public:
-    [[nodiscard]] uint16_t connection_handle() const ;
-    [[nodiscard]] std::optional<Error> drop_connection(int32_t reason);
-    [[nodiscard]] int discover_services();
     void set_connection(uint16_t id);
     void reset_connection();
-    [[nodiscard]] int start();
     void rssi();
+    [[nodiscard]] uint16_t connection_handle() const ;
+    [[nodiscard]] std::optional<Error> discover_services();
+    [[nodiscard]] std::optional<Error> start();
     [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();
+    [[nodiscard]] std::optional<Error> drop_connection(ErrorCode reason);
 private:
     uint8_t m_bleAddressType;
     ble_gap_adv_params m_params;
-    //std::atomic<bool> m_isAdvertising;
     CConnectionHandle m_currentConnectionHandle;
 };
 

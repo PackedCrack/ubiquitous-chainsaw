@@ -87,11 +87,11 @@ CNimble::CNimble()
     : //m_gatt {}
      m_gap {}
 {
-    esp_err_t result = nimble_port_init();
-    std::printf("Result: %d\n", result);
-    if (result != SUCCESS)
+    esp_err_t nimbleResult = nimble_port_init();
+    std::printf("Result: %d\n", nimbleResult);
+    if (nimbleResult != SUCCESS)
     {
-        if (result != ESP_ERR_INVALID_STATE)
+        if (nimbleResult != ESP_ERR_INVALID_STATE)
             throw std::runtime_error("Error initilizing nimble_port_init() due to controller is not idle");
     }
 
@@ -116,18 +116,13 @@ CNimble::CNimble()
 
     //syncFuture.get();
 
-    result = m_gap.start();
-    std::printf("Result: %d\n", result);
-    if (result != SUCCESS)
+    std::optional<Error> result = m_gap.start();
+    if (result != std::nullopt)
     {
-        if (result == BLE_HS_EBUSY)
-            throw std::runtime_error("ERROR setting advertising fields. Avertising is in progress");
-
-        if (result == BLE_HS_EMSGSIZE)
-            throw std::runtime_error("ERROR setting advertising fields. Specified data is too large to fit in an advertisement packet");
-
-        //throw std::runtime_error("Error starting advertising");
-    } 
+        Error err = *result;
+        std::printf(err.msg.c_str());
+        throw std::runtime_error(err.msg);
+    }
 }
 
 
@@ -147,10 +142,6 @@ CNimble::~CNimble()
         // handle error here
     }
 
-
-    //ASSERT(result == SUCCESS, "Error ending advertising!");
-
-	
     //result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
     //ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
 
