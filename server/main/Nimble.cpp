@@ -194,7 +194,6 @@ CNimble& CNimble::operator=(CNimble&& other)
     
     // Check if other exists?
     //m_gatt = std::move(other.m_gatt);
-    //m_gatt = std::move(other.m_gatt);
     m_gap = std::move(other.m_gap);
     return *this;
 }
