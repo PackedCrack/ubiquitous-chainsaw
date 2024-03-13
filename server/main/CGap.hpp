@@ -83,7 +83,7 @@ private:
 
 enum class ErrorCode : int32_t
 {
-	success = Success,
+	//success = Success,
 	inProgress = BLE_HS_EALREADY,
 	unknown = INT32_MAX
 };

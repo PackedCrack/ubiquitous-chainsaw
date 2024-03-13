@@ -653,23 +653,25 @@ int CGap::begin_advertise()
 std::optional<Error> CGap::end_advertise()
 { 
 	int32_t result = ble_gap_adv_stop(); 
-	if(result == Success)
-		return std::nullopt;
-
-	if(result == SomeError)
-	{
-		return std::optional{ Error{
-			.code = result,
-			.msg = "Some error message"			
-		}};
-	}
-	else
-	{
-		return std::optional{ Error{
-			.code = unknown,
-			.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result)
-		}};
-	}
+	// TODO: implement
+	return std::nullopt;
+	//if(result == Success)
+	//	return std::nullopt;
+//
+	//if(result == SomeError)
+	//{
+	//	return std::optional{ Error{
+	//		.code = result,
+	//		.msg = "Some error message"			
+	//	}};
+	//}
+	//else
+	//{
+	//	return std::optional{ Error{
+	//		.code = unknown,
+	//		.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result)
+	//	}};
+	//}
 }
 
 } // namespace ble
