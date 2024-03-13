@@ -12,10 +12,7 @@ std::string_view nimble_error_to_string(int error)
     {
 		// bug
         case SUCCESS:
-		{
-			static constexpr std::string_view str{ "Success" };
-			return str;
-		}
+			return std::string_view { "Success" };
         case BLE_HS_EAGAIN:
             return std::string_view {"Temporary failure; try again"};
         case BLE_HS_EALREADY:
@@ -347,13 +344,27 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         case BLE_GAP_EVENT_DISCONNECT: 
         {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            int result;
+            int result1;
 
             pGap->reset_connection();
 
-            result = pGap->begin_advertise();
-            if(result != 0)
-                LOG_WARN_FMT("ERROR STARTING ADVERTISING! ERROR{}", nimble_error_to_string(result));
+            std::optional<Error> result = pGap->begin_advertise();
+            if (result != std::nullopt)
+            {
+               //if (result != SUCCESS)
+    
+               // if (result == BLE_HS_EBUSY)
+               //      throw std::runtime_error("ERROR setting advertising fields. Avertising is in progress");
+
+               // if (result == BLE_HS_EMSGSIZE)
+               //     throw std::runtime_error("ERROR setting advertising fields. Specified data is too large to fit in an advertisement packet");
+
+            }
+
+
+
+            //if(result != 0)
+            //    LOG_WARN_FMT("ERROR STARTING ADVERTISING! ERROR{}", nimble_error_to_string(result));
 
                 
             break;
@@ -492,17 +503,38 @@ void CConnectionHandle::set_connection(uint16_t id)
 uint16_t CConnectionHandle::handle() const
 { return m_id; }
 
-
-int CConnectionHandle::drop(int reason)
+/// @brief 
+/// @param int32_t reason 
+/// @return std::nullopt on success. 
+/// ErrorCode::noConnection if there is no connection with the specified handle. 
+/// ErrorCode::unknown on failure.
+std::optional<Error> CConnectionHandle::drop(int32_t reason)
 {
-    // https://mynewt.apache.org/v1_8_0/network/ble_hs/ble_hs_return_codes.html
-    int result = ble_gap_terminate(m_id, reason);
-
-    if (result == SUCCESS)
+    int32_t result = ble_gap_terminate(m_id, reason);
+    if(result == static_cast<int32_t>(ErrorCode::success))
+    {
         reset();
+        ASSERT(m_id == INVALID_HANDLE_ID, "Tried to reset a valid connection!");
+		return std::nullopt; 
+    }
 
-    ASSERT(m_id == INVALID_HANDLE_ID, "Tried to reset a valid connection!");
-    return result;
+	if(result == static_cast<int32_t>(ErrorCode::noConnection))
+	{
+		return std::optional{ Error {
+			.code = ErrorCode::noConnection,
+			.msg = "no existing connection"			
+		}};
+	}
+	else
+	{
+		return std::optional<Error> { Error {
+			.code = ErrorCode::unknown,
+			//.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result);
+            .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
+		}};
+	}
+
+
 }
 
 
@@ -596,10 +628,18 @@ uint16_t CGap::connection_handle() const
 }
 
 
-int CGap::drop_connection(int reason)
+/// @brief 
+/// @param int32_t reason 
+/// @return std::nullopt on success. 
+/// ErrorCode::noConnection if there is no connection with the specified handle. 
+/// ErrorCode::unknown on failure.
+std::optional<Error> CGap::drop_connection(int32_t reason)
 {
     // if we drop connection manually, ble will start advertising automatically
+    //return 
+    
     return m_currentConnectionHandle.drop(reason);
+    //if (result != std::nullopt) 
 }
 
 void CGap::reset_connection()
@@ -621,9 +661,22 @@ int CGap::start()
     result = set_adv_fields(deviceName); // handle this error here or give to caller? return a error code/reason pair?
     if (result != SUCCESS)
         return result;
-        
-    
-    return begin_advertise();
+
+
+
+    std::optional<Error> result1 = begin_advertise();
+    if (result1 != std::nullopt)
+    {
+        //Error err = *result1;
+        //return result1;
+        // how to handle if we cant advertise?
+        // its a fatal error and we need to restart the 
+    }
+
+    //return std::nullopt;
+
+    //return begin_advertise();
+    return 0;
 
 }
 
@@ -645,29 +698,67 @@ void CGap::rssi()
     //}
 }
 
-
-int CGap::begin_advertise()
-{ return ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); }
-
-
-std::optional<Error> CGap::end_advertise()
+/// @brief 
+/// @return std::nullopt on success. ErrorCode::unknown on failure.
+std::optional<Error> CGap::begin_advertise()
 { 
-	int32_t result = ble_gap_adv_stop(); 
-	if(result == Success)
+    int32_t result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); 
+    if(result == static_cast<int32_t>(ErrorCode::success))
 		return std::nullopt;
 
-	if(result == SomeError)
+    return std::optional<Error> { Error {
+			.code = ErrorCode::unknown,
+			//.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result);
+            .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
+		}};
+
+    //if(result == static_cast<int32_t>(ErrorCode::isBusy))
+	//{
+	//	return std::optional{ Error {
+	//		.code = ErrorCode::isBusy,
+	//		.msg = "ERROR setting advertising fields. Avertising is in progress"			
+	//	}};
+	//}
+//
+    //else if (result == static_cast<int32_t>(ErrorCode::toSmallBuffer))
+    //{
+    //    return std::optional{ Error {
+	//		.code = ErrorCode::toSmallBuffer,
+	//		.msg = "ERROR setting advertising fields. Specified data is too large to fit in an advertisement packet"			
+	//	}};
+//
+    //}
+    //else
+    //{
+    //    return std::optional<Error> { Error {
+	//		.code = ErrorCode::unknown,
+	//		//.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result);
+    //        .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
+	//	}};
+    //}
+}
+
+/// @brief 
+/// @return std::nullopt on success. ErrorCode::inProgressOrCompleted if there is no active advertising procedur. ErrorCode::unknown on failure.
+std::optional<Error> CGap::end_advertise()
+{ 
+	int32_t result = ble_gap_adv_stop();
+	if(result == static_cast<int32_t>(ErrorCode::success))
+		return std::nullopt;
+
+	if(result == static_cast<int32_t>(ErrorCode::inProgressOrCompleted))
 	{
-		return std::optional{ Error{
-			.code = result,
-			.msg = "Some error message"			
+		return std::optional{ Error {
+			.code = ErrorCode::inProgressOrCompleted,
+			.msg = "no active advertising procedure"			
 		}};
 	}
 	else
 	{
-		return std::optional{ Error{
-			.code = unknown,
-			.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result)
+		return std::optional<Error> { Error {
+			.code = ErrorCode::unknown,
+			//.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result);
+            .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
 		}};
 	}
 }

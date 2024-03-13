@@ -85,7 +85,7 @@ void configure_nimble_host()
 
 CNimble::CNimble()
     : //m_gatt {}
-    , m_gap {}
+     m_gap {}
 {
     esp_err_t result = nimble_port_init();
     std::printf("Result: %d\n", result);
@@ -139,9 +139,15 @@ CNimble::~CNimble()
 	// destructor order -> CNimble -> Gap -> Gatt
     // since we use deinit in CNimble destructor, the destructors of Gap and Gatt will crash..
 
-    int result = m_gap.drop_connection(BLE_HS_ENOENT);   
+    //int result = m_gap.drop_connection(BLE_HS_ENOENT);   
 
-    result = m_gap.end_advertise();
+    std::optional<Error> result = m_gap.end_advertise();
+    if (result != std::nullopt)
+    {
+        // handle error here
+    }
+
+
     //ASSERT(result == SUCCESS, "Error ending advertising!");
 
 	
@@ -172,8 +178,8 @@ CNimble::~CNimble()
 
 
 CNimble::CNimble(CNimble&& other) noexcept
-    : m_gatt { std::move(other.m_gatt) }
-     ,m_gap { std::move(other.m_gap) } 
+    : //m_gatt { std::move(other.m_gatt) }
+     m_gap { std::move(other.m_gap) } 
 {
     // no pointers have been moved
 }
@@ -187,7 +193,7 @@ CNimble& CNimble::operator=(CNimble&& other)
     */
     
     // Check if other exists?
-    m_gatt = std::move(other.m_gatt);
+    //m_gatt = std::move(other.m_gatt);
     m_gap = std::move(other.m_gap);
     return *this;
 }

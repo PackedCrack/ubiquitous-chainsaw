@@ -5,16 +5,11 @@
 #include <cstdio>
 #include <type_traits>
 #include <vector>
-#include <atomic>
 #include <array>
 #include <optional>
+//#include <format> // apparently i dont have c++20
 
-
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <future>
-#include <utility>
+//#include <utility>
 
 /* Project */
 #include "defines.hpp"
@@ -53,6 +48,50 @@ struct BleClientService
 };
 
 
+enum class ErrorCode : int32_t
+{
+	success = SUCCESS, // (not defined by nimble)
+    temporaryFailure = BLE_HS_EAGAIN, // Temporary failure; try again
+	inProgressOrCompleted = BLE_HS_EALREADY, // Operation already in progress or completed
+    invalidArguments = BLE_HS_EINVAL, // One or more arguments are invalid
+    toSmallBuffer = BLE_HS_EMSGSIZE, //The provided buffer is too small
+    noEntry = BLE_HS_ENOENT, // No entry matching the specified criteria
+    resourceExhaustion = BLE_HS_ENOMEM, // Operation failed due to resource exhaustion
+    noConnection = BLE_HS_ENOTCONN, // No open connection with the specified handle
+    operationDisabled = BLE_HS_ENOTSUP, // Operation disabled at compile time
+    unexpectedCallbackBehavior = BLE_HS_EAPP, // Application callback behaved unexpectedly
+    invalidPeerCommand = BLE_HS_EBADDATA, // Command from peer is invalid
+    osError = BLE_HS_EOS, // Mynewt OS error
+    invalidControllerEvent = BLE_HS_ECONTROLLER, // Event from controller is invalid
+    operationTimeOut = BLE_HS_ETIMEOUT, // Operation timed out
+    operationCompleted = BLE_HS_EDONE, // Operation completed successfully
+    isBusy = BLE_HS_EBUSY, // Operation cannot be performed until procedure completes
+    peerRejectedConnectionParam = BLE_HS_EREJECT, // Peer rejected a connection parameter update request
+    unexpectedFailure = BLE_HS_EUNKNOWN, // Unexpected failure; catch all
+    wrongRole = BLE_HS_EROLE, // Operation requires different role (e.g., central vs. peripheral)
+    requestTimeOut = BLE_HS_ETIMEOUT_HCI, // HCI request timed out; controller unresponsiv
+    eventMemoryExhaustion = BLE_HS_ENOMEM_EVT, // Controller failed to send event due to memory exhaustion (combined host-controller only)
+    noConfiguredIdentityAddress = BLE_HS_ENOADDR, // Operation requires an identity address but none configured
+    notSynced = BLE_HS_ENOTSYNCED, // Attempt to use the host before it is synced with controller
+    insufficientAuthen = BLE_HS_EAUTHEN, // Insufficient authentication
+    insufficientAuthor = BLE_HS_EAUTHOR, // Insufficient authorization
+    insufficientEncLvl = BLE_HS_EENCRYPT, // Insufficient encryption level
+    insufficientKeySize = BLE_HS_EENCRYPT_KEY_SZ, // Insufficient key size
+    storageFull = BLE_HS_ESTORE_CAP, // Storage at capacity
+    storageIO = BLE_HS_ESTORE_FAIL, // Storage IO error
+    preemptedOperation = BLE_HS_EPREEMPTED, // Operation preempted 
+    disabledFeature = BLE_HS_EDISABLED, // FDisabled feature
+    operationStalled = BLE_HS_ESTALLED, //Operation stalled 
+	unknown = INT32_MAX
+};
+
+struct Error
+{
+	ErrorCode code;
+	std::string msg;
+};
+
+
 class CConnectionHandle // NOTE: Will this be needed for GATT services???? probably drop connectino if not authenticated
 {
 
@@ -70,7 +109,7 @@ public:
     //[[nodiscard]] int num_characteristics(uint16_t handleStart, uint16_t handleEnd) const;
     [[nodiscard]] std::vector<BleClientService> services() const; // cannot be const because of the discovery process (we add characteristics afterwards)
     void set_connection(uint16_t id);
-    [[nodiscard]] int drop(int reason);
+    [[nodiscard]] std::optional<Error> drop(int32_t reason);
     void reset();
     void add_service(const BleClientService& service);
 private:
@@ -79,19 +118,6 @@ private:
 
 };
 
-
-
-enum class ErrorCode : int32_t
-{
-	success = Success,
-	inProgress = BLE_HS_EALREADY,
-	unknown = INT32_MAX
-};
-struct Error
-{
-	ErrorCode code;
-	std::string msg;
-};
 
 class CGap
 {
@@ -104,13 +130,13 @@ public:
     CGap& operator=(CGap&& other);
 public:
     [[nodiscard]] uint16_t connection_handle() const ;
-    [[nodiscard]] int drop_connection(int reason);
+    [[nodiscard]] std::optional<Error> drop_connection(int32_t reason);
     [[nodiscard]] int discover_services();
     void set_connection(uint16_t id);
     void reset_connection();
     [[nodiscard]] int start();
     void rssi();
-    [[nodiscard]] int begin_advertise();
+    [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();
 private:
     uint8_t m_bleAddressType;
