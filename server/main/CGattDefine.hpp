@@ -48,6 +48,7 @@ std::unique_ptr<ble_uuid128_t> make_ble_uuid_128(uint16_t uniqueValue)
 	auto m_pNimbleUUID = std::make_unique<ble_uuid128_t>();
 	m_pNimbleUUID->u = BLE_UUID_TYPE_128;
 	static_assert(std::is_trivially_copyable_v<decltype(uuid)>);
+	static_assert(ARRAY_SIZE(m_pNumbleUUID->value) == sizeof(decltype(uuid)));
 	std::memcpy(&(m_pNumbleUUID->value[0]), &uuid, ARRAY_SIZE(m_pNumbleUUID->value));
 
 	return m_pNimbleUUID;
