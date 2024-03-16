@@ -115,7 +115,7 @@ private:
 
 		auto pCpy = std::make_unique<CharacteristicData>();
 		std::memcpy(pCpy.get(), pSource, sizeof(typename decltype(pCpy)::element_type));
-
+		
 		return pCpy;
 	}
 private:
@@ -123,7 +123,6 @@ private:
 	invocable_t m_Callback;
 	CharsCallbackArgs m_Args;
 };
-
 
 template<typename characteristic_t>
 concept GattCharacteristic = requires(characteristic_t characteristic)
@@ -141,6 +140,7 @@ public:
 	virtual ~Concept() = default;
 public:
 	virtual ble_gatt_chr_def exec_to_nimble_t() = 0;
+	virtual std::unique_ptr<Concept> copy() const = 0;
 protected:
 	Concept() = default;
 	Concept(const Concept& other) = default;
@@ -150,7 +150,7 @@ protected:
 };
 template<typename characteristic_t>
 requires GattCharacteristic<characteristic_t>
-class Model : public Concept
+class Model final : public Concept
 {
 public:
 	Model(characteristic_t&& characteristic)
@@ -161,11 +161,9 @@ public:
 	Model(Model&& other) = default;
 	Model& operator=(const Model& other) = default;
 	Model& operator=(Model&& other) = default;
+	[[nodiscard]] std::unique_ptr<Concept> copy() const override { return std::make_unique<Model>(*this); }
 public:
-	[[nodiscard]] ble_gatt_chr_def exec_to_nimble_t() override
-	{
-		return m_Characteristic.to_nimble_t();
-	}
+	[[nodiscard]] ble_gatt_chr_def exec_to_nimble_t() override { return m_Characteristic.to_nimble_t(); }
 private:
 	characteristic_t m_Characteristic;
 };
@@ -175,19 +173,21 @@ public:
 		: m_pCharacteristic{ std::make_unique<Model<characteristic_t>>(std::forward<characteristic_t>(characteristic)) }
 	{}
 	~CCharacteristic() = default;
-	CCharacteristic(const CCharacteristic& other) = default;
+	CCharacteristic(const CCharacteristic& other)
+		: m_pCharacteristic{ other.m_pCharacteristic->copy() }
+	{};
 	CCharacteristic(CCharacteristic&& other) = default;
-	CCharacteristic& operator=(const CCharacteristic& other) = default;
+	CCharacteristic& operator=(const CCharacteristic& other)
+	{
+		if(this != &other)
+			m_pCharacteristic = other.m_pCharacteristic->copy();
+
+		return *this;
+	};
 	CCharacteristic& operator=(CCharacteristic&& other) = default;
+	explicit operator ble_gatt_chr_def() { return m_pCharacteristic->exec_to_nimble_t(); }
 public:
-	[[nodiscard]] ble_gatt_chr_def to_nimble_t()
-	{
-		return m_pCharacteristic->exec_to_nimble_t();
-	}
-	explicit operator ble_gatt_chr_def()
-	{
-		return m_pCharacteristic->exec_to_nimble_t();
-	}
+	[[nodiscard]] ble_gatt_chr_def to_nimble_t() { return m_pCharacteristic->exec_to_nimble_t(); }
 private:
 	std::unique_ptr<Concept> m_pCharacteristic;
 };
