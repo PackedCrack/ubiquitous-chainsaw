@@ -13,7 +13,7 @@
 
 /* Project */
 #include "defines.hpp"
-#include "ServerDefines.hpp"
+#include "../ServerDefines.hpp"
 
 /* BLE */
 #include "host/ble_hs_adv.h"

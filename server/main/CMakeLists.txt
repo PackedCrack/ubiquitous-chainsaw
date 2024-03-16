@@ -1,16 +1,21 @@
 idf_component_register(
 	SRCS 
-	"Nimble.cpp"
-	"CGap.cpp"
-	"CGatt.cpp"
-	"CEventGroup.cpp" 
-	"CEventLoop.cpp" 
-	"CNonVolatileStorage.cpp" 
-	"CChip.cpp" 
 	"main.cpp"
-	"CGattCharacteristic.hpp"
-	"CGattService.cpp"
-	"CAuthentication.cpp"
+
+	"sys/CEventGroup.cpp"
+	"sys/CEventLoop.cpp" 
+	"sys/CNonVolatileStorage.cpp" 
+	"sys/CChip.cpp" 
+	"sys/CRestarter.cpp"
+
+	"ble/Nimble.cpp"
+	"ble/CGap.cpp"
+	"ble/CGatt.cpp"
+	"ble/CGattCharacteristic.hpp"
+	"ble/CGattService.cpp"
+	"ble/CAuthentication.cpp"
+	
+	
 	
 	INCLUDE_DIRS 
 	"${CMAKE_SOURCE_DIR}/../external/include"

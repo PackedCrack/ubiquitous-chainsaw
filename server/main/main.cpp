@@ -1,8 +1,7 @@
-#include "CChip.hpp"
-#include "Nimble.hpp"
+#include "sys/CChip.hpp"
+#include "ble/Nimble.hpp"
 
-#include "CNonVolatileStorage.hpp"
-
+#include "sys/CNonVolatileStorage.hpp"
 
 
 
@@ -22,16 +21,17 @@ void print_chip_info()
 	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", sys::min_free_heap());
 }
 
+
 extern "C" void app_main(void)
-
 {
-	print_chip_info();
-	storage::CNonVolatileStorage nvs{};
-
-	// https://mynewt.apache.org/latest/
-	
 	try 
 	{
+		print_chip_info();
+		storage::CNonVolatileStorage nvs{};
+
+
+		// https://mynewt.apache.org/latest/
+
 		//{
         //ble::CNimble tmp {};
 		//}
@@ -39,20 +39,16 @@ extern "C" void app_main(void)
 		//ble::CNimble nimble {std::move(tmp)};
 		//ble::CNimble nimble = std::move(tmp);
 
-	while (true)
+		while (true)
+		{
+			//chainsawServer.rssi();
+			// Perform any periodic tasks here
+			vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
+		}
+    } 
+	catch (const exception::fatal_error& error) 
 	{
-		//chainsawServer.rssi();
-		// Perform any periodic tasks here
-		vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
-	}
-
-	
-    } catch (const std::exception& error) {
 		LOG_ERROR_FMT("Caught exception: {}", error.what());
 		esp_restart();
-    } catch (...) {
-		LOG_ERROR("Caught unknown exception");
-		esp_restart();
     }
-
 }

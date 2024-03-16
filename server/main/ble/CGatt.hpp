@@ -3,7 +3,7 @@
 #include <vector>
 
 // project
-#include "ServerDefines.hpp"
+#include "../ServerDefines.hpp"
 #include "defines.hpp"
 
 #include "host/ble_hs.h"
