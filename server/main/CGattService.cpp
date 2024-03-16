@@ -74,15 +74,28 @@ CGattService CGattService::copy(const CGattService& source) const
 {
 	CGattService cpy{};
 	cpy.m_pUUID = std::make_unique<ble_uuid128_t>();
-	static_assert(std::is_trivially_constructible_v<std::remove_cvref_t<decltype(*cpy.m_pUUID)>>);
-	static_assert(sizeof(std::remove_cvref_t<decltype(*source.m_pUUID)>) == sizeof(std::remove_cvref_t<decltype(*cpy.m_pUUID)>));
-	std::memcpy(cpy.m_pUUID.get(), source.m_pUUID.get(), sizeof(std::remove_cvref_t<decltype(*cpy.m_pUUID)>));
 	
-	// TODO:: likely bugged copy
+	
+	using TypeToCopy = std::remove_cvref_t<decltype(*source.m_pUUID)>;
+	using DstType = std::remove_cvref_t<decltype(*cpy.m_pUUID)>;
+	static_assert(std::is_trivially_copyable_v<TypeToCopy>);
+	static_assert(std::is_trivially_constructible_v<DstType>);
+	static_assert(sizeof(TypeToCopy) == sizeof(DstType));	
+	std::memcpy(cpy.m_pUUID.get(), source.m_pUUID.get(), sizeof(DstType));
+	
+	
 	cpy.m_Characteristics = source.m_Characteristics;
-	cpy.m_Service = source.m_Service;
+	cpy.m_Service = cpy.make_nimble_svc_arr();
 
 	return cpy;
+}
+std::vector<ble_gatt_svc_def> CGattService::make_nimble_svc_arr() const
+{
+	std::vector<ble_gatt_svc_def> arr{};
+	arr.emplace_back(static_cast<ble_gatt_svc_def>(*this));
+	arr.emplace_back(end_of_array<ble_gatt_svc_def>());
+
+	return arr;
 }
 CGattService::operator ble_gatt_svc_def() const
 {

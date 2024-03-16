@@ -7,7 +7,7 @@
 
 namespace
 {
-[[nodiscard]] auto make_signed_mac_callback()
+[[nodiscard]] auto make_callback_signed_mac()
 {
 	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
 	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt, void* arg) -> int	// type deduction requires exact typematch
@@ -16,9 +16,9 @@ namespace
 		return int32_t{ 0 };
 	};
 }
-[[nodiscard]] ble::CCharacteristic make_signed_mac()
+[[nodiscard]] ble::CCharacteristic make_characteristic_signed_mac()
 {
-	return ble::make_characteristic(ble::ID_CHARS_SIGNED_MAC, make_signed_mac_callback(), ble::CharsPropertyFlag::read);
+	return ble::make_characteristic(ble::ID_CHARS_SIGNED_MAC, make_callback_signed_mac(), ble::CharsPropertyFlag::read);
 }
 }	// namespace
 
@@ -31,7 +31,7 @@ CAuthentication::CAuthentication()
 std::vector<CCharacteristic> CAuthentication::make_characteristics() const
 {
 	std::vector<CCharacteristic> chars{};
-	chars.emplace_back(make_signed_mac());
+	chars.emplace_back(make_characteristic_signed_mac());
 
 	return chars;
 }
