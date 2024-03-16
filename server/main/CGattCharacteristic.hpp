@@ -50,27 +50,47 @@ template<typename invocable_t>
 requires std::is_invocable_r_v<int32_t, invocable_t, uint16_t, uint16_t, ble_gatt_access_ctxt*, void*>
 class CGattCharacteristic
 {
+struct CharacteristicData
+{
+	CharsPropertyFlag flags;
+	uint16_t valueHandle;
+	ble_uuid128_t uuid;
+};
 public:
 	template<typename... property_flag_t>
 	CGattCharacteristic(uint16_t uuid, invocable_t&& callback, property_flag_t&&... flags)
-		: m_UUID{ make_ble_uuid128(uuid) }
+		: m_Data{ make_data(uuid, std::forward<property_flag_t>(flags)...) }
 		, m_Callback{ std::forward<invocable_t>(callback) }
 		, m_Args{}
-		, m_Flags{}
-		, m_ValueHandle{}
+	{}
+	CGattCharacteristic(const CGattCharacteristic& other)
+		: m_Data{ copy_data(other.m_Data.get()) }
+		, m_Callback{ other.m_Callback }
+		, m_Args{ other.m_Args }
+	{}
+	CGattCharacteristic(CGattCharacteristic&& other) = default;
+	CGattCharacteristic& operator=(const CGattCharacteristic& other)
 	{
-		m_Flags = (flags | ...);
+		if(this != &other)
+		{
+			m_Data = copy_data(other.m_Data.get());
+			m_Callback = other.m_Callback;
+			m_Args = other.m_Args;
+		}
+
+		return *this;
 	}
+	CGattCharacteristic& operator=(CGattCharacteristic&& other) = default;
 	explicit operator ble_gatt_chr_def()
 	{
 		return ble_gatt_chr_def{
-			.uuid = &(m_UUID.u),
+			.uuid = &(m_Data->uuid.u),
 			.access_cb = m_Callback,
 			.arg = static_cast<void*>(&m_Args),
 			.descriptors = nullptr,
-			.flags = static_cast<ble_gatt_chr_flags>(m_Flags),
+			.flags = static_cast<ble_gatt_chr_flags>(m_Data->flags),
 			.min_key_size = 0,
-			.val_handle = &m_ValueHandle
+			.val_handle = &(m_Data->valueHandle)
 		};
 	}
 	[[nodiscard]] ble_gatt_chr_def to_nimble_t()
@@ -78,17 +98,35 @@ public:
 		return static_cast<ble_gatt_chr_def>(*this);
 	}
 private:
-	//std::unique_ptr<ble_uuid128_t> m_pUUID;
-	ble_uuid128_t m_UUID;
+	template<typename... flag_t>
+	[[nodiscard]] std::unique_ptr<CharacteristicData> make_data(uint16_t uuid, flag_t&&... flags)
+	{
+		return std::make_unique<CharacteristicData>(CharacteristicData{
+			.flags = (flags | ...),
+			.valueHandle = 0u,
+			.uuid = make_ble_uuid128(uuid)
+		});
+	}
+	[[nodiscard]] std::unique_ptr<CharacteristicData> copy_data(const CharacteristicData* pSource)
+	{
+		static_assert(std::is_trivially_copyable_v<CharacteristicData>);
+		static_assert(std::is_trivially_constructible_v<CharacteristicData>);
+		static_assert(std::is_trivially_copy_constructible_v<CharacteristicData>);
+
+		auto pCpy = std::make_unique<CharacteristicData>();
+		std::memcpy(pCpy.get(), pSource, sizeof(typename decltype(pCpy)::element_type));
+
+		return pCpy;
+	}
+private:
+	std::unique_ptr<CharacteristicData> m_Data;
 	invocable_t m_Callback;
-	CharsCallbackArgs m_Args;	// needed at all?
-	CharsPropertyFlag m_Flags;
-	uint16_t m_ValueHandle;
+	CharsCallbackArgs m_Args;
 };
 
 
 template<typename characteristic_t>
-concept GattCharacteristicDefine = requires(characteristic_t characteristic)
+concept GattCharacteristic = requires(characteristic_t characteristic)
 {
 	{ characteristic.to_nimble_t() } -> std::convertible_to<ble_gatt_chr_def>;
 	{ static_cast<ble_gatt_chr_def>(characteristic) } -> std::convertible_to<ble_gatt_chr_def>;
@@ -111,7 +149,7 @@ protected:
 	Concept& operator=(Concept&& other) = default;
 };
 template<typename characteristic_t>
-requires GattCharacteristicDefine<characteristic_t>
+requires GattCharacteristic<characteristic_t>
 class Model : public Concept
 {
 public:
@@ -133,7 +171,7 @@ private:
 };
 public:
 	template<typename characteristic_t>
-	explicit CCharacteristic(characteristic_t&& characteristic) requires GattCharacteristicDefine<characteristic_t>
+	explicit CCharacteristic(characteristic_t&& characteristic) requires GattCharacteristic<characteristic_t>
 		: m_pCharacteristic{ std::make_unique<Model<characteristic_t>>(std::forward<characteristic_t>(characteristic)) }
 	{}
 	~CCharacteristic() = default;
