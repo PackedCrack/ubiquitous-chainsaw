@@ -1,4 +1,4 @@
-#include "sys/CChip.hpp"
+#include "sys/CSystem.hpp"
 #include "ble/Nimble.hpp"
 
 #include "sys/CNonVolatileStorage.hpp"
@@ -7,7 +7,8 @@
 
 void print_chip_info()
 {
-	sys::CChip chip{};
+	sys::CSystem system{};
+	sys::CChip chip = system.chip_info();
 
 	std::printf("\nChip information");
 	std::printf("\nRevision: %s", chip.revision().c_str());
@@ -18,12 +19,13 @@ void print_chip_info()
 	std::printf("\nSupports Bluetooth LE: %s", chip.bluetooth_le() ? "True" : "False");
 	std::printf("\nSupports Bluetooth Classic: %s", chip.bluetooth_classic() ? "True" : "False");
 	std::printf("\nSupports IEEE 802.15.4: %s", chip.IEEE_802_15_4() ? "True" : "False");
-	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", sys::min_free_heap());
+	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", system.min_free_heap());
 }
 
 
 extern "C" void app_main(void)
 {
+	sys::CSystem system{};
 	try 
 	{
 		print_chip_info();
@@ -49,6 +51,6 @@ extern "C" void app_main(void)
 	catch (const exception::fatal_error& error) 
 	{
 		LOG_ERROR_FMT("Caught exception: {}", error.what());
-		esp_restart();
+		system.restart();
     }
 }

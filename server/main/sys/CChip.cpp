@@ -2,16 +2,11 @@
 
 // third_party
 #include "esp_chip_info.h"
-#include "freertos/FreeRTOS.h"
+//#include "freertos/FreeRTOS.h"
 
 
 namespace sys
 {
-uint32_t min_free_heap()
-{
-	return esp_get_minimum_free_heap_size();
-}
-
 CChip::CChip()
 	: m_Features{ UINT32_MAX }
 	, m_Revision{ UINT16_MAX }

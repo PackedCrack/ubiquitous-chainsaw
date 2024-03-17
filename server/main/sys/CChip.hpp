@@ -6,9 +6,6 @@
 
 namespace sys
 {
-// free func because this value makes no sense to store. And might want to call it mid app without instantiating the entire chip info.
-[[nodiscard]] uint32_t min_free_heap();
-
 class CChip
 {
 public:

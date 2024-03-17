@@ -6,7 +6,7 @@ idf_component_register(
 	"sys/CEventLoop.cpp" 
 	"sys/CNonVolatileStorage.cpp" 
 	"sys/CChip.cpp" 
-	"sys/CRestarter.cpp"
+	"sys/CSystem.cpp"
 
 	"ble/Nimble.cpp"
 	"ble/CGap.cpp"
