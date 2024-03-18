@@ -1,9 +1,7 @@
-
 #include "CGap.hpp"
 
 
-
-namespace ble
+namespace 
 {
 std::string_view nimble_error_to_string(int error)
 {
@@ -11,7 +9,7 @@ std::string_view nimble_error_to_string(int error)
     switch (error)
     {
 		// bug
-        case SUCCESS:
+        case ble::SUCCESS:
 			return std::string_view { "Success" };
         case BLE_HS_EAGAIN:
             return std::string_view {"Temporary failure; try again"};
@@ -81,11 +79,6 @@ std::string_view nimble_error_to_string(int error)
         
     }
 }
-
-
-namespace 
-{
-
 uint8_t* make_field_name(const std::string_view deviceName)
 { return (uint8_t*)deviceName.data(); }
 
@@ -123,8 +116,6 @@ ble_hs_adv_fields make_advertise_fields(const std::string_view deviceName) // No
 
      #pragma GCC diagnostic pop
 }
-
-
 ble_gap_adv_params make_advertise_params() 
 {
     return ble_gap_adv_params { // either initilize all or none warning
@@ -137,15 +128,18 @@ ble_gap_adv_params make_advertise_params()
                             .high_duty_cycle = 0u //High duty cycle directed advertising increases the frequency of advertising packets sent during directed advertising
                             };
 }
-
 /// @brief 
 /// @param std::string_view deviceName  
 /// @return std::nullopt on success, 
 /// ErrorCode::isBusy if advertising is in progress. 
 /// ErrorCode::toSmallBuffer if the specified data is too large to fit in an advertisement.
 /// ErrorCode::unknown on failure.
-std::optional<Error> set_adv_fields(const std::string_view deviceName)
+std::optional<ble::CGap::Error> set_adv_fields(const std::string_view deviceName)
 {
+	using namespace ble;
+	using Error = CGap::Error;
+
+	
     ble_hs_adv_fields fields = make_advertise_fields(deviceName); // only the constructor for ble_hs_adv_fields will be called here
     
     int32_t result = ble_gap_adv_set_fields(&fields);
@@ -156,7 +150,7 @@ std::optional<Error> set_adv_fields(const std::string_view deviceName)
     {
         return std::optional<Error> { Error {
 			.code = ErrorCode::isBusy,
-            .msg = "Advertising is already in progress: " + std::to_string(result)
+            .msg = "Advertising is already in progress: " + std::to_string(result) // FMT("Advertising is already in progress: \"{}\"", result);
 		}};
     }
     else if (result == static_cast<int32_t>(ErrorCode::toSmallBuffer))
@@ -174,8 +168,6 @@ std::optional<Error> set_adv_fields(const std::string_view deviceName)
 		}};
     }
 }
-
-
 //auto  descriptor_discovery_event_handler = [](uint16_t conn_handle,
 //                                            const struct ble_gatt_error *error,
 //                                            uint16_t chr_val_handle,
@@ -193,9 +185,6 @@ std::optional<Error> set_adv_fields(const std::string_view deviceName)
 //    LOG_INFO_FMT("Descriptor discovered: handle={}, UUID={}", dsc->handle, uuid);
 //    return 0;
 //};
-
-
-
 auto characteristic_discovery_event_handler = [](uint16_t connHandle,
                                             const struct ble_gatt_error *error,
                                             const struct ble_gatt_chr *characteristic,
@@ -203,7 +192,7 @@ auto characteristic_discovery_event_handler = [](uint16_t connHandle,
 
     // https://mynewt.apache.org/master/network/ble_hs/ble_hs_return_codes.html#return-codes-att    
 
-    CConnectionHandle* pConnHandle = static_cast<CConnectionHandle*>(arg);
+    ble::CConnectionHandle* pConnHandle = static_cast<ble::CConnectionHandle*>(arg);
     ASSERT(pConnHandle->handle() == connHandle, "Error casting void* to CConnectionHandle");
 
     int returnedResult = error->status;
@@ -225,7 +214,7 @@ auto characteristic_discovery_event_handler = [](uint16_t connHandle,
     }
 
 
-    if (returnedResult != SUCCESS)
+    if (returnedResult != ble::SUCCESS)
     {
         LOG_ERROR_FMT("Characteristic discovery error: {}", nimble_error_to_string(returnedResult));
         return BLE_HS_EUNKNOWN;
@@ -249,7 +238,7 @@ auto characteristic_discovery_event_handler = [](uint16_t connHandle,
         if (characteristic->def_handle > service.handleStart && characteristic->def_handle < service.handleEnd)
         {
             service.characteristics.emplace_back(
-                BleClientCharacteristic {
+                ble::BleClientCharacteristic {
                     .uuid = characteristic->uuid,
                     .handle = characteristic->def_handle,
                     .handleValue = characteristic->val_handle,
@@ -262,33 +251,32 @@ auto characteristic_discovery_event_handler = [](uint16_t connHandle,
             const uint16_t CHARACTERISTIC_HANDLE = service.characteristics[ CHARACTERISTIC_INDEX ].handle;
             const uint16_t HANDLE_VALUE = service.characteristics[ CHARACTERISTIC_INDEX ].handleValue;
 
-            char serviceUuidBuf [MAX_UUID_LEN];
+            char serviceUuidBuf [ble::MAX_UUID_LEN];
             std::string_view characteristicUuidToString = ble_uuid_to_str(reinterpret_cast<const ble_uuid_t*>( &service.characteristics[ CHARACTERISTIC_INDEX ].uuid ), serviceUuidBuf);
             LOG_INFO_FMT("Added New Characteristic: UUID={} handle={} handleValue={}", characteristicUuidToString, CHARACTERISTIC_HANDLE, HANDLE_VALUE);
             break;
         }
     }
 
-    return SUCCESS;
+    return ble::SUCCESS;
 };
-
-
-int discover_service_characteristics(const uint16_t connhandle, const uint16_t handleStart, const uint16_t handleEnd, CConnectionHandle& connHandler)
+int discover_service_characteristics(const uint16_t connhandle, const uint16_t handleStart, const uint16_t handleEnd, ble::CConnectionHandle& connHandler)
 {
     return ble_gattc_disc_all_chrs(connhandle, handleStart, handleEnd, characteristic_discovery_event_handler, &connHandler);
 }
-
-
 auto service_discovery_event_handler = [](uint16_t connHandle,
                     const struct ble_gatt_error *error,
                     const struct ble_gatt_svc *service,
                     void *arg) {
+	using namespace ble;
+
+
     // https://mynewt.apache.org/v1_8_0/network/ble_hs/ble_hs_return_codes.html
-    CConnectionHandle* pConnHandle = static_cast<CConnectionHandle*>(arg);
+    CConnectionHandle* pConnHandle = static_cast<ble::CConnectionHandle*>(arg);
     ASSERT(pConnHandle->handle() == connHandle, "Error casting void* to CConnectionHandle");
     
 
-    int returnedResult = error->status;
+    uint16_t returnedResult = error->status;
 
     if (returnedResult != PROCEDURE_HAS_FINISHED && returnedResult != SUCCESS)
     {
@@ -340,29 +328,48 @@ auto service_discovery_event_handler = [](uint16_t connHandle,
     ASSERT(0, "End of service_discovery_event_handler() reached!");
     return BLE_HS_EUNKNOWN; // should not be triggered
 };
-
-
 /// @brief 
 /// @param CConnectionHandle& connHandler 
 /// @return std::nullopt on success.
 /// std::unknown on all other failures
-std::optional<Error> discover_client_services(CConnectionHandle& connHandler)
+std::optional<ble::CConnectionHandle::Error> discover_client_services(ble::CConnectionHandle& connHandler)
 {
     int32_t result = ble_gattc_disc_all_svcs(connHandler.handle(), service_discovery_event_handler, &connHandler);
-    if (result == static_cast<int32_t>(ErrorCode::success))
+    if (result == static_cast<int32_t>(ble::ErrorCode::success))
         return std::nullopt;
 
-    return std::optional<Error> { Error {
-        .code = ErrorCode::unknown,
+    return std::optional<ble::CConnectionHandle::Error> { ble::CConnectionHandle::Error {
+        .code = ble::ErrorCode::unknown,
         .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
     }};
 }
-
-
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
-
+	using namespace ble;
     CGap* pGap = static_cast<CGap*>(arg);
-    
+
+	//UNHANDLED_CASE_PROTECTION_ON
+	//switch()
+	//{
+	//	case CGap::Event::connect:
+	//	{
+	//		// code
+	//		// return 0;
+	//	}
+	//	case CGap::Event::disconnect:
+	//	{
+	//		// code
+	//		// return 0;
+	//	}
+	//	case CGap::Event::update:
+	//	[[fallthrough]]
+	//	case CGap::Event::updateReq:
+	//	[[fallthrough]]
+	//	case CGap::Event::lastCase:
+	//	return UNHANDLED_CASE
+	//};
+	//UNHANDLED_CASE_PROTECTION_OFF
+	//
+	// __builtin_unreachable();
 
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
@@ -372,11 +379,11 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
             pGap->set_connection(event->connect.conn_handle);
 
 
-            std::optional<Error> result = pGap->discover_services();
+            std::optional<CConnectionHandle::Error> result = pGap->discover_services();
             if (result != std::nullopt)
             {
-                Error err = *result;
-                std::optional<Error> result = pGap->drop_connection(ErrorCode::unexpectedFailure);
+                CConnectionHandle::Error err = *result;
+                std::optional<CConnectionHandle::Error> result = pGap->drop_connection(ErrorCode::unexpectedFailure);
                 if (err.code != ErrorCode::success)
                 {
                     if (err.code == ErrorCode::noConnection)
@@ -387,7 +394,6 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
                 }
             }
       
-
             // when connection happens, it is possible to configure another callback that should be used for that connection
             // unable to have locks in here if new procedures are to be created
             break;
@@ -397,19 +403,17 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
             pGap->reset_connection();
 
-            std::optional<Error> result = pGap->begin_advertise();
+            std::optional<CGap::Error> result = pGap->begin_advertise();
             if (result != std::nullopt)
             {
-                Error err = *result;
+                CGap::Error err = *result;
                 LOG_FATAL_FMT("{}", err.msg);
             }
-
 
 
             //if(result != 0)
             //    LOG_WARN_FMT("ERROR STARTING ADVERTISING! ERROR{}", nimble_error_to_string(result));
 
-                
             break;
         }
 
@@ -447,18 +451,18 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         //case BLE_GAP_EVENT_MTU:
         //    LOG_INFO("BLE_GAP_EVENT_MTU");
         //    break;
-        default: 
+        
+		// TODO
+		default: 
             break;
     } // switch
     return 0;
 };
-
-
 void print_ble_address()
 {
     std::array<uint8_t, 6> bleDeviceAddr {};
     int result;
-    result = ble_hs_id_copy_addr(RANDOM_BLUETOOTH_ADDRESS, bleDeviceAddr.data(), NULL);
+    result = ble_hs_id_copy_addr(ble::RANDOM_BLUETOOTH_ADDRESS, bleDeviceAddr.data(), NULL);
     ASSERT(result == 0, "Unable to retrieve the servers bluetooth address");
 
     if (result != 0) 
@@ -466,38 +470,30 @@ void print_ble_address()
 
     std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
 }
-
-
 uint8_t ble_generate_random_device_address() 
 {
-    
-    int result;
-    uint8_t addrType = INVALID_ADDRESS_TYPE;
-    result = ble_hs_util_ensure_addr(RANDOM_BLUETOOTH_ADDRESS);
+    uint8_t addrType = ble::INVALID_ADDRESS_TYPE;
+    int32_t result = ble_hs_util_ensure_addr(ble::RANDOM_BLUETOOTH_ADDRESS);
     if (result != 0) 
         LOG_FATAL_FMT("No address was able to be ensured ERROR={}", nimble_error_to_string(result));
 
-    result = ble_hs_id_infer_auto(PUBLIC_BLUETOOTH_ADDRESS, &addrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
+    result = ble_hs_id_infer_auto(ble::PUBLIC_BLUETOOTH_ADDRESS, &addrType); // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
     if (result != 0) 
         LOG_FATAL_FMT("No address was able to be inferred ERROR={}", nimble_error_to_string(result));
 
-    ASSERT(addrType == RANDOM_BLUETOOTH_ADDRESS, "Assigned wrong bluetooth address type");
+    ASSERT(addrType == ble::RANDOM_BLUETOOTH_ADDRESS, "Assigned wrong bluetooth address type");
 
     print_ble_address();
 
     return addrType;
 }
-
 }// namespace
 
-
+namespace ble
+{
 CConnectionHandle::CConnectionHandle()
     : m_id { INVALID_HANDLE_ID }
-{
-
-}
-
-
+{}
 CConnectionHandle::~CConnectionHandle()
 {
     std::printf("CConnectionHandle destructor\n");
@@ -508,30 +504,22 @@ CConnectionHandle::~CConnectionHandle()
     //    LOG_ERROR_FMT("ERROR terminating connection! ERROR={}", nimble_error_to_string(result));
     reset();
 }
-
-
 CConnectionHandle::CConnectionHandle(CConnectionHandle&& other) noexcept 
     : m_id {other.m_id}
     , m_services {std::move(other.m_services)}
-{
-}
-
+{}
 CConnectionHandle& CConnectionHandle::operator=(CConnectionHandle&& other)
 {
-
     /*
         1. Clean up all visible resources
         2. Transfer the content of other into this
         3. Leave other in a valid but undefined state
     */
-    
     // Check if other exists?
     m_id = other.m_id;
     m_services = std::move(other.m_services);
     return *this;
 }
-
-
 void CConnectionHandle::set_connection(uint16_t id)
 { 
     m_id = id; 
@@ -539,10 +527,7 @@ void CConnectionHandle::set_connection(uint16_t id)
     {
         m_services.clear();
     }
-
 }
-
-
 uint16_t CConnectionHandle::handle() const
 { return m_id; }
 
@@ -551,7 +536,7 @@ uint16_t CConnectionHandle::handle() const
 /// @return std::nullopt on success. 
 /// ErrorCode::noConnection if there is no connection with the specified handle. 
 /// ErrorCode::unknown on failure.
-std::optional<Error> CConnectionHandle::drop(ErrorCode reason)
+std::optional<CConnectionHandle::Error> CConnectionHandle::drop(ErrorCode reason)
 {
     int32_t result = ble_gap_terminate(m_id, static_cast<int32_t>(reason));
     if(result == static_cast<int32_t>(ErrorCode::success))
@@ -563,53 +548,39 @@ std::optional<Error> CConnectionHandle::drop(ErrorCode reason)
 
 	if(result == static_cast<int32_t>(ErrorCode::noConnection))
 	{
-		return std::optional{ Error {
+		return std::optional<Error>{ Error {
 			.code = ErrorCode::noConnection,
 			.msg = "no existing connection"			
 		}};
 	}
 	else
 	{
-		return std::optional<Error> { Error {
+		return std::optional<Error>{ Error {
 			.code = ErrorCode::unknown,
 			//.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result);
             .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
 		}};
 	}
 }
-
-
 void CConnectionHandle::reset()
 {
     m_id = INVALID_HANDLE_ID;
     m_services.clear();
 }
-
-
 void CConnectionHandle::add_service(const BleClientService& service)
 {
     ASSERT(service.handleStart != 0, "Tried to add a service to an invalid/wrong connection");
     m_services.emplace_back(service);
 }
-
 int32_t CConnectionHandle::num_services() const
 { return m_services.size(); }
-
-
-
 std::vector<BleClientService> CConnectionHandle::services() const
 { return m_services; }
-
-
 CGap::CGap() 
-    : m_bleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
-    , m_params { make_advertise_params() }
-    , m_currentConnectionHandle {}
-{
-
-}
-
-
+    : m_BleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
+    , m_Params { make_advertise_params() }
+    , m_CurrentConnectionHandle {}
+{}
 CGap::~CGap()
 {
     std::printf("CGap destructor\n");
@@ -621,18 +592,12 @@ CGap::~CGap()
     //        LOG_FATAL_FMT("ERROR ENDING ADVERTISE! ERROR={}", nimble_error_to_string(result));
     //}
 }
-
-
 CGap::CGap(CGap&& other) noexcept
-    : m_bleAddressType {other.m_bleAddressType}
-     ,m_params {std::move(other.m_params)} 
-     ,m_currentConnectionHandle {std::move(other.m_currentConnectionHandle)}
-{
-
-    // no pointers have been moved
+    : m_BleAddressType {other.m_BleAddressType}
+    , m_Params {std::move(other.m_Params)} 
+    , m_CurrentConnectionHandle {std::move(other.m_CurrentConnectionHandle)}
+{// no pointers have been moved
 }
-
-
 CGap& CGap::operator=(CGap&& other)
 {
     /*
@@ -642,63 +607,52 @@ CGap& CGap::operator=(CGap&& other)
     */
     
     // Check if other exists?
-    m_bleAddressType = other.m_bleAddressType;
-    m_params = std::move(other.m_params);
-    m_currentConnectionHandle = std::move(other.m_currentConnectionHandle);
+    m_BleAddressType = other.m_BleAddressType;
+    m_Params = std::move(other.m_Params);
+    m_CurrentConnectionHandle = std::move(other.m_CurrentConnectionHandle);
     return *this;
 }
-
-
-std::optional<Error> CGap::discover_services()
+std::optional<CConnectionHandle::Error> CGap::discover_services()
 {
-    ASSERT(m_currentConnectionHandle.handle() != INVALID_HANDLE_ID, "Tried to intiate 'Service Discovery' on an invalid connection");
-    return discover_client_services(m_currentConnectionHandle);
+    ASSERT(m_CurrentConnectionHandle.handle() != INVALID_HANDLE_ID, "Tried to intiate 'Service Discovery' on an invalid connection");
+    return discover_client_services(m_CurrentConnectionHandle);	// inverted
 }
-
-
 void CGap::set_connection(const uint16_t id)
 {
-    m_currentConnectionHandle.set_connection(id);
-
+    m_CurrentConnectionHandle.set_connection(id);
 }
-
 uint16_t CGap::connection_handle() const
 {
-    return m_currentConnectionHandle.handle();
+    return m_CurrentConnectionHandle.handle();
 }
-
-
 /// @brief 
 /// @param int32_t reason 
 /// @return std::nullopt on success. 
 /// ErrorCode::noConnection if there is no connection with the specified handle. 
 /// ErrorCode::unknown on failure.
-std::optional<Error> CGap::drop_connection(ErrorCode reason)
+std::optional<CConnectionHandle::Error> CGap::drop_connection(ErrorCode reason)
 {
     // if we drop connection manually, ble will start advertising automatically
     //return 
     
-    return m_currentConnectionHandle.drop(reason);
+    return m_CurrentConnectionHandle.drop(reason);
     //if (result != std::nullopt) 
 }
-
 void CGap::reset_connection()
 {
-    m_currentConnectionHandle.reset();
+    m_CurrentConnectionHandle.reset();
 
 }
-
-
 /// @brief 
 /// @return std::nullopt on success, 
 /// ErrorCode::isBusy if advertising is in progress. 
 /// ErrorCode::toSmallBuffer if the specified data is too large to fit in an advertisement.
 /// ErrorCode::unknown on other failure.
-std::optional<Error> CGap::start()
+std::optional<CGap::Error> CGap::start()
 {
     //ble_svc_gap_init(); // will crash if called before nimble_port_init()
-    m_bleAddressType = ble_generate_random_device_address(); // nimble_port_run(); has to be called before this
-    ASSERT(m_bleAddressType != INVALID_ADDRESS_TYPE, "Failed to generate a random device address");
+    m_BleAddressType = ble_generate_random_device_address(); // nimble_port_run(); has to be called before this
+    ASSERT(m_BleAddressType != INVALID_ADDRESS_TYPE, "Failed to generate a random device address");
 
     std::string_view deviceName = "Chainsaw-server";
     int32_t nameSetResult = ble_svc_gap_device_name_set(deviceName.data()); // haven't found which error code is returned when this fails
@@ -721,8 +675,6 @@ std::optional<Error> CGap::start()
 
     return std::nullopt;
 }
-
-
 void CGap::rssi()
 {
     //if(currentConnectionHandle == INVALID_HANDLE_ID)
@@ -739,12 +691,11 @@ void CGap::rssi()
     //    LOG_INFO_FMT("RSSI VALUE: {}", rssiValue);
     //}
 }
-
 /// @brief 
 /// @return std::nullopt on success. ErrorCode::unknown on failure.
-std::optional<Error> CGap::begin_advertise()
+std::optional<CGap::Error> CGap::begin_advertise()
 { 
-    int32_t result = ble_gap_adv_start(m_bleAddressType, NULL, BLE_HS_FOREVER, &m_params, gap_event_handler, this); 
+    int32_t result = ble_gap_adv_start(m_BleAddressType, NULL, BLE_HS_FOREVER, &m_Params, gap_event_handler, this); 
     if(result == static_cast<int32_t>(ErrorCode::success))
 		return std::nullopt;
 
@@ -753,10 +704,9 @@ std::optional<Error> CGap::begin_advertise()
             .msg = "Unknown error received when starting advertising. Return code from nimble: " + std::to_string(result)
 		}};
 }
-
 /// @brief 
 /// @return std::nullopt on success. ErrorCode::inProgressOrCompleted if there is no active advertising procedur. ErrorCode::unknown on failure.
-std::optional<Error> CGap::end_advertise()
+std::optional<CGap::Error> CGap::end_advertise()
 { 
 	int32_t result = ble_gap_adv_stop();
 	if(result == static_cast<int32_t>(ErrorCode::success))
@@ -777,5 +727,4 @@ std::optional<Error> CGap::end_advertise()
 		}};
 	}
 }
-
 } // namespace ble

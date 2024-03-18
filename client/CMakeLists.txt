@@ -22,7 +22,7 @@ include(FetchContent)
 include(cmake/dependencies.cmake)
 include(../cmake/CompilerWarnings.cmake)
 include(../cmake/pch.cmake)
-include(../cmake/cppcheck.cmake)
+include(cmake/cppcheck.cmake)
 
 fetch_third_party()
 

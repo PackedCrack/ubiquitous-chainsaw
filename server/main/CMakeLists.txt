@@ -8,12 +8,13 @@ idf_component_register(
 	"sys/CChip.cpp" 
 	"sys/CSystem.cpp"
 
-	"ble/Nimble.cpp"
+	"ble/CNimble.cpp"
 	"ble/CGap.cpp"
 	"ble/CGatt.cpp"
-	"ble/CGattCharacteristic.hpp"
-	"ble/CGattService.cpp"
-	"ble/CAuthentication.cpp"
+	
+	"ble/profiles/CGattCharacteristic.hpp"
+	"ble/profiles/CGattService.cpp"
+	"ble/profiles/CWhoAmI.cpp"
 	
 	
 	

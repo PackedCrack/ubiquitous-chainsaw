@@ -29,7 +29,6 @@
 
 namespace ble
 {
-
 struct BleClientCharacteristic
 {
     ble_uuid_any_t uuid;
@@ -37,7 +36,6 @@ struct BleClientCharacteristic
     uint16_t handleValue;
     uint8_t properties;
 };
-
 struct BleClientService 
 {
     ble_uuid_any_t uuid;
@@ -46,55 +44,19 @@ struct BleClientService
     uint16_t handleEnd;
     std::vector<BleClientCharacteristic> characteristics;
 };
-
-
-enum class ErrorCode : int32_t
-{
-	success = SUCCESS, // (not defined by nimble)
-    temporaryFailure = BLE_HS_EAGAIN, // Temporary failure; try again
-	inProgressOrCompleted = BLE_HS_EALREADY, // Operation already in progress or completed
-    invalidArguments = BLE_HS_EINVAL, // One or more arguments are invalid
-    toSmallBuffer = BLE_HS_EMSGSIZE, //The provided buffer is too small
-    noEntry = BLE_HS_ENOENT, // No entry matching the specified criteria
-    resourceExhaustion = BLE_HS_ENOMEM, // Operation failed due to resource exhaustion
-    noConnection = BLE_HS_ENOTCONN, // No open connection with the specified handle
-    operationDisabled = BLE_HS_ENOTSUP, // Operation disabled at compile time
-    unexpectedCallbackBehavior = BLE_HS_EAPP, // Application callback behaved unexpectedly
-    invalidPeerCommand = BLE_HS_EBADDATA, // Command from peer is invalid
-    osError = BLE_HS_EOS, // Mynewt OS error
-    invalidControllerEvent = BLE_HS_ECONTROLLER, // Event from controller is invalid
-    operationTimeOut = BLE_HS_ETIMEOUT, // Operation timed out
-    operationCompleted = BLE_HS_EDONE, // Operation completed successfully
-    isBusy = BLE_HS_EBUSY, // Operation cannot be performed until procedure completes
-    peerRejectedConnectionParam = BLE_HS_EREJECT, // Peer rejected a connection parameter update request
-    unexpectedFailure = BLE_HS_EUNKNOWN, // Unexpected failure; catch all
-    wrongRole = BLE_HS_EROLE, // Operation requires different role (e.g., central vs. peripheral)
-    requestTimeOut = BLE_HS_ETIMEOUT_HCI, // HCI request timed out; controller unresponsiv
-    eventMemoryExhaustion = BLE_HS_ENOMEM_EVT, // Controller failed to send event due to memory exhaustion (combined host-controller only)
-    noConfiguredIdentityAddress = BLE_HS_ENOADDR, // Operation requires an identity address but none configured
-    notSynced = BLE_HS_ENOTSYNCED, // Attempt to use the host before it is synced with controller
-    insufficientAuthen = BLE_HS_EAUTHEN, // Insufficient authentication
-    insufficientAuthor = BLE_HS_EAUTHOR, // Insufficient authorization
-    insufficientEncLvl = BLE_HS_EENCRYPT, // Insufficient encryption level
-    insufficientKeySize = BLE_HS_EENCRYPT_KEY_SZ, // Insufficient key size
-    storageFull = BLE_HS_ESTORE_CAP, // Storage at capacity
-    storageIO = BLE_HS_ESTORE_FAIL, // Storage IO error
-    preemptedOperation = BLE_HS_EPREEMPTED, // Operation preempted 
-    disabledFeature = BLE_HS_EDISABLED, // FDisabled feature
-    operationStalled = BLE_HS_ESTALLED, //Operation stalled 
-	unknown = INT32_MAX
-};
-
 struct Error
 {
 	ErrorCode code;
 	std::string msg;
 };
-
-
 class CConnectionHandle // NOTE: Will this be needed for GATT services???? probably drop connectino if not authenticated
 {
-
+public:
+	struct Error
+	{
+		ErrorCode code;
+		std::string msg;
+	};
 public:
     CConnectionHandle();
     ~CConnectionHandle();
@@ -116,10 +78,45 @@ private:
     std::vector<BleClientService> m_services;
 
 };
-
-
 class CGap
 {
+public:
+	enum class Events : int32_t
+	{
+		connect = BLE_GAP_EVENT_CONNECT,
+		disconnect = BLE_GAP_EVENT_DISCONNECT,
+		update = BLE_GAP_EVENT_CONN_UPDATE,
+		updateReq = BLE_GAP_EVENT_CONN_UPDATE_REQ
+
+		//#define BLE_GAP_EVENT_L2CAP_UPDATE_REQ      5
+		//#define BLE_GAP_EVENT_TERM_FAILURE          6
+		//#define BLE_GAP_EVENT_DISC                  7
+		//#define BLE_GAP_EVENT_DISC_COMPLETE         8
+		//#define BLE_GAP_EVENT_ADV_COMPLETE          9
+		//#define BLE_GAP_EVENT_ENC_CHANGE            10
+		//#define BLE_GAP_EVENT_PASSKEY_ACTION        11
+		//#define BLE_GAP_EVENT_NOTIFY_RX             12
+		//#define BLE_GAP_EVENT_NOTIFY_TX             13
+		//#define BLE_GAP_EVENT_SUBSCRIBE             14
+		//#define BLE_GAP_EVENT_MTU                   15
+		//#define BLE_GAP_EVENT_IDENTITY_RESOLVED     16
+		//#define BLE_GAP_EVENT_REPEAT_PAIRING        17
+		//#define BLE_GAP_EVENT_PHY_UPDATE_COMPLETE   18
+		//#define BLE_GAP_EVENT_EXT_DISC              19
+		//#define BLE_GAP_EVENT_PERIODIC_SYNC         20
+		//#define BLE_GAP_EVENT_PERIODIC_REPORT       21
+		//#define BLE_GAP_EVENT_PERIODIC_SYNC_LOST    22
+		//#define BLE_GAP_EVENT_SCAN_REQ_RCVD         23
+		//#define BLE_GAP_EVENT_PERIODIC_TRANSFER     24
+		//#define BLE_GAP_EVENT_PATHLOSS_THRESHOLD    25
+		//#define BLE_GAP_EVENT_TRANSMIT_POWER        26
+		//#define BLE_GAP_EVENT_SUBRATE_CHANGE        27
+	};
+	struct Error
+	{
+		ErrorCode code;
+		std::string msg;
+	};
 public:
     CGap();
     ~CGap();
@@ -132,15 +129,14 @@ public:
     void reset_connection();
     void rssi();
     [[nodiscard]] uint16_t connection_handle() const ;
-    [[nodiscard]] std::optional<Error> discover_services();
+    [[nodiscard]] std::optional<CConnectionHandle::Error> discover_services();
     [[nodiscard]] std::optional<Error> start();
     [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();
-    [[nodiscard]] std::optional<Error> drop_connection(ErrorCode reason);
+    [[nodiscard]] std::optional<CConnectionHandle::Error> drop_connection(ErrorCode reason);
 private:
-    uint8_t m_bleAddressType;
-    ble_gap_adv_params m_params;
-    CConnectionHandle m_currentConnectionHandle;
+    uint8_t m_BleAddressType;
+    ble_gap_adv_params m_Params;
+    CConnectionHandle m_CurrentConnectionHandle;
 };
-
 } // namespace nimble

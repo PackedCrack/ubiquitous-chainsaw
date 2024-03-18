@@ -1,6 +1,8 @@
 #pragma once
+#include "defines.hpp"
 // std
 #include <string>
+#include <optional>
 // esp
 #include "esp_err.h"
 
@@ -15,3 +17,10 @@ inline std::string esp_err_to_str(esp_err_t code)
 
 	return err;
 }
+
+template<typename value_t, typename error_t>
+struct Result
+{
+	std::optional<value_t> value;
+	error_t error;
+};

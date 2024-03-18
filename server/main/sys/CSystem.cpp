@@ -61,17 +61,53 @@ CSystem::MacError CSystem::set_base_mac_address(const std::array<uint8_t, 6u>& a
 	// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv421esp_base_mac_addr_setPK7uint8_t
 	return to_mac_error(esp_base_mac_addr_set(address.data()));
 }
-CSystem::MacError CSystem::base_mac_address(std::optional<std::array<uint8_t, 6u>>& outAddress) const
+Result<std::array<uint8_t, 6u>, CSystem::MacError> CSystem::base_mac_address() const
 {
-	outAddress = std::nullopt;
-
 	// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv421esp_base_mac_addr_getP7uint8_t
 	std::array<uint8_t, 6u> addr{};
 	esp_err_t result = esp_base_mac_addr_get(addr.data());
-	if(success(result))
-		outAddress = std::make_optional<std::array<uint8_t, 6u>>(addr);
 
-	return to_mac_error(result);
+	return Result<std::array<uint8_t, 6u>, MacError>{
+		.value = success(result) ? std::make_optional<std::array<uint8_t, 6u>>(addr) : std::nullopt,
+		.error = to_mac_error(result)
+	};
+}
+Result<CSystem::AddressArray, CSystem::MacError> CSystem::custom_efuse_mac_address() const
+{
+	// TODO
+	AddressArray address{};
+	// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv424esp_efuse_mac_get_customP7uint8_t
+	esp_err_t result = esp_efuse_mac_get_custom(address.data());
+	MacError err = to_mac_error(result);
+	if(err == MacError::unknown)
+	{
+		LOG_ERROR_FMT("Failed with code: \"{}\" - \"{}\". When trying to retrieve the custom efuse mac address", 
+						result, 
+						esp_err_to_str(result));
+	}
+	
+	return Result<AddressArray, MacError>{
+		.value = success(result) ? std::make_optional<AddressArray>(address) : std::nullopt,
+		.error = err
+	};
+}
+Result<CSystem::AddressArray, CSystem::MacError> CSystem::default_efuse_mac_address() const
+{
+	AddressArray address{};
+	// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv425esp_efuse_mac_get_defaultP7uint8_t
+	esp_err_t result = esp_efuse_mac_get_default(address.data());
+	MacError err = to_mac_error(result);
+	if(err == MacError::unknown)
+	{
+		LOG_ERROR_FMT("Failed with code: \"{}\" - \"{}\". When trying to retrieve the default efuse mac address", 
+						result, 
+						esp_err_to_str(result));
+	}
+	
+	return Result<AddressArray, MacError>{
+		.value = success(result) ? std::make_optional<AddressArray>(address) : std::nullopt,
+		.error = err
+	};
 }
 constexpr CSystem::MacError CSystem::to_mac_error(esp_err_t err) const
 {

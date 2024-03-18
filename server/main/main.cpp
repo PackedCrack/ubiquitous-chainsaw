@@ -1,5 +1,5 @@
 #include "sys/CSystem.hpp"
-#include "ble/Nimble.hpp"
+#include "ble/CNimble.hpp"
 
 #include "sys/CNonVolatileStorage.hpp"
 
@@ -19,7 +19,7 @@ void print_chip_info()
 	std::printf("\nSupports Bluetooth LE: %s", chip.bluetooth_le() ? "True" : "False");
 	std::printf("\nSupports Bluetooth Classic: %s", chip.bluetooth_classic() ? "True" : "False");
 	std::printf("\nSupports IEEE 802.15.4: %s", chip.IEEE_802_15_4() ? "True" : "False");
-	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", system.min_free_heap());
+	std::printf("\nCurrent minimum free heap: %u bytes\n\n", system.min_free_heap());
 }
 
 

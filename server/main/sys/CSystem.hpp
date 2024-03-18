@@ -1,5 +1,4 @@
 #pragma once
-#include "defines.hpp"
 #include "../server_common.hpp"
 #include "CChip.hpp"
 // esp
@@ -7,7 +6,6 @@
 #include "esp_mac.h"
 // std
 #include <array>
-#include <optional>
 
 
 namespace sys
@@ -50,12 +48,12 @@ public:
 		invalidCrc,
 		unknown
 	};
+	#if CONFIG_IEEE802154_ENABLED
+	using AddressArray = std::array<uint8_t, 8u>;
+	#else
+	using AddressArray = std::array<uint8_t, 6u>;
+	#endif
 private:
-		#if CONFIG_IEEE802154_ENABLED
-		using AddressArray = std::array<uint8_t, 8u>;
-		#else
-		using AddressArray = std::array<uint8_t, 6u>;
-		#endif
 	struct CustomMac{};
 	struct DefaultMac{};
 public:
@@ -73,52 +71,9 @@ public:
 	[[nodiscard]] uint32_t min_free_heap();
 	[[nodiscard]] size_t mac_address_size(MacType type) const;
 	[[nodiscard]] MacError set_base_mac_address(const std::array<uint8_t, 6u>& address) const;
-	[[nodiscard]] MacError base_mac_address(std::optional<std::array<uint8_t, 6u>>& outAddress) const;
-	template<size_t size>
-	[[nodiscard]] MacError custom_efuse_mac_address(std::optional<std::array<uint8_t, size>>& outAddress) const
-	{
-		outAddress = std::nullopt;
-		AddressArray address{};
-		static_assert(std::is_same_v<decltype(outAddress)::value_type, decltype(address)>);
-
-
-		// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv424esp_efuse_mac_get_customP7uint8_t
-		esp_err_t result = esp_efuse_mac_get_custom(address.data());
-		if(success(result))
-			outAddress = std::make_optional<std::array<uint8_t, size>>(address);
-
-		MacError err = to_mac_error(result);
-		if(err == MacError::unknown)
-		{
-			LOG_ERROR_FMT("Failed with code: \"{}\" - \"{}\". When trying to retrieve the custom efuse mac address", 
-							result, 
-							esp_err_to_str(result));
-		}
-		
-		return err;
-	}
-	template<size_t size>
-	[[nodiscard]] MacError default_efuse_mac_address(std::optional<std::array<uint8_t, size>>& outAddress) const
-	{
-		outAddress = std::nullopt;
-		AddressArray address{};
-		static_assert(std::is_same_v<decltype(outAddress)::value_type, decltype(address)>);
-
-		// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv425esp_efuse_mac_get_defaultP7uint8_t
-		esp_err_t result = esp_efuse_mac_get_default(address.data());
-		if(success(result))
-			outAddress = std::make_optional<std::array<uint8_t, size>>(address);
-
-		MacError err = to_mac_error(result);
-		if(err == MacError::unknown)
-		{
-			LOG_ERROR_FMT("Failed with code: \"{}\" - \"{}\". When trying to retrieve the default efuse mac address", 
-							result, 
-							esp_err_to_str(result));
-		}
-		
-		return err;
-	}
+	[[nodiscard]] Result<std::array<uint8_t, 6u>, MacError> base_mac_address() const;
+	[[nodiscard]] Result<AddressArray, MacError> custom_efuse_mac_address() const;
+	[[nodiscard]] Result<AddressArray, MacError> default_efuse_mac_address() const;
 	template<size_t size>
 	[[nodiscard]] MacError set_interface_mac_address(MacType type, const std::array<uint8_t, size>& address)
 	{
