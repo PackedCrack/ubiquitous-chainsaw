@@ -8,7 +8,16 @@
 
 namespace
 {
-[[nodiscard]] auto make_callback_signed_mac()
+[[nodiscard]] auto make_callback_server_auth()
+{
+	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
+	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt, void* arg) -> int	// type deduction requires exact typematch
+	{
+
+		return int32_t{ 0 };
+	};
+}
+[[nodiscard]] auto make_callback_client_auth()
 {
 	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
 	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt, void* arg) -> int	// type deduction requires exact typematch
@@ -19,11 +28,11 @@ namespace
 }
 [[nodiscard]] ble::CCharacteristic make_characteristic_server_auth()
 {
-	return ble::make_characteristic(ble::ID_CHARS_SERVER_AUTH, make_callback_signed_mac(), ble::CharsPropertyFlag::read);
+	return ble::make_characteristic(ble::ID_CHARS_SERVER_AUTH, make_callback_server_auth(), ble::CharsPropertyFlag::read);
 }
 [[nodiscard]] ble::CCharacteristic make_characteristic_client_auth()
 {
-	return ble::make_characteristic(ble::ID_CHARS_CLIENT_AUTH, make_callback_signed_mac(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write);
+	return ble::make_characteristic(ble::ID_CHARS_CLIENT_AUTH, make_callback_client_auth(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write);
 }
 [[nodiscard]] std::vector<ble::CCharacteristic> make_characteristics()
 {
@@ -37,33 +46,12 @@ namespace
 
 namespace ble
 {
-Result<CWhoAmI, CWhoAmI::Error> CWhoAmI::make_whoami()
-{
-	try
-	{
-		CWhoAmI profile{};
-		return Result<CWhoAmI, CWhoAmI::Error>{
-			.value = std::make_optional<CWhoAmI>(std::move(profile)),
-			.error = Error::none
-		};
-	}
-	catch(const std::runtime_error& err)
-	{
-		return Result<CWhoAmI, CWhoAmI::Error>{
-			.value = std::nullopt,
-			.error = Error::outOfHeapMemory
-		};
-	}
-}
 CWhoAmI::CWhoAmI()
 	: m_Characteristics{ make_characteristics() }
-	, m_Service{ m_Characteristics }
+	, m_Service{ ID_SERVICE_WHOAMI, m_Characteristics }
+{}
+ble_gatt_svc_def CWhoAmI::as_nimble_service() const
 {
-	int32_t result = ble_gatts_count_cfg(m_Service.as_nimble_arr().data());
-    if (result != SUCCESS) 
-        throw std::runtime_error{ "nice" };
-
-    result = ble_gatts_add_svcs(m_Service.as_nimble_arr().data());
+	return static_cast<ble_gatt_svc_def>(m_Service);
 }
-
 }	// namespace ble

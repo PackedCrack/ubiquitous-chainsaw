@@ -1,5 +1,5 @@
 #include "CNonVolatileStorage.hpp"
-#include "defines.hpp"
+#include "../server_common.hpp"
 // std
 #include <stdexcept>
 #include <cassert>

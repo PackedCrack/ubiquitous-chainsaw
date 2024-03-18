@@ -8,23 +8,14 @@ namespace ble
 class CWhoAmI
 {
 public:
-	enum class Error
-	{
-		none,
-		outOfHeapMemory,
-		invalidResource
-	};
-public:
-	[[nodiscard]] static Result<CWhoAmI, CWhoAmI::Error> make_whoami();
+	CWhoAmI();
 	~CWhoAmI() = default;
 	CWhoAmI(const CWhoAmI& other) = default;
 	CWhoAmI(CWhoAmI&& other) = default;
 	CWhoAmI& operator=(const CWhoAmI& other) = default;
 	CWhoAmI& operator=(CWhoAmI&& other) = default;
-private:
-	CWhoAmI();
-private:
-	//void register_service();
+public:
+	[[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
 private:
 	std::vector<CCharacteristic> m_Characteristics;
 	CGattService m_Service;
