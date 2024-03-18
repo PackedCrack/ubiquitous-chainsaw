@@ -1,5 +1,5 @@
 #pragma once
-#include "defines.hpp"
+#include "../common/common.hpp"
 // std
 #include <string>
 #include <optional>
@@ -24,3 +24,20 @@ struct Result
 	std::optional<value_t> value;
 	error_t error;
 };
+
+template<typename error_t>
+constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
+{
+	if constexpr (std::is_same_v<error_t, esp_err_t>)
+	{
+		return errorCode == ESP_OK;
+	}
+
+	if constexpr (std::is_same_v<error_t, err_t>)
+	{
+		return errorCode == ERR_OK;
+	}
+
+	// So CPPCHECk stops complaining
+	return 0;
+}

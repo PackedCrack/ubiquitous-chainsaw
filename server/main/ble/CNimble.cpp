@@ -1,41 +1,37 @@
 #include "CNimble.hpp"
 #include "profiles/CWhoAmI.hpp"
+#include "profiles/CProfileCacheBuilder.hpp"
+// esp
 #include "esp_bt.h"
 
+#include <iostream>
 
 namespace 
 {
-//constexpr std::string_view SERVER_TAG {"Chainsaw-server"}; // used for ESP_LOG
-//std::promise<void> syncPromise {};
-//std::future<void> syncFuture = syncPromise.get_future();
-auto gatt_service_register_event_handle = [](struct ble_gatt_register_ctxt *ctxt, void *arg) {
-    // NIMBLE BLEPRPH EXAMPLE CODE
-    char buf[BLE_UUID_STR_LEN];
-    switch (ctxt->op) {
-        case BLE_GATT_REGISTER_OP_SVC:
-            LOG_INFO_FMT("registered service {} with handle={}\n",
-                        ble_uuid_to_str(ctxt->svc.svc_def->uuid, buf), ctxt->svc.handle);
-            break;
-        case BLE_GATT_REGISTER_OP_CHR:
-            LOG_INFO_FMT("registering characteristic {} with "
-                        "def_handle={} val_handle={}\n",
-                        ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf), ctxt->chr.def_handle, ctxt->chr.val_handle);
-            break;
-        case BLE_GATT_REGISTER_OP_DSC:
-            LOG_INFO_FMT("registering descriptor {} with handle={}\n",
-                        ble_uuid_to_str(ctxt->dsc.dsc_def->uuid, buf),ctxt->dsc.handle);
-            break;
-        default:
-            assert(0);
-            break;
-    }
-};
-auto make_on_sync_handle() 
+auto make_callback_gatt_service_register()
 {
-    return [](){
-        LOG_INFO("Ble Host and Controller have become synced!");
-        //syncPromise.set_value();
-    };
+	return [](ble_gatt_register_ctxt* ctxt, void* arg)
+	{
+		std::array<char, BLE_UUID_STR_LEN> buffer{};
+    	switch (ctxt->op) 
+		{
+    	    case BLE_GATT_REGISTER_OP_SVC:
+    	        LOG_INFO_FMT("Registered service = \"{}\" with handle = \"{}\"",
+    	                    ble_uuid_to_str(ctxt->svc.svc_def->uuid, buffer.data()), ctxt->svc.handle);
+    	        return;
+    	    case BLE_GATT_REGISTER_OP_CHR:
+    	        LOG_INFO_FMT("Registered characteristic: \"{}\" with "
+    	                    "def_handle = \"{}\" val_handle = \"{}\"",
+    	                    ble_uuid_to_str(ctxt->chr.chr_def->uuid, buffer.data()), ctxt->chr.def_handle, ctxt->chr.val_handle);
+    	        return;
+    	    case BLE_GATT_REGISTER_OP_DSC:
+    	        LOG_INFO_FMT("Registered descriptor = \"{}\" with handle = {}",
+    	                    ble_uuid_to_str(ctxt->dsc.dsc_def->uuid, buffer.data()),ctxt->dsc.handle);
+    	        return;
+    	}
+
+		__builtin_unreachable();
+	};
 }
 auto make_on_reset_handle()
 {
@@ -57,74 +53,79 @@ auto make_host_task()
 }
 void configure_nimble_host()
 {
+	// retarded global that all of the example code uses - the api is like this dont blame us.
     ble_hs_cfg.reset_cb = make_on_reset_handle(); 
-    ble_hs_cfg.sync_cb = make_on_sync_handle();
-    ble_hs_cfg.gatts_register_cb = gatt_service_register_event_handle;
+    ble_hs_cfg.sync_cb = ble::CNimble::sync_callback;
+
+	#ifndef NDEBUG
+    ble_hs_cfg.gatts_register_cb = make_callback_gatt_service_register();
+	#else
+	ble_hs_cfg.gatts_register_cb = nullptr;
+	#endif
+
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr; // NOT THE BEST CALLBACK TO USE FOR PRODUCTION
     ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
     ble_hs_cfg.sm_bonding = 1u;
-    ble_hs_cfg.sm_our_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the local device is willing to share the encryption key (ENC) during pairing.
-    ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the remote device is expected to share the encryption key during pairing.
+    ble_hs_cfg.sm_our_key_dist = ble_hs_cfg.sm_our_key_dist | BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the local device is willing to share the encryption key (ENC) during pairing.
+    ble_hs_cfg.sm_their_key_dist = ble_hs_cfg.sm_our_key_dist | BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the remote device is expected to share the encryption key during pairing.
     ble_hs_cfg.sm_sc = 1u;
     //ble_store_config_init(); // which header is this?..
 }
 } // namespace
-
-
 namespace ble
 {
-CNimble::CNimble()
-    : //m_gatt {}
-     m_gap {}
+std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>> CNimble::synchronization_primitives()
 {
-	auto[value, error] = CWhoAmI::make_whoami();
+	static std::mutex m{};
+	std::lock_guard lock{ m };
 
+	static auto pMutex = std::make_shared<std::mutex>();
+	static auto pCV = std::make_shared<std::condition_variable>();
 
-	Result<CWhoAmI, CWhoAmI::Error> result2 = CWhoAmI::make_whoami();
-	if(!(result2.value))
-	{
-		LOG_FATAL("Failed to instantiate whoami profile");
-	}
-	// else
-	CWhoAmI whoami{ std::move(result2.value.value()) };
-
-
+	return std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>>{ pMutex, pCV };
+}
+void CNimble::sync_callback()
+{
+	auto[pMutex, pCV] = synchronization_primitives();
+	std::unique_lock lock{ *pMutex };
+	pCV->notify_one();
+}
+CNimble::CNimble()
+	: m_pGap{ nullptr }
+	, m_pProfileCache{ nullptr }
+{
+	// https://mynewt.apache.org/latest/network/ble_setup/ble_addr.html#method-3-configure-a-random-address-at-runtime
     esp_err_t nimbleResult = nimble_port_init();
-    std::printf("Result: %d\n", nimbleResult);
-    if (nimbleResult != SUCCESS)
+    if (!success(nimbleResult))
     {
         if (nimbleResult != ESP_ERR_INVALID_STATE)
-            throw std::runtime_error("Error initilizing nimble_port_init() due to controller is not idle");
+		{
+			LOG_FATAL("Error initilizing nimble_port_init() due to controller is not idle");
+		}
+		else
+		{
+			LOG_FATAL("CNimble constructor failed. invalid state");
+		}
     }
 
+
+	auto[pMutex, pCV] = synchronization_primitives();
+	std::unique_lock lock{ *pMutex };
+
     configure_nimble_host();
-    //result = m_gatt.register_services();
-    //if (result != 0)
-    //{
-    //    if (result == BLE_HS_EBUSY)
-    //        throw std::runtime_error("GATT server could not be reset due to existing connections or active GAP procedures");
 
-    //    if (result == BLE_HS_EINVAL)
-    //        throw std::runtime_error("Services array contains an invalid resource definition");
-    
-    //    if (result == BLE_HS_ENOMEM)
-    //        throw std::runtime_error("heap exhaustion");
-
-    //    throw std::runtime_error("Unknown error");
-    //}
+	CProfileCache cache = CProfileCacheBuilder()
+							.add_whoami()
+							.build();
+	m_pProfileCache = std::make_unique<CProfileCache>(std::move(cache));
 
   
     nimble_port_freertos_init(make_host_task());
+	
+	pCV->wait(lock);
 
-    //syncFuture.get();
 
-    std::optional<CGap::Error> result = m_gap.start();
-    if (result != std::nullopt)
-    {
-        CGap::Error err = *result; // bugg
-        std::printf(err.msg.c_str());
-        throw std::runtime_error(err.msg);
-    }
+	m_pGap = std::make_unique<CGap>();
 }
 CNimble::~CNimble()
 {
@@ -136,11 +137,17 @@ CNimble::~CNimble()
 
     //int result = m_gap.drop_connection(BLE_HS_ENOENT);   
 
-    std::optional<CGap::Error> result = m_gap.end_advertise();
-    if (result != std::nullopt)
-    {
-        // handle error here
-    }
+	if(m_pGap)
+		m_pGap.release();
+
+	if(m_pProfileCache)
+		m_pProfileCache.release();
+
+    //std::optional<CGap::Error> result = m_gap.end_advertise();
+    //if (result != std::nullopt)
+    //{
+    //    LOG_FATAL_FMT("{}", result.value().msg.c_str());
+    //}
 
     //result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
     //ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
@@ -166,23 +173,23 @@ CNimble::~CNimble()
     I dont know what is causing the 530 error code.
     */
 }
-CNimble::CNimble(CNimble&& other) noexcept
-    : //m_gatt { std::move(other.m_gatt) }
-     m_gap { std::move(other.m_gap) } 
-{
-    // no pointers have been moved
-}
-CNimble& CNimble::operator=(CNimble&& other)
-{
-    /*
-        1. Clean up all visible resources
-        2. Transfer the content of other into this
-        3. Leave other in a valid but undefined state
-    */
-    
-    // Check if other exists?
-    //m_gatt = std::move(other.m_gatt);
-    m_gap = std::move(other.m_gap);
-    return *this;
-}
+//CNimble::CNimble(CNimble&& other) noexcept
+//    : //m_gatt { std::move(other.m_gatt) }
+//     m_gap { std::move(other.m_gap) } 
+//{
+//    // no pointers have been moved
+//}
+//CNimble& CNimble::operator=(CNimble&& other)
+//{
+//    /*
+//        1. Clean up all visible resources
+//        2. Transfer the content of other into this
+//        3. Leave other in a valid but undefined state
+//    */
+//    
+//    // Check if other exists?
+//    //m_gatt = std::move(other.m_gatt);
+//    m_gap = std::move(other.m_gap);
+//    return *this;
+//}
 } // namespace ble
