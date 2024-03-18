@@ -1,16 +1,13 @@
-#include "Nimble.hpp"
-
+#include "CNimble.hpp"
+#include "profiles/CWhoAmI.hpp"
 #include "esp_bt.h"
 
-namespace ble
-{
 
 namespace 
 {
 //constexpr std::string_view SERVER_TAG {"Chainsaw-server"}; // used for ESP_LOG
 //std::promise<void> syncPromise {};
 //std::future<void> syncFuture = syncPromise.get_future();
-
 auto gatt_service_register_event_handle = [](struct ble_gatt_register_ctxt *ctxt, void *arg) {
     // NIMBLE BLEPRPH EXAMPLE CODE
     char buf[BLE_UUID_STR_LEN];
@@ -33,7 +30,6 @@ auto gatt_service_register_event_handle = [](struct ble_gatt_register_ctxt *ctxt
             break;
     }
 };
-
 auto make_on_sync_handle() 
 {
     return [](){
@@ -41,7 +37,6 @@ auto make_on_sync_handle()
         //syncPromise.set_value();
     };
 }
-
 auto make_on_reset_handle()
 {
     return [](int reason){
@@ -51,7 +46,6 @@ auto make_on_reset_handle()
         //syncFuture = syncPromise.get_future();
     };
 }
-
 auto make_host_task()
 {
     return [](void* param){
@@ -61,8 +55,6 @@ auto make_host_task()
         std::printf("exited from nimble_port_run()\n");
     };
 }
-
-
 void configure_nimble_host()
 {
     ble_hs_cfg.reset_cb = make_on_reset_handle(); 
@@ -75,18 +67,28 @@ void configure_nimble_host()
     ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the remote device is expected to share the encryption key during pairing.
     ble_hs_cfg.sm_sc = 1u;
     //ble_store_config_init(); // which header is this?..
-
-
 }
-
-
 } // namespace
 
 
+namespace ble
+{
 CNimble::CNimble()
     : //m_gatt {}
      m_gap {}
 {
+	auto[value, error] = CWhoAmI::make_whoami();
+
+
+	Result<CWhoAmI, CWhoAmI::Error> result2 = CWhoAmI::make_whoami();
+	if(!(result2.value))
+	{
+		LOG_FATAL("Failed to instantiate whoami profile");
+	}
+	// else
+	CWhoAmI whoami{ std::move(result2.value.value()) };
+
+
     esp_err_t nimbleResult = nimble_port_init();
     std::printf("Result: %d\n", nimbleResult);
     if (nimbleResult != SUCCESS)
@@ -116,16 +118,14 @@ CNimble::CNimble()
 
     //syncFuture.get();
 
-    std::optional<Error> result = m_gap.start();
+    std::optional<CGap::Error> result = m_gap.start();
     if (result != std::nullopt)
     {
-        Error err = *result;
+        CGap::Error err = *result; // bugg
         std::printf(err.msg.c_str());
         throw std::runtime_error(err.msg);
     }
 }
-
-
 CNimble::~CNimble()
 {
     std::printf("CNimble destructor\n");
@@ -136,7 +136,7 @@ CNimble::~CNimble()
 
     //int result = m_gap.drop_connection(BLE_HS_ENOENT);   
 
-    std::optional<Error> result = m_gap.end_advertise();
+    std::optional<CGap::Error> result = m_gap.end_advertise();
     if (result != std::nullopt)
     {
         // handle error here
@@ -166,15 +166,12 @@ CNimble::~CNimble()
     I dont know what is causing the 530 error code.
     */
 }
-
-
 CNimble::CNimble(CNimble&& other) noexcept
     : //m_gatt { std::move(other.m_gatt) }
      m_gap { std::move(other.m_gap) } 
 {
     // no pointers have been moved
 }
-
 CNimble& CNimble::operator=(CNimble&& other)
 {
     /*
@@ -188,6 +185,4 @@ CNimble& CNimble::operator=(CNimble&& other)
     m_gap = std::move(other.m_gap);
     return *this;
 }
-
-
 } // namespace ble
