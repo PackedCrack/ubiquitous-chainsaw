@@ -77,7 +77,7 @@ struct UUID
     };
 };
 
-static constexpr UUID BaseUID
+static constexpr UUID BaseUUID
 {
         .data1 = 0u,
         .custom = 0u,
@@ -88,7 +88,7 @@ static constexpr UUID BaseUID
         .data7 = 0x34FB
 };
 
-static constexpr uint16_t ID_SERVICE_WHOAMI = 0xAAAA;
-static constexpr uint16_t ID_CHARS_SERVER_AUTH = 0xAAAB;
-static constexpr uint16_t ID_CHARS_CLIENT_AUTH = 0xAAAB;
+static constexpr uint16_t ID_SERVICE_WHOAMI = 0xADDE;
+static constexpr uint16_t ID_CHARS_SERVER_AUTH = 0x0BB0;
+static constexpr uint16_t ID_CHARS_CLIENT_AUTH = 0xBEBA;
 }   // namespace ble

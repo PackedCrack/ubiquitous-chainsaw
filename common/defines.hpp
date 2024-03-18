@@ -120,24 +120,6 @@ logger::log_fat(__FILE__, __func__, __LINE__, FMT(msg, esp_err_to_name(errorCode
 #define LOG_ERROR_LWIP(msg, errorCode) \
 logger::log_err(__FILE__, __func__, __LINE__, FMT(msg, lwip_strerr(errorCode))) \
 
-
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-
-template<typename error_t>
-constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
-{
-	if constexpr (std::is_same_v<error_t, esp_err_t>)
-	{
-		return errorCode == ESP_OK;
-	}
-
-	if constexpr (std::is_same_v<error_t, err_t>)
-	{
-		return errorCode == ERR_OK;
-	}
-
-	// So CPPCHECk stops complaining
-	return 0;
-}
 #endif
 
