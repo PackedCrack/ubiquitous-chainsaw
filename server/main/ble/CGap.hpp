@@ -1,8 +1,7 @@
 #pragma once
-
+/* Project */
+#include "ble_common.hpp"
 /* STD */
-#include <string>
-#include <cstdio>
 #include <type_traits>
 #include <vector>
 #include <array>
@@ -10,11 +9,6 @@
 //#include <format> // apparently i dont have c++20
 
 //#include <utility>
-
-/* Project */
-#include "defines.hpp"
-#include "ble_common.hpp"
-
 /* BLE */
 #include "host/ble_hs_adv.h"
 #include "host/ble_gap.h"
@@ -44,17 +38,12 @@ struct BleClientService
     uint16_t handleEnd;
     std::vector<BleClientCharacteristic> characteristics;
 };
-struct Error
-{
-	ErrorCode code;
-	std::string msg;
-};
 class CConnectionHandle // NOTE: Will this be needed for GATT services???? probably drop connectino if not authenticated
 {
 public:
 	struct Error
 	{
-		ErrorCode code;
+		NimbleErrorCode code;
 		std::string msg;
 	};
 public:
@@ -70,7 +59,7 @@ public:
     [[nodiscard]] int32_t num_services() const;
     [[nodiscard]] std::vector<BleClientService> services() const;
     void set_connection(uint16_t id);
-    [[nodiscard]] std::optional<Error> drop(ErrorCode reason);
+    [[nodiscard]] std::optional<Error> drop(NimbleErrorCode reason);
     void reset();
     void add_service(const BleClientService& service);
 private:
@@ -114,7 +103,7 @@ public:
 	};
 	struct Error
 	{
-		ErrorCode code;
+		NimbleErrorCode code;
 		std::string msg;
 	};
 public:
@@ -133,7 +122,7 @@ public:
     [[nodiscard]] std::optional<Error> start();
     [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();
-    [[nodiscard]] std::optional<CConnectionHandle::Error> drop_connection(ErrorCode reason);
+    [[nodiscard]] std::optional<CConnectionHandle::Error> drop_connection(NimbleErrorCode reason);
 private:
     uint8_t m_BleAddressType;
     ble_gap_adv_params m_Params;

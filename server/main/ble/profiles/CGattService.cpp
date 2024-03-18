@@ -6,31 +6,17 @@
 
 namespace
 {
-template<typename return_t>
-requires std::is_same_v<return_t, ble_gatt_chr_def> || std::is_same_v<return_t, ble_gatt_svc_def>
-[[nodiscard]] constexpr return_t end_of_array()
+[[nodiscard]] constexpr ble_gatt_chr_def end_of_array()
 {
-	if constexpr(std::is_same_v<return_t, ble_gatt_chr_def>)
-	{
-		return ble_gatt_chr_def {
-			.uuid = nullptr,
-			.access_cb = nullptr,
-			.arg = nullptr,
-			.descriptors = nullptr,
-			.flags = NO_FLAGS,
-			.min_key_size = 0u,
-			.val_handle = nullptr
-		};
-	}
-	else
-	{
-		return ble_gatt_svc_def {
-			.type = BLE_GATT_SVC_TYPE_END,
-			.uuid = nullptr,
-			.includes = nullptr,
-			.characteristics = nullptr
-		};
-	}
+	return ble_gatt_chr_def {
+		.uuid = nullptr,
+		.access_cb = nullptr,
+		.arg = nullptr,
+		.descriptors = nullptr,
+		.flags = NO_FLAGS,
+		.min_key_size = 0u,
+		.val_handle = nullptr
+	};
 }
 [[nodiscard]] std::vector<ble_gatt_chr_def> make_nimble_characteristics_arr(std::vector<ble::CCharacteristic>& characteristics)
 {
@@ -38,7 +24,7 @@ requires std::is_same_v<return_t, ble_gatt_chr_def> || std::is_same_v<return_t, 
 	nimbleArr.reserve(characteristics.size());
 	for(auto&& characteristic : characteristics)
 		nimbleArr.emplace_back(static_cast<ble_gatt_chr_def>(characteristic));
-	nimbleArr.emplace_back(end_of_array<ble_gatt_chr_def>());
+	nimbleArr.emplace_back(end_of_array());
 
 	return nimbleArr;
 }
@@ -47,14 +33,10 @@ requires std::is_same_v<return_t, ble_gatt_chr_def> || std::is_same_v<return_t, 
 
 namespace ble
 {
-CGattService::CGattService(std::vector<CCharacteristic>& characteristics)
-	: m_pUUID{ std::make_unique<ble_uuid128_t>(/* stuff */) }
+CGattService::CGattService(uint16_t uuid, std::vector<CCharacteristic>& characteristics)
+	: m_pUUID{ std::make_unique<ble_uuid128_t>(make_ble_uuid128(uuid)) }
 	, m_Characteristics{ make_nimble_characteristics_arr(characteristics) }
-	, m_Service{}
-{
-	m_Service.emplace_back(static_cast<ble_gatt_svc_def>(*this));
-	m_Service.emplace_back(end_of_array<ble_gatt_svc_def>());
-}
+{}
 CGattService::CGattService(const CGattService& other)
 	: m_pUUID{ nullptr }
 	, m_Characteristics{}
@@ -85,18 +67,18 @@ CGattService CGattService::copy(const CGattService& source) const
 	
 	
 	cpy.m_Characteristics = source.m_Characteristics;
-	cpy.m_Service = cpy.make_nimble_svc_arr();
+	//cpy.m_Service = cpy.make_nimble_svc_arr();
 
 	return cpy;
 }
-std::vector<ble_gatt_svc_def> CGattService::make_nimble_svc_arr() const
-{
-	std::vector<ble_gatt_svc_def> arr{};
-	arr.emplace_back(static_cast<ble_gatt_svc_def>(*this));
-	arr.emplace_back(end_of_array<ble_gatt_svc_def>());
-
-	return arr;
-}
+//std::vector<ble_gatt_svc_def> CGattService::make_nimble_svc_arr() const
+//{
+//	std::vector<ble_gatt_svc_def> arr{};
+//	arr.emplace_back(static_cast<ble_gatt_svc_def>(*this));
+//	arr.emplace_back(end_of_array<ble_gatt_svc_def>());
+//
+//	return arr;
+//}
 CGattService::operator ble_gatt_svc_def() const
 {
 	return ble_gatt_svc_def{
@@ -106,8 +88,8 @@ CGattService::operator ble_gatt_svc_def() const
 		.characteristics = m_Characteristics.data()
 	};
 }
-const std::vector<ble_gatt_svc_def>& CGattService::as_nimble_arr() const
-{
-	return m_Service;
-}	
+//const std::vector<ble_gatt_svc_def>& CGattService::as_nimble_arr() const
+//{
+//	return m_Service;
+//}	
 }	// namespace ble

@@ -4,7 +4,6 @@
 
 // project
 #include "ble_common.hpp"
-#include "defines.hpp"
 
 #include "host/ble_hs.h"
 #include "host/ble_uuid.h"
