@@ -442,6 +442,8 @@ FodyWeavers.xsd
 
 # cppcheck
 /build-cppcheck
+/client/build-cppcheck
+/server/build-cppcheck
 
 # clion
 /.idea
