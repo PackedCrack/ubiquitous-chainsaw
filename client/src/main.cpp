@@ -58,30 +58,16 @@ void query_device(uint64_t bluetoothAddress)
     {
     }
     
-    ble::UUID uuid{
-        .data1 = 0x59462f12,
-        .custom = 0x9543,
-        .data3 = 0x9999,
-        .data4 = 0x12c8,
-        .data5 = 0x58b4,
-        .data6 = 0x59a2,
-        .data7 = 0x712d
-    };
+    ble::UUID whoami = ble::BaseUUID;
+    whoami.custom = ble::ID_SERVICE_WHOAMI;
     
     auto services = device.services();
-    auto iter = services.find(uuid);
+    auto iter = services.find(whoami);
     if(iter != std::end(services))
     {
         ble::win::CService& service = iter->second;
-        ble::UUID characteristicUuid{
-                .data1 = 0x33333333,
-                .custom = 0x2222,
-                .data3 = 0x2222,
-                .data4 = 0x1111,
-                .data5 = 0x1111,
-                .data6 = 0x0000,
-                .data7 = 0x0000
-        };
+        ble::UUID characteristicUuid = ble::BaseUUID;
+        characteristicUuid.custom = ble::ID_CHARS_SERVER_AUTH;
         
         auto result = service.characteristic(characteristicUuid);
         if(result)

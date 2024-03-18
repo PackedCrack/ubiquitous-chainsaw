@@ -1,14 +1,14 @@
-#include "CChip.hpp"
-#include "Nimble.hpp"
+#include "sys/CSystem.hpp"
+#include "ble/CNimble.hpp"
 
-#include "CNonVolatileStorage.hpp"
-
+#include "sys/CNonVolatileStorage.hpp"
 
 
 
 void print_chip_info()
 {
-	sys::CChip chip{};
+	sys::CSystem system{};
+	sys::CChip chip = system.chip_info();
 
 	std::printf("\nChip information");
 	std::printf("\nRevision: %s", chip.revision().c_str());
@@ -19,31 +19,38 @@ void print_chip_info()
 	std::printf("\nSupports Bluetooth LE: %s", chip.bluetooth_le() ? "True" : "False");
 	std::printf("\nSupports Bluetooth Classic: %s", chip.bluetooth_classic() ? "True" : "False");
 	std::printf("\nSupports IEEE 802.15.4: %s", chip.IEEE_802_15_4() ? "True" : "False");
-	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", sys::min_free_heap());
+	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", system.min_free_heap());
 }
 
+
 extern "C" void app_main(void)
-
 {
-	print_chip_info();
-	storage::CNonVolatileStorage nvs{};
-
-	// https://mynewt.apache.org/latest/
-	
+	sys::CSystem system{};
 	try 
 	{
-        ble::CNimble nimble {};
-		//ble::CNimble nimble1 {}; // will fuck up the advertising aswell
-    } catch (const std::exception& error) {
-		LOG_ERROR_FMT("Caught exception: {}", error.what());
-    } catch (...) {
-		LOG_ERROR("Caught unknown exception");
-    }
+		print_chip_info();
+		storage::CNonVolatileStorage nvs{};
 
-	while (true)
+
+		// https://mynewt.apache.org/latest/
+
+		//{
+        //ble::CNimble tmp {};
+		//}
+		ble::CNimble nimble {};
+		//ble::CNimble nimble {std::move(tmp)};
+		//ble::CNimble nimble = std::move(tmp);
+
+		while (true)
+		{
+			//chainsawServer.rssi();
+			// Perform any periodic tasks here
+			vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
+		}
+    } 
+	catch (const exception::fatal_error& error) 
 	{
-		//chainsawServer.rssi();
-		// Perform any periodic tasks here
-		vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
-	}
+		LOG_ERROR_FMT("Caught exception: {}", error.what());
+		system.restart();
+    }
 }

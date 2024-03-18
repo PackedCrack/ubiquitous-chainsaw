@@ -1,4 +1,7 @@
 #pragma once
+// std
+#include <cstdint>
+#include <concepts>
 
 
 namespace ble
@@ -50,11 +53,11 @@ struct UUID
     }
     struct Hasher
     {
-        [[nodiscard]]std::size_t operator()(const UUID& uuid) const
+        [[nodiscard]] std::size_t operator()(const UUID& uuid) const
         {
-            static constexpr size_t prime = 31u;
+            static constexpr std::size_t prime = 31u;
             
-            size_t hash = 1u;
+            std::size_t hash = 1u;
             hash = (hash * prime) + (uuid.data1 ^ lower_end_bits(uuid.data1));
             hash = (hash * prime) + (uuid.custom ^ lower_end_bits(uuid.custom));
             hash = (hash * prime) + (uuid.data3 ^ lower_end_bits(uuid.data3));
@@ -67,14 +70,14 @@ struct UUID
         }
     private:
         template<typename integer_t> requires std::integral<integer_t>
-        [[nodiscard]] size_t lower_end_bits(integer_t val) const
+        [[nodiscard]] std::size_t lower_end_bits(integer_t val) const
         {
             return val >> (sizeof(decltype(data1)) / 2);
         }
     };
 };
 
-static constexpr UUID BaseUID
+static constexpr UUID BaseUUID
 {
         .data1 = 0u,
         .custom = 0u,
@@ -85,5 +88,7 @@ static constexpr UUID BaseUID
         .data7 = 0x34FB
 };
 
-static constexpr uint16_t ID_SERVICE_WHOAMI = 0xAAAA;
+static constexpr uint16_t ID_SERVICE_WHOAMI = 0xADDE;
+static constexpr uint16_t ID_CHARS_SERVER_AUTH = 0x0BB0;
+static constexpr uint16_t ID_CHARS_CLIENT_AUTH = 0xBEBA;
 }   // namespace ble

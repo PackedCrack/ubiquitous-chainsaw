@@ -15,6 +15,11 @@ concept Buffer = requires(buffer_t buffer)
     { buffer.size() } -> std::convertible_to<typename decltype(buffer)::size_type>;
     { buffer.data() } -> std::convertible_to<typename decltype(buffer)::pointer>;
 };
+template<typename string_t>
+concept BasicString = requires(string_t str)
+{
+	{ std::is_same_v<std::remove_cvref_t<string_t>, std::string> };
+};
 }   // common
 
 
@@ -34,7 +39,11 @@ template<typename enum_t>
 requires std::is_enum_v<enum_t>
 [[nodiscard]] constexpr bool enum_to_bool(enum_t&& properties)
 {
-    return static_cast<bool>(std::to_underlying(std::forward<enum_t>(properties)));
+	#if __cplusplus > 202002L
+	return static_cast<bool>(std::to_underlying(std::forward<enum_t>(properties)));
+	#else
+	return static_cast<bool>(static_cast<int64_t>(std::forward<enum_t>(properties)));
+	#endif
 }
 }   // common
 
