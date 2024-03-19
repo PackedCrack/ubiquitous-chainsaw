@@ -23,50 +23,6 @@
 
 namespace ble
 {
-struct BleClientCharacteristic
-{
-    ble_uuid_any_t uuid;
-    uint16_t handle;
-    uint16_t handleValue;
-    uint8_t properties;
-};
-struct BleClientService 
-{
-    ble_uuid_any_t uuid;
-    uint16_t connHandle;
-    uint16_t handleStart;
-    uint16_t handleEnd;
-    std::vector<BleClientCharacteristic> characteristics;
-};
-class CConnectionHandle // NOTE: Will this be needed for GATT services???? probably drop connectino if not authenticated
-{
-public:
-	struct Error
-	{
-		NimbleErrorCode code;
-		std::string msg;
-	};
-public:
-    CConnectionHandle();
-    ~CConnectionHandle();
-    CConnectionHandle(const CConnectionHandle& other) = delete; // why shouldnt i be able to copy it?, because if i make i copy, the other one can be droped and then the copy is invalid?
-    CConnectionHandle(CConnectionHandle&& other) noexcept;
-    CConnectionHandle& operator=(const CConnectionHandle& other) = delete;
-    CConnectionHandle& operator=(CConnectionHandle&& other);
-
-public:
-    [[nodiscard]] uint16_t handle() const;
-    [[nodiscard]] int32_t num_services() const;
-    [[nodiscard]] std::vector<BleClientService> services() const;
-    void set_connection(uint16_t id);
-    [[nodiscard]] std::optional<Error> drop(NimbleErrorCode reason);
-    void reset();
-    void add_service(const BleClientService& service);
-private:
-    uint16_t m_id;
-    std::vector<BleClientService> m_services;
-
-};
 class CGap
 {
 public:
@@ -118,7 +74,6 @@ public:
     void reset_connection();
     void rssi();
     [[nodiscard]] uint16_t connection_handle() const ;
-    [[nodiscard]] std::optional<CConnectionHandle::Error> discover_services();
     [[nodiscard]] std::optional<Error> start();
     [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();

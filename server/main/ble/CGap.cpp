@@ -305,11 +305,6 @@ CGap& CGap::operator=(CGap&& other)
     m_CurrentConnectionHandle = std::move(other.m_CurrentConnectionHandle);
     return *this;
 }
-std::optional<CConnectionHandle::Error> CGap::discover_services()
-{
-    ASSERT(m_CurrentConnectionHandle.handle() != INVALID_HANDLE_ID, "Tried to intiate 'Service Discovery' on an invalid connection");
-    return discover_client_services(m_CurrentConnectionHandle);	// inverted
-}
 void CGap::set_connection(const uint16_t id)
 {
     m_CurrentConnectionHandle.set_connection(id);
