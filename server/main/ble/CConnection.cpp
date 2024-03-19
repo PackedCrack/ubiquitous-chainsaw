@@ -1,7 +1,11 @@
 #include "CConnection.hpp"
 // std
 #include <utility>
+// ble
+#include "host/../../src/ble_hs_conn_priv.h"
 
+
+extern ble_hs_conn* ble_hs_conn_find(uint16_t conn_handle);
 
 namespace ble
 {
@@ -13,6 +17,8 @@ CConnection::~CConnection()
 	if(!m_Handle)
 		return;
 	
+	if(ble_hs_conn_find(*m_Handle) == nullptr)
+		return;
 	
 	std::optional<Error> result = drop(DropCode::completed);
 	if(result)

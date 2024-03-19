@@ -7,6 +7,7 @@
 #include <vector>
 #include <array>
 #include <optional>
+#include <functional>
 //#include <format> // apparently i dont have c++20
 
 //#include <utility>
@@ -26,6 +27,7 @@ namespace ble
 {
 class CGap
 {
+	typedef void* function;
 public:
 	enum class Events : int32_t
 	{
@@ -71,6 +73,7 @@ public:
     CGap& operator=(const CGap& other) = delete;
     CGap& operator=(CGap&& other) noexcept;
 public:
+	static void event_callback_caller(ble_gap_event* pEvent, function eventCallback);
     void rssi();
 	void set_connection(CConnection&& newConncetion);
 	[[nodiscard]] std::optional<CConnection*> active_connection();
@@ -82,5 +85,6 @@ private:
     uint8_t m_BleAddressType;
     ble_gap_adv_params m_Params;
     CConnection m_ActiveConnection;
+	std::function<void(ble_gap_event*)> m_EventCallback;
 };
 } // namespace nimble

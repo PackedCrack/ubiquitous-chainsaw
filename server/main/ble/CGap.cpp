@@ -245,10 +245,16 @@ void print_ble_address()
 
 namespace ble
 {
+void CGap::event_callback_caller(ble_gap_event* pEvent, function eventCallback)
+{
+	std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
+	cb(pEvent);
+}
 CGap::CGap() 
     : m_BleAddressType{ ble_generate_random_device_address() } // nimble_port_run(); has to be called before this
     , m_Params{ make_default_advertise_params() }
     , m_ActiveConnection{}
+	, m_EventCallback{ /* make cb */}
 {
     ASSERT(m_BleAddressType != INVALID_ADDRESS_TYPE, "Failed to generate a random device address");
 
@@ -304,6 +310,7 @@ CGap::CGap(CGap&& other) noexcept
     : m_BleAddressType{ other.m_BleAddressType }
     , m_Params{ std::move(other.m_Params) } 
     , m_ActiveConnection{ std::move(other.m_ActiveConnection) }
+	, m_EventCallback{ std::move(other.m_EventCallback) }
 {}
 CGap& CGap::operator=(CGap&& other) noexcept
 {
@@ -312,6 +319,7 @@ CGap& CGap::operator=(CGap&& other) noexcept
 		m_BleAddressType = other.m_BleAddressType;
     	m_Params = std::move(other.m_Params);
     	m_ActiveConnection = std::move(other.m_ActiveConnection);
+		m_EventCallback = std::move(other.m_EventCallback);
 	}
 
 	return *this;
