@@ -39,7 +39,7 @@ template<typename enum_t>
 requires std::is_enum_v<enum_t>
 [[nodiscard]] constexpr bool enum_to_bool(enum_t&& properties)
 {
-	#if __cplusplus > 202002L
+	#ifdef __cpp_lib_to_underlying
 	return static_cast<bool>(std::to_underlying(std::forward<enum_t>(properties)));
 	#else
 	return static_cast<bool>(static_cast<int64_t>(std::forward<enum_t>(properties)));
