@@ -11,6 +11,7 @@ idf_component_register(
 	"ble/CNimble.cpp"
 	"ble/CGap.cpp"
 	"ble/CGatt.cpp"
+	"ble/CConnection.cpp"
 	
 	"ble/profiles/CProfileCache.cpp"
 	"ble/profiles/CProfileCacheBuilder.cpp"

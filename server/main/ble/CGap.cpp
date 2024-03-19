@@ -96,6 +96,26 @@ std::optional<ble::CGap::Error> set_adv_fields(const std::string deviceName)
     	}
 	} 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //auto  descriptor_discovery_event_handler = [](uint16_t conn_handle,
 //                                            const struct ble_gatt_error *error,
 //                                            uint16_t chr_val_handle,
@@ -271,6 +291,40 @@ std::optional<ble::CConnectionHandle::Error> discover_client_services(ble::CConn
         .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
     }};
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 	using namespace ble;
     CGap* pGap = static_cast<CGap*>(arg);
@@ -298,10 +352,19 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 	//UNHANDLED_CASE_PROTECTION_OFF
 	//
 	// __builtin_unreachable();
-
-    switch (event->type) {
+    
+	switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
         {
+			// make conncetion handle
+			// if gap has connection handle
+			// then drop
+			// else
+			// stop advertising
+			// query client mac
+			// 
+
+
             LOG_INFO("BLE_GAP_EVENT_CONNECT");
 
             pGap->set_connection(event->connect.conn_handle);
@@ -329,6 +392,10 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         }
         case BLE_GAP_EVENT_DISCONNECT: 
         {
+			// if disconnect is connection handle
+			// destroy connection handle
+			// begin advertisment
+
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
             pGap->reset_connection();
 
@@ -418,94 +485,6 @@ uint8_t ble_generate_random_device_address()
 
 namespace ble
 {
-CConnectionHandle::CConnectionHandle()
-    : m_id { INVALID_HANDLE_ID }
-{}
-CConnectionHandle::~CConnectionHandle()
-{
-    std::printf("CConnectionHandle destructor\n");
-    // Q: how to handle errors in destructors? thinking crash the program is the best since if a destructor fails, something very serious has happened.
-    //int result = drop(BLE_HS_ENOENT);
-//
-    //if (result != SUCCESS && result != BLE_HS_ENOTCONN)
-    //    LOG_ERROR_FMT("ERROR terminating connection! ERROR={}", nimble_error_to_string(result));
-    reset();
-}
-CConnectionHandle::CConnectionHandle(CConnectionHandle&& other) noexcept 
-    : m_id {other.m_id}
-    , m_services {std::move(other.m_services)}
-{}
-CConnectionHandle& CConnectionHandle::operator=(CConnectionHandle&& other)
-{
-    /*
-        1. Clean up all visible resources
-        2. Transfer the content of other into this
-        3. Leave other in a valid but undefined state
-    */
-    // Check if other exists?
-    m_id = other.m_id;
-    m_services = std::move(other.m_services);
-    return *this;
-}
-void CConnectionHandle::set_connection(uint16_t id)
-{ 
-    m_id = id; 
-    if (!m_services.empty())
-    {
-        m_services.clear();
-    }
-}
-uint16_t CConnectionHandle::handle() const
-{ return m_id; }
-
-/// @brief 
-/// @param int32_t reason 
-/// @return std::nullopt on success. 
-/// NimbleErrorCode::noConnection if there is no connection with the specified handle. 
-/// NimbleErrorCode::unknown on failure.
-std::optional<CConnectionHandle::Error> CConnectionHandle::drop(NimbleErrorCode reason)
-{
-    int32_t result = ble_gap_terminate(m_id, static_cast<int32_t>(reason));
-    if(result == static_cast<int32_t>(NimbleErrorCode::success))
-    {
-        reset();
-        ASSERT(m_id == INVALID_HANDLE_ID, "Tried to reset a valid connection!");
-		return std::nullopt; 
-    }
-
-	if(result == static_cast<int32_t>(NimbleErrorCode::noConnection))
-	{
-		return std::optional<Error>{ Error {
-			.code = NimbleErrorCode::noConnection,
-			.msg = "no existing connection"			
-		}};
-	}
-	else
-	{
-		return std::optional<Error>{ Error {
-			.code = NimbleErrorCode::unexpectedFailure,
-			//.msg = std::format("Unknown error recieved.. Return code from nimble: \"{}\"", result);
-            .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
-		}};
-	}
-}
-void CConnectionHandle::reset()
-{
-    m_id = INVALID_HANDLE_ID;
-    m_services.clear();
-}
-void CConnectionHandle::add_service(const BleClientService& service)
-{
-    ASSERT(service.handleStart != 0, "Tried to add a service to an invalid/wrong connection");
-    m_services.emplace_back(service);
-}
-int32_t CConnectionHandle::num_services() const
-{ return m_services.size(); }
-std::vector<BleClientService> CConnectionHandle::services() const
-{ return m_services; }
-///////////////////
-///		CGap	///
-///////////////////
 CGap::CGap() 
     : m_BleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
     , m_Params { make_advertise_params() }
