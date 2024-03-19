@@ -1,6 +1,7 @@
 #pragma once
 /* Project */
 #include "ble_common.hpp"
+#include "CConnection.hpp"
 /* STD */
 #include <type_traits>
 #include <vector>
@@ -68,19 +69,18 @@ public:
     CGap(const CGap& other) = delete;
     CGap(CGap&& other) noexcept;
     CGap& operator=(const CGap& other) = delete;
-    CGap& operator=(CGap&& other);
+    CGap& operator=(CGap&& other) noexcept;
 public:
-    void set_connection(uint16_t id);
-    void reset_connection();
     void rssi();
-    [[nodiscard]] uint16_t connection_handle() const ;
-    [[nodiscard]] std::optional<Error> start();
+	void set_connection(CConnection&& newConncetion);
+	[[nodiscard]] std::optional<CConnection*> active_connection();
+    [[nodiscard]] std::optional<CConnection::Error> drop_connection(CConnection::DropCode reason);
     [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();
-    [[nodiscard]] std::optional<CConnectionHandle::Error> drop_connection(NimbleErrorCode reason);
+	[[nodiscard]] bool is_advertising() const;
 private:
     uint8_t m_BleAddressType;
     ble_gap_adv_params m_Params;
-    CConnectionHandle m_CurrentConnectionHandle;
+    CConnection m_ActiveConnection;
 };
 } // namespace nimble

@@ -6,15 +6,14 @@
 namespace ble
 {
 CConnection::CConnection(ConnectionHandle handle)	
-	: m_Handle{ std::move(handle) }
+	: m_Handle{ handle }
 {}
 CConnection::~CConnection()
 {
-	if(m_Handle == INVALID_HANDLE)
+	if(!m_Handle)
 		return;
 	
 	
-	m_Handle = INVALID_HANDLE;
 	std::optional<Error> result = drop(DropCode::completed);
 	if(result)
 	{
@@ -27,15 +26,19 @@ CConnection::~CConnection()
 			LOG_ERROR_FMT("{}", result->msg);
 		}
 	}
+	else
+	{
+		m_Handle = std::nullopt;
+	}
 }
 CConnection::CConnection(CConnection&& other) noexcept
-	: m_Handle{ m_Handle = std::exchange(other.m_Handle, INVALID_HANDLE) }
+	: m_Handle{ std::exchange(other.m_Handle, std::nullopt) }
 {}
 CConnection& CConnection::operator=(CConnection&& other) noexcept
 {
 	if(this != &other)
 	{
-		m_Handle = std::exchange(other.m_Handle, INVALID_HANDLE);
+		m_Handle = std::exchange(other.m_Handle, std::nullopt);
 	}
 
 	return *this;
@@ -47,7 +50,7 @@ CConnection& CConnection::operator=(CConnection&& other) noexcept
 /// NimbleErrorCode::unknown on failure.
 std::optional<CConnection::Error> CConnection::drop(DropCode reason)
 {
-	int32_t result = ble_gap_terminate(m_Handle, static_cast<int32_t>(reason));
+	int32_t result = ble_gap_terminate(*m_Handle, static_cast<int32_t>(reason));
     if(result == static_cast<int32_t>(NimbleErrorCode::success))
 		return std::nullopt;
 
@@ -62,5 +65,5 @@ std::optional<CConnection::Error> CConnection::drop(DropCode reason)
 			NimbleErrorCode::noConnection, FMT("Unknown error recieved.. Return code from nimble: \"{}\"", result));
 	}
 }
-ConnectionHandle CConnection::handle() { return m_Handle; }
+std::optional<ConnectionHandle> CConnection::handle() { return m_Handle; }
 }	// namespace ble

@@ -32,7 +32,7 @@ private:
 };
 class CConnection
 {
-	static constexpr ConnectionHandle INVALID_HANDLE = UINT16_MAX;
+	using InvalidHandle = std::nullopt_t;
 public:
 	struct Error
 	{
@@ -48,7 +48,11 @@ public:
 		unexpectedCallbackBehavior = static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior),
 		unexpectedError = static_cast<int32_t>(NimbleErrorCode::unexpectedFailure)
 	};
+	[[nodiscard]] inline operator bool() { return m_Handle != std::nullopt; }
+	[[nodiscard]] inline friend bool operator==(const CConnection& lhs, const CConnection& rhs) { return lhs.m_Handle == rhs.m_Handle; }
+	[[nodiscard]] inline friend bool operator!=(const CConnection& lhs, const CConnection& rhs) { return lhs.m_Handle == rhs.m_Handle; }
 public:
+	CConnection() = default;;
 	CConnection(ConnectionHandle handle);
 	~CConnection();
 	CConnection(const CConnection& other) = delete;
@@ -57,8 +61,8 @@ public:
 	CConnection& operator=(CConnection&& other) noexcept;
 public:
 	[[nodiscard]] std::optional<Error> drop(DropCode reason);
-	[[nodiscard]] ConnectionHandle handle();
+	[[nodiscard]] std::optional<ConnectionHandle> handle();
 private:
-	ConnectionHandle m_Handle;
+	std::optional<ConnectionHandle> m_Handle = std::nullopt;
 };
 }	// namespace ble

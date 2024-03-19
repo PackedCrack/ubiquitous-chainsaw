@@ -3,54 +3,36 @@
 
 namespace 
 {
-uint8_t* make_field_name(const std::string deviceName)
-{ return (uint8_t*)deviceName.data(); }
-
-uint8_t make_field_name_len(const std::string deviceName)
-{ return static_cast<uint8_t>(deviceName.size()); }
-
-unsigned int make_field_name_is_complete()
-{ return 1u; }
-
-uint8_t make_field_flags()
-{ return BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP; }
-
-unsigned int make_field_tx_pwr_is_present()
-{ return 1u; }
-
-int8_t make_field_pwr_lvl()
-{ return BLE_HS_ADV_TX_PWR_LVL_AUTO; }
-
-ble_hs_adv_fields make_advertise_fields(const std::string deviceName) // Nodiscard directive ignored for deviecName??
+[[nodiscard]] ble_hs_adv_fields make_advertise_fields(const std::string& deviceName) // Nodiscard directive ignored for deviecName??
 {
-    // i 0% understand what im doing
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+	ASSERT(deviceName.size() <= UINT8_MAX, "Nimble expects devices name to be smaller than 2^8 bytes.");
+	static constexpr int32_t FIELD_TX_PWR_PRESENT = 1u;
+	static constexpr int32_t FIELD_NAME_COMPLETE = 1u;
 
-    // A lot of warnings because missing initilizators
-    return ble_hs_adv_fields {
-        .flags = make_field_flags(),
-        .name = make_field_name(deviceName),
-        .name_len = make_field_name_len(deviceName),
-        .name_is_complete = make_field_name_is_complete(),
-        .tx_pwr_lvl = make_field_pwr_lvl(),
-        .tx_pwr_lvl_is_present = make_field_tx_pwr_is_present()
-        // todo add services 
-    };
 
-     #pragma GCC diagnostic pop
+	ble_hs_adv_fields fields{};
+	fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+
+	static_assert(alignof(uint8_t) == alignof(std::remove_cvref_t<decltype(*(deviceName.data()))>));
+    fields.name = reinterpret_cast<const uint8_t*>(deviceName.data());
+    fields.name_len = static_cast<uint8_t>(deviceName.size());
+    fields.name_is_complete = FIELD_NAME_COMPLETE;
+    fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
+    fields.tx_pwr_lvl_is_present = FIELD_TX_PWR_PRESENT;
+
+	return fields;
 }
-ble_gap_adv_params make_advertise_params() 
+[[nodiscard]] ble_gap_adv_params make_default_advertise_params() 
 {
     return ble_gap_adv_params { // either initilize all or none warning
-                            .conn_mode = BLE_GAP_CONN_MODE_UND,
-                            .disc_mode = BLE_GAP_DISC_MODE_GEN,
-                            .itvl_min = 0,
-                            .itvl_max = 0,
-                            .channel_map = 0,
-                            .filter_policy = 0u, // whether the advertising packets should be filtered based on the scanner's whitelist (Might be needed for when we scan to retrieve RSSI)
-                            .high_duty_cycle = 0u //High duty cycle directed advertising increases the frequency of advertising packets sent during directed advertising
-                            };
+		.conn_mode = BLE_GAP_CONN_MODE_UND,
+        .disc_mode = BLE_GAP_DISC_MODE_GEN,
+        .itvl_min = 0,
+        .itvl_max = 0,
+        .channel_map = 0,
+        .filter_policy = 0u, // whether the advertising packets should be filtered based on the scanner's whitelist (Might be needed for when we scan to retrieve RSSI)
+        .high_duty_cycle = 0u //High duty cycle directed advertising increases the frequency of advertising packets sent during directed advertising
+    };
 }
 /// @brief 
 /// @param std::string deviceName  
@@ -58,7 +40,7 @@ ble_gap_adv_params make_advertise_params()
 /// NimbleErrorCode::isBusy if advertising is in progress. 
 /// NimbleErrorCode::toSmallBuffer if the specified data is too large to fit in an advertisement.
 /// NimbleErrorCode::unknown on failure.
-std::optional<ble::CGap::Error> set_adv_fields(const std::string deviceName)
+[[nodiscard]] std::optional<ble::CGap::Error> set_adv_fields(const std::string& deviceName)
 {
 	using namespace ble;
 	using Error = CGap::Error;
@@ -66,12 +48,8 @@ std::optional<ble::CGap::Error> set_adv_fields(const std::string deviceName)
 	
     ble_hs_adv_fields fields = make_advertise_fields(deviceName); // only the constructor for ble_hs_adv_fields will be called here
     
-    NimbleErrorCode result = NimbleErrorCode{ ble_gap_adv_set_fields(&fields) };
-    if (result == NimbleErrorCode::success)
-	{
-		return std::nullopt;
-	}
-    else
+    auto result = NimbleErrorCode{ ble_gap_adv_set_fields(&fields) };
+    if (result != NimbleErrorCode::success)
 	{
 		Error err{
 			.code = result
@@ -93,8 +71,10 @@ std::optional<ble::CGap::Error> set_adv_fields(const std::string deviceName)
 							static_cast<int32_t>(result), 
 							nimble_error_to_string(result));
 			return std::make_optional<Error>(std::move(err));
-    	}
-	} 
+		}
+	}
+
+	return std::nullopt;
 }
 
 /////////////////////////////////////////////
@@ -130,35 +110,32 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
 	switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
         {
-			// make conncetion handle
-			// if gap has connection handle
-			// then drop
-			// else
-			// stop advertising
-			// query client mac
-			// 
-
-
             LOG_INFO("BLE_GAP_EVENT_CONNECT");
 
-            pGap->set_connection(event->connect.conn_handle);
 
+			CConnection connection{ event->connect.conn_handle };
+			if(!pGap->active_connection())
+			{
+				pGap->set_connection(std::move(connection));
 
-            std::optional<CConnectionHandle::Error> result = pGap->discover_services();
-            if (result != std::nullopt)
-            {
-				std::printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-                CConnectionHandle::Error err = *result;
-                std::optional<CConnectionHandle::Error> result = pGap->drop_connection(NimbleErrorCode::unexpectedFailure);
-                if (err.code != NimbleErrorCode::success)
-                {
-                    if (err.code == NimbleErrorCode::noConnection)
-                        break;
-
-                    if (err.code == NimbleErrorCode::unexpectedFailure)
-                        break;
-                }
-            }
+				if(pGap->is_advertising())
+				{
+					std::optional<CGap::Error> result = pGap->end_advertise();
+					if (result)
+            		{
+						LOG_ERROR_FMT("Gap event callback failed to end advertisment when recieving incoming connection! Reason: \"{}\"",
+						 				result->msg);
+            		}
+				}
+			}
+			else
+			{
+            	std::optional<CConnection::Error> result = connection.drop(CConnection::DropCode::busy);
+				if(result)
+				{
+					LOG_ERROR_FMT("Could not drop secondary incoming connection. Reason: \"{}\"", result->msg);
+				}
+			}
       
             // when connection happens, it is possible to configure another callback that should be used for that connection
             // unable to have locks in here if new procedures are to be created
@@ -166,24 +143,30 @@ auto gap_event_handler = [](ble_gap_event* event, void* arg) {
         }
         case BLE_GAP_EVENT_DISCONNECT: 
         {
-			// if disconnect is connection handle
-			// destroy connection handle
-			// begin advertisment
-
             LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-            pGap->reset_connection();
+			
+			std::optional<CConnection*> activeCon = pGap->active_connection();
+			if(activeCon)
+			{
+				CConnection* pActiveConnection = *activeCon;
+				CConnection connection{ event->disconnect.conn.conn_handle };
 
-            std::optional<CGap::Error> result = pGap->begin_advertise();
-            if (result != std::nullopt)
-            {
-                CGap::Error err = *result;
-                LOG_FATAL_FMT("{}", err.msg);
-            }
+				if(*pActiveConnection == connection)
+				{
+					pGap->set_connection(CConnection{});
 
-
-            //if(result != 0)
-            //    LOG_WARN_FMT("ERROR STARTING ADVERTISING! ERROR{}", nimble_error_to_string(result));
-
+					if(!pGap->is_advertising())
+					{
+						std::optional<CGap::Error> result = pGap->begin_advertise();
+            			if (result)
+            			{
+							LOG_ERROR_FMT(
+								"Gap event callback failed to start advertisment when disconnecting previous connection! Reason: \"{}\"",
+								 result->msg);
+            			}
+					}
+				}
+			}
             break;
         }
 
@@ -241,7 +224,7 @@ void print_ble_address()
 
     std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
 }
-uint8_t ble_generate_random_device_address() 
+[[nodiscard]] uint8_t ble_generate_random_device_address() 
 {
     uint8_t addrType = ble::INVALID_ADDRESS_TYPE;
     ble::NimbleErrorCode result = ble::NimbleErrorCode{ ble_hs_util_ensure_addr(ble::RANDOM_BLUETOOTH_ADDRESS) };
@@ -263,105 +246,75 @@ uint8_t ble_generate_random_device_address()
 namespace ble
 {
 CGap::CGap() 
-    : m_BleAddressType {INVALID_ADDRESS_TYPE} // How to make this better? cant determine bleaddresstype until nimble host stack is started
-    , m_Params { make_advertise_params() }
-    , m_CurrentConnectionHandle {}
+    : m_BleAddressType{ ble_generate_random_device_address() } // nimble_port_run(); has to be called before this
+    , m_Params{ make_default_advertise_params() }
+    , m_ActiveConnection{}
 {
-	// TODO:
-	std::optional<Error> result = start();
-	if (result != std::nullopt)
-    {
-		LOG_FATAL_FMT("{}", result.value().msg.c_str());
-    }
-}
-CGap::~CGap()
-{
-    std::printf("Gape destructor\n");
-
-	// TODO:
-	std::optional<CGap::Error> result = end_advertise();
-    if (result != std::nullopt)
-    {
-        LOG_FATAL_FMT("{}", result.value().msg.c_str());
-    }
-}
-CGap::CGap(CGap&& other) noexcept
-    : m_BleAddressType {other.m_BleAddressType}
-    , m_Params {std::move(other.m_Params)} 
-    , m_CurrentConnectionHandle {std::move(other.m_CurrentConnectionHandle)}
-{// no pointers have been moved
-}
-CGap& CGap::operator=(CGap&& other)
-{
-    /*
-        1. Clean up all visible resources
-        2. Transfer the content of other into this
-        3. Leave other in a valid but undefined state
-    */
-    
-    // Check if other exists?
-    m_BleAddressType = other.m_BleAddressType;
-    m_Params = std::move(other.m_Params);
-    m_CurrentConnectionHandle = std::move(other.m_CurrentConnectionHandle);
-    return *this;
-}
-void CGap::set_connection(const uint16_t id)
-{
-    m_CurrentConnectionHandle.set_connection(id);
-}
-uint16_t CGap::connection_handle() const
-{
-    return m_CurrentConnectionHandle.handle();
-}
-/// @brief 
-/// @param int32_t reason 
-/// @return std::nullopt on success. 
-/// NimbleErrorCode::noConnection if there is no connection with the specified handle. 
-/// NimbleErrorCode::unknown on failure.
-std::optional<CConnectionHandle::Error> CGap::drop_connection(NimbleErrorCode reason)
-{
-    // if we drop connection manually, ble will start advertising automatically
-    //return 
-    
-    return m_CurrentConnectionHandle.drop(reason);
-    //if (result != std::nullopt) 
-}
-void CGap::reset_connection()
-{
-    m_CurrentConnectionHandle.reset();
-
-}
-/// @brief 
-/// @return std::nullopt on success, 
-/// NimbleErrorCode::isBusy if advertising is in progress. 
-/// NimbleErrorCode::toSmallBuffer if the specified data is too large to fit in an advertisement.
-/// NimbleErrorCode::unknown on other failure.
-std::optional<CGap::Error> CGap::start()
-{
-    //ble_svc_gap_init(); // will crash if called before nimble_port_init()
-    m_BleAddressType = ble_generate_random_device_address(); // nimble_port_run(); has to be called before this
     ASSERT(m_BleAddressType != INVALID_ADDRESS_TYPE, "Failed to generate a random device address");
 
     std::string deviceName = "Chainsaw-server";
-    int32_t nameSetResult = ble_svc_gap_device_name_set(deviceName.data()); // haven't found which error code is returned when this fails
-    if (nameSetResult != static_cast<int32_t>(NimbleErrorCode::success))
+	{
+		auto result = NimbleErrorCode{ ble_svc_gap_device_name_set(deviceName.data()) }; // haven't found which error code is returned when this fails
+    	if (result != NimbleErrorCode::success)
+    	{
+			LOG_WARN_FMT("CGap constructor could not set the name of the server. Failed with: \"{}\" - \"{}\"", 
+							static_cast<int32_t>(result), 
+							nimble_error_to_string(result));
+    	}
+	}
+    
+	{
+		std::optional<Error> result = set_adv_fields(deviceName);
+		if(result)
+		{
+			if(result->code == NimbleErrorCode::isBusy)
+			{
+				LOG_WARN_FMT("CGap constructor could not set advertisment fields. Reason: \"{}\"", result->msg);
+			}
+			else if(result->code == NimbleErrorCode::toSmallBuffer)
+			{
+				LOG_ERROR_FMT("Failure when trying to set advertisment fields. Reason: \"{}\"", result->msg);
+			}
+			else
+			{
+				LOG_FATAL_FMT("Unexpected failure when trying to set advertisment fields. Reason: \"{}\"", result->msg);
+			}
+		}
+	}
+
+	ASSERT(!is_advertising(), "Advertisment was unexpectedly on.");
+	std::optional<Error> result = begin_advertise();
+    if (result != std::nullopt)
     {
-          return std::optional<Error> { Error {
-			.code = NimbleErrorCode{ nameSetResult },
-            .msg = "Unknown error received when setting device name. Return code from esp: " + std::to_string(nameSetResult)
-		}};
-    }
+		LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", result->msg);
+	}
+}
+CGap::~CGap()
+{
+	if(is_advertising())
+	{
+		std::optional<CGap::Error> result = end_advertise();
+    	if (result != std::nullopt)
+    	{
+			LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", result->msg);
+    	}
+	}
+}
+CGap::CGap(CGap&& other) noexcept
+    : m_BleAddressType{ other.m_BleAddressType }
+    , m_Params{ std::move(other.m_Params) } 
+    , m_ActiveConnection{ std::move(other.m_ActiveConnection) }
+{}
+CGap& CGap::operator=(CGap&& other) noexcept
+{
+	if(this != &other)
+	{
+		m_BleAddressType = other.m_BleAddressType;
+    	m_Params = std::move(other.m_Params);
+    	m_ActiveConnection = std::move(other.m_ActiveConnection);
+	}
 
-    std::optional<Error> result = set_adv_fields(deviceName);
-    if (result != std::nullopt)
-        return result;
-
-
-    result = begin_advertise();
-    if (result != std::nullopt)
-        return result;
-
-    return std::nullopt;
+	return *this;
 }
 void CGap::rssi()
 {
@@ -378,6 +331,26 @@ void CGap::rssi()
     //{
     //    LOG_INFO_FMT("RSSI VALUE: {}", rssiValue);
     //}
+}
+void CGap::set_connection(CConnection&& newConncetion)
+{
+    m_ActiveConnection = std::move(newConncetion);
+}
+std::optional<CConnection*> CGap::active_connection()
+{
+	return m_ActiveConnection ? std::make_optional<CConnection*>(&m_ActiveConnection) : std::nullopt;
+}
+/// @brief 
+/// @param int32_t reason 
+/// @return std::nullopt on success. 
+/// NimbleErrorCode::noConnection if there is no connection with the specified handle. 
+/// NimbleErrorCode::unknown on failure.
+std::optional<CConnection::Error> CGap::drop_connection(CConnection::DropCode reason)
+{
+    // if we drop connection manually, ble will start advertising automatically
+    //return 
+    
+    return m_ActiveConnection.drop(reason);
 }
 /// @brief 
 /// @return std::nullopt on success. NimbleErrorCode::unknown on failure.
@@ -414,5 +387,9 @@ std::optional<CGap::Error> CGap::end_advertise()
             .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
 		}};
 	}
+}
+bool CGap::is_advertising() const
+{
+	return ble_gap_adv_active();
 }
 } // namespace ble
