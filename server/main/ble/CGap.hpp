@@ -29,36 +29,35 @@ class CGap
 {
 	typedef void* function;
 public:
-	enum class Events : int32_t
+	enum class Event : uint8_t
 	{
 		connect = BLE_GAP_EVENT_CONNECT,
 		disconnect = BLE_GAP_EVENT_DISCONNECT,
 		update = BLE_GAP_EVENT_CONN_UPDATE,
-		updateReq = BLE_GAP_EVENT_CONN_UPDATE_REQ
-
-		//#define BLE_GAP_EVENT_L2CAP_UPDATE_REQ      5
-		//#define BLE_GAP_EVENT_TERM_FAILURE          6
-		//#define BLE_GAP_EVENT_DISC                  7
-		//#define BLE_GAP_EVENT_DISC_COMPLETE         8
-		//#define BLE_GAP_EVENT_ADV_COMPLETE          9
-		//#define BLE_GAP_EVENT_ENC_CHANGE            10
-		//#define BLE_GAP_EVENT_PASSKEY_ACTION        11
-		//#define BLE_GAP_EVENT_NOTIFY_RX             12
-		//#define BLE_GAP_EVENT_NOTIFY_TX             13
-		//#define BLE_GAP_EVENT_SUBSCRIBE             14
-		//#define BLE_GAP_EVENT_MTU                   15
-		//#define BLE_GAP_EVENT_IDENTITY_RESOLVED     16
-		//#define BLE_GAP_EVENT_REPEAT_PAIRING        17
-		//#define BLE_GAP_EVENT_PHY_UPDATE_COMPLETE   18
-		//#define BLE_GAP_EVENT_EXT_DISC              19
-		//#define BLE_GAP_EVENT_PERIODIC_SYNC         20
-		//#define BLE_GAP_EVENT_PERIODIC_REPORT       21
-		//#define BLE_GAP_EVENT_PERIODIC_SYNC_LOST    22
-		//#define BLE_GAP_EVENT_SCAN_REQ_RCVD         23
-		//#define BLE_GAP_EVENT_PERIODIC_TRANSFER     24
-		//#define BLE_GAP_EVENT_PATHLOSS_THRESHOLD    25
-		//#define BLE_GAP_EVENT_TRANSMIT_POWER        26
-		//#define BLE_GAP_EVENT_SUBRATE_CHANGE        27
+		updateReq = BLE_GAP_EVENT_CONN_UPDATE_REQ,
+		l2capUpdateReq = BLE_GAP_EVENT_L2CAP_UPDATE_REQ,
+		termFailure = BLE_GAP_EVENT_TERM_FAILURE,
+		disc = BLE_GAP_EVENT_DISC,
+		discComplete = BLE_GAP_EVENT_DISC_COMPLETE,
+		advertismentComplete = BLE_GAP_EVENT_ADV_COMPLETE,
+		encryptionChanged = BLE_GAP_EVENT_ENC_CHANGE,
+		passkeyAction = BLE_GAP_EVENT_PASSKEY_ACTION,
+		notifyRecieve = BLE_GAP_EVENT_NOTIFY_RX,
+		notifyTransfer = BLE_GAP_EVENT_NOTIFY_TX,
+		subscribe = BLE_GAP_EVENT_SUBSCRIBE,
+		mtu = BLE_GAP_EVENT_MTU,
+		identityResolved = BLE_GAP_EVENT_IDENTITY_RESOLVED,
+		repeatPairing = BLE_GAP_EVENT_REPEAT_PAIRING,
+		physicalUpdateComplete = BLE_GAP_EVENT_PHY_UPDATE_COMPLETE,
+		extDisc = BLE_GAP_EVENT_EXT_DISC, // external disconnect?
+		periodicSync = BLE_GAP_EVENT_PERIODIC_SYNC,
+		periodicSyncReport = BLE_GAP_EVENT_PERIODIC_REPORT,
+		periodicSyncLost = BLE_GAP_EVENT_PERIODIC_SYNC_LOST,
+		scanRequireRCVD = BLE_GAP_EVENT_SCAN_REQ_RCVD,
+		periodicTransfer = BLE_GAP_EVENT_PERIODIC_TRANSFER,
+		pathlossThreshold = BLE_GAP_EVENT_PATHLOSS_THRESHOLD,
+		transmitPower = BLE_GAP_EVENT_TRANSMIT_POWER,
+		subrateChange = BLE_GAP_EVENT_SUBRATE_CHANGE
 	};
 	struct Error
 	{
@@ -73,7 +72,7 @@ public:
     CGap& operator=(const CGap& other) = delete;
     CGap& operator=(CGap&& other) noexcept;
 public:
-	static void event_callback_caller(ble_gap_event* pEvent, function eventCallback);
+	static int event_callback_caller(ble_gap_event* pEvent, function eventCallback);
     void rssi();
 	void set_connection(CConnection&& newConncetion);
 	[[nodiscard]] std::optional<CConnection*> active_connection();
@@ -81,6 +80,7 @@ public:
     [[nodiscard]] std::optional<Error> begin_advertise();
     [[nodiscard]] std::optional<Error> end_advertise();
 	[[nodiscard]] bool is_advertising() const;
+	[[nodiscard]] std::function<void(ble_gap_event*)> make_event_callback();
 private:
     uint8_t m_BleAddressType;
     ble_gap_adv_params m_Params;
