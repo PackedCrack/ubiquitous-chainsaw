@@ -20,16 +20,16 @@ CConnection::~CConnection()
 	if(ble_hs_conn_find(*m_Handle) == nullptr)
 		return;
 	
-	std::optional<Error> result = drop(DropCode::completed);
-	if(result)
+	std::optional<Error> error = drop(DropCode::completed);
+	if(error)
 	{
-		if(result->code == NimbleErrorCode::noConnection)
+		if(error->code == NimbleErrorCode::noConnection)
 		{
-			LOG_WARN_FMT("{}", result->msg);
+			LOG_WARN_FMT("{}", error->msg);
 		}
-		else if(result->code == NimbleErrorCode::unexpectedFailure)
+		else if(error->code == NimbleErrorCode::unexpectedFailure)
 		{
-			LOG_ERROR_FMT("{}", result->msg);
+			LOG_ERROR_FMT("{}", error->msg);
 		}
 	}
 	else

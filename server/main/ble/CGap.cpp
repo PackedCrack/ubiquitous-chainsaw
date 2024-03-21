@@ -161,23 +161,23 @@ CGap::CGap()
 	}
     
 	{
-		std::optional<NimbleErrorCode> result = set_adv_fields(deviceName);
-		if(result)
+		std::optional<NimbleErrorCode> error = set_adv_fields(deviceName);
+		if(error)
 		{
-			if(result == NimbleErrorCode::isBusy)
+			if(error == NimbleErrorCode::isBusy)
 			{
 				LOG_WARN_FMT("CGap constructor could not set advertisment fields. Because Advertising is already in progress: \"{}\"",
-								nimble_error_to_string(*result));
+								nimble_error_to_string(*error));
 			}
-			else if(result == NimbleErrorCode::toSmallBuffer)
+			else if(error == NimbleErrorCode::toSmallBuffer)
 			{
 				LOG_ERROR_FMT("Failure when trying to set advertisment fields. Because Advertising is already in progress: \"{}\"",
-								nimble_error_to_string(*result));
+								nimble_error_to_string(*error));
 			}
-			else if(result == NimbleErrorCode::unexpectedFailure)
+			else if(error == NimbleErrorCode::unexpectedFailure)
 			{
 				LOG_FATAL_FMT("Unexpected failure when trying to set advertisment fields. ErrorCode: \"{}\"", 
-								nimble_error_to_string(*result));
+								nimble_error_to_string(*error));
 			}
 			else
 			{
@@ -187,20 +187,20 @@ CGap::CGap()
 	}
 
 	ASSERT(!is_advertising(), "Advertisment was unexpectedly on.");
-	std::optional<Error> result = begin_advertise();
-    if (result != std::nullopt)
+	std::optional<Error> error = begin_advertise();
+    if (error)
     {
-		LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", result->msg);
+		LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", error->msg);
 	}
 }
 CGap::~CGap()
 {
 	if(is_advertising())
 	{
-		std::optional<CGap::Error> result = end_advertise();
-    	if (result != std::nullopt)
+		std::optional<CGap::Error> error = end_advertise();
+    	if (error)
     	{
-			LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", result->msg);
+			LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", error->msg);
     	}
 	}
 }

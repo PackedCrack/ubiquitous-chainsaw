@@ -11,18 +11,16 @@ namespace
 [[nodiscard]] auto make_callback_server_auth()
 {
 	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
-	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt, void* arg) -> int	// type deduction requires exact typematch
+	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt) -> int	// type deduction requires exact typematch
 	{
-
 		return int32_t{ 0 };
 	};
 }
 [[nodiscard]] auto make_callback_client_auth()
 {
 	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
-	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt, void* arg) -> int	// type deduction requires exact typematch
+	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt) -> int	// type deduction requires exact typematch
 	{
-
 		return int32_t{ 0 };
 	};
 }
