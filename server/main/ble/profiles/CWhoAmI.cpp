@@ -4,6 +4,7 @@
 // std
 #include <cstdint>
 #include <stdexcept>
+#include <array>
 
 
 namespace
@@ -13,6 +14,13 @@ namespace
 	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
 	return [](uint16_t conn_handle, uint16_t attr_handle, ble_gatt_access_ctxt* ctxt) -> int	// type deduction requires exact typematch
 	{
+		Result<std::string, ble::NimbleErrorCode> result = ble::current_mac_address<std::string>(ble::AddressType::randomMac);
+		if(result.value)
+		{
+			std::printf("\nADDRESS: %s", result.value->c_str());
+		}
+		
+
 		return int32_t{ 0 };
 	};
 }

@@ -82,7 +82,7 @@ public:
 	[[nodiscard]] bool is_advertising() const;
 	[[nodiscard]] std::function<void(ble_gap_event*)> make_event_callback();
 private:
-    uint8_t m_BleAddressType;
+    AddressType m_BleAddressType;
     ble_gap_adv_params m_Params;
     CConnection m_ActiveConnection;
 	std::function<void(ble_gap_event*)> m_EventCallback;

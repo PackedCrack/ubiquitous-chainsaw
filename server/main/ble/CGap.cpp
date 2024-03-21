@@ -106,29 +106,44 @@ namespace
 void print_ble_address()
 {
     std::array<uint8_t, 6> bleDeviceAddr {};
-    ble::NimbleErrorCode result = ble::NimbleErrorCode{ ble_hs_id_copy_addr(ble::RANDOM_BLUETOOTH_ADDRESS, bleDeviceAddr.data(), nullptr) };
+    ble::NimbleErrorCode result = ble::NimbleErrorCode{ 
+		ble_hs_id_copy_addr(static_cast<uint8_t>(ble::AddressType::randomMac), bleDeviceAddr.data(), nullptr) };
 
     if (result != ble::NimbleErrorCode::success) 
         LOG_FATAL_FMT("Adress was unable to be retreived {}", ble::nimble_error_to_string(result));
 
-    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", bleDeviceAddr[5],bleDeviceAddr[4],bleDeviceAddr[3],bleDeviceAddr[2],bleDeviceAddr[1],bleDeviceAddr[0]);
+    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", 
+				bleDeviceAddr[5], 
+				bleDeviceAddr[4],
+				bleDeviceAddr[3],
+				bleDeviceAddr[2],
+				bleDeviceAddr[1],
+				bleDeviceAddr[0]);
 }
-[[nodiscard]] uint8_t ble_generate_random_device_address() 
+[[nodiscard]] ble::AddressType ble_generate_random_device_address() 
 {
-    uint8_t addrType = ble::INVALID_ADDRESS_TYPE;
-    ble::NimbleErrorCode result = ble::NimbleErrorCode{ ble_hs_util_ensure_addr(ble::RANDOM_BLUETOOTH_ADDRESS) };
-    if (result != ble::NimbleErrorCode::success) 
-        LOG_FATAL_FMT("No address was able to be ensured ERROR={}", ble::nimble_error_to_string(result));
+	static constexpr bool PREFER_RANDOM = true;
+	static constexpr bool USE_PRIVATE_ADDR = false;
 
-    result = ble::NimbleErrorCode{ ble_hs_id_infer_auto(ble::PUBLIC_BLUETOOTH_ADDRESS, &addrType) }; // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
-    if (result != ble::NimbleErrorCode::success) 
-        LOG_FATAL_FMT("No address was able to be inferred ERROR={}", ble::nimble_error_to_string(result));
+    uint8_t expectedAddrType = ble::INVALID_ADDRESS_TYPE;
+    auto result = ble::NimbleErrorCode{ ble_hs_util_ensure_addr(PREFER_RANDOM) };
+    if (result != ble::NimbleErrorCode::success)
+	{
+		LOG_FATAL_FMT("No address was able to be ensured ERROR={}", ble::nimble_error_to_string(result));
+	}
+        
+    result = ble::NimbleErrorCode{ ble_hs_id_infer_auto(USE_PRIVATE_ADDR, &expectedAddrType) }; // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
+    if (result != ble::NimbleErrorCode::success)
+	{
+		LOG_FATAL_FMT("No address was able to be inferred ERROR={}", ble::nimble_error_to_string(result));
+	}
 
-    ASSERT(addrType == ble::RANDOM_BLUETOOTH_ADDRESS, "Assigned wrong bluetooth address type");
-
+    ASSERT(expectedAddrType == static_cast<uint8_t>(ble::AddressType::randomMac), "Assigned wrong bluetooth address type");
+	#ifndef NDEBUG
     print_ble_address();
+	#endif
 
-    return addrType;
+    return ble::AddressType{ expectedAddrType };
 }
 }// namespace
 
@@ -147,7 +162,7 @@ CGap::CGap()
     , m_ActiveConnection{}
 	, m_EventCallback{ make_event_callback() }
 {
-    ASSERT(m_BleAddressType != INVALID_ADDRESS_TYPE, "Failed to generate a random device address");
+    ASSERT(m_BleAddressType != AddressType::invalid, "Failed to generate a random device address");
 
     std::string deviceName = "Chainsaw-server";
 	{
@@ -262,7 +277,8 @@ std::optional<CConnection::Error> CGap::drop_connection(CConnection::DropCode re
 /// @return std::nullopt on success. NimbleErrorCode::unknown on failure.
 std::optional<CGap::Error> CGap::begin_advertise()
 { 
-    int32_t result = ble_gap_adv_start(m_BleAddressType, nullptr, BLE_HS_FOREVER, &m_Params, CGap::event_callback_caller, &m_EventCallback); 
+    int32_t result = ble_gap_adv_start(
+		static_cast<uint8_t>(m_BleAddressType), nullptr, BLE_HS_FOREVER, &m_Params, CGap::event_callback_caller, &m_EventCallback);
     if(result == static_cast<int32_t>(NimbleErrorCode::success))
 		return std::nullopt;
 

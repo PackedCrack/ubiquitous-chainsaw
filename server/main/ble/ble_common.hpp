@@ -1,6 +1,9 @@
 #pragma once
 #include "../../common/ble_services.hpp"
-#include "../../common/defines.hpp"
+#include "../server_common.hpp"
+// std
+#include <string_view>
+#include <array>
 // nimble
 #include "host/ble_uuid.h"
 #include "host/ble_gatt.h"
@@ -12,8 +15,6 @@ namespace ble
 // GAP DEFINES
 constexpr uint16_t INVALID_HANDLE_ID = 65535u;
 constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
-constexpr int RANDOM_BLUETOOTH_ADDRESS = 1;
-constexpr int PUBLIC_BLUETOOTH_ADDRESS = 0;
 constexpr int MAX_UUID_LEN = 128;
 
 constexpr int SUCCESS = 0;
@@ -27,6 +28,26 @@ constexpr int DATA_END = 0;
 constexpr int NUM_SERVICES = 1;
 constexpr int SERVICE_SIZE = 2; // name?
 
+enum class AddressType : uint8_t
+{
+	publicMac = BLE_ADDR_PUBLIC,
+	randomMac = BLE_ADDR_RANDOM,
+	invalid = INVALID_ADDRESS_TYPE
+};
+/*function should be constexpr but cant be until -std=c++2b, because of the static storage.*/
+[[nodiscard]] inline std::string_view address_type_to_str(AddressType type)
+{
+	UNHANDLED_CASE_PROTECTION_ON
+	switch(type)
+	{
+		case AddressType::publicMac: { static constexpr std::string_view str = "publicMac"; return str; }
+		case AddressType::randomMac: { static constexpr std::string_view str = "randomMac"; return str; }
+		case AddressType::invalid: { static constexpr std::string_view str = "invalid"; return str; }
+	}
+	UNHANDLED_CASE_PROTECTION_OFF
+
+	__builtin_unreachable();
+}
 enum class NimbleErrorCode : int32_t
 {
 	success = SUCCESS, // (not defined by nimble)
@@ -62,49 +83,50 @@ enum class NimbleErrorCode : int32_t
     disabledFeature = BLE_HS_EDISABLED, // FDisabled feature
     operationStalled = BLE_HS_ESTALLED //Operation stalled 
 };
-inline std::string nimble_error_to_string(NimbleErrorCode error)
+/*function should be constexpr but cant be until -std=c++2b, because of the static storage.*/
+[[nodiscard]] inline std::string_view nimble_error_to_string(NimbleErrorCode error)
 {
     UNHANDLED_CASE_PROTECTION_ON
     switch (error)
     {
-        case NimbleErrorCode::success: return "Success";
-        case NimbleErrorCode::temporaryFailure: return "Temporary failure; try again";
-        case NimbleErrorCode::inProgressOrCompleted: return "Operation already in progress or completed";
-        case NimbleErrorCode::invalidArguments: return "One or more arguments are invalid";
-        case NimbleErrorCode::toSmallBuffer: return "The provided buffer is too small";
-        case NimbleErrorCode::noEntry: return "No entry matching the specified criteria";
-        case NimbleErrorCode::resourceExhaustion: return "Operation failed due to resource exhaustion"; 
-        case NimbleErrorCode::noConnection: return "No open connection with the specified handle";
-        case NimbleErrorCode::operationDisabled: return "Operation disabled at compile time";
-        case NimbleErrorCode::unexpectedCallbackBehavior: return "Application callback behaved unexpectedly";
-        case NimbleErrorCode::invalidPeerCommand: return "Command from peer is invalid";
-        case NimbleErrorCode::osError: return "Mynewt OS error"; 
-        case NimbleErrorCode::invalidControllerEvent: return "Event from controller is invalid"; 
-        case NimbleErrorCode::operationTimeOut: return "Operation timed out"; 
-        case NimbleErrorCode::operationCompleted: return "Operation completed successfully"; 
-        case NimbleErrorCode::isBusy: return "Operation cannot be performed until procedure completes"; 
-        case NimbleErrorCode::peerRejectedConnectionParam: return "Peer rejected a connection parameter update request"; 
-        case NimbleErrorCode::unexpectedFailure: return "Unexpected failure; catch all"; 
-        case NimbleErrorCode::wrongRole: return "Operation requires different role (e.g., central vs. peripheral)"; 
-        case NimbleErrorCode::requestTimeOut: return "HCI request timed out; controller unresponsiv"; 
-        case NimbleErrorCode::eventMemoryExhaustion: return "Controller failed to send event due to memory exhaustion (combined host-controller only)"; 
-        case NimbleErrorCode::noConfiguredIdentityAddress: return "Operation requires an identity address but none configured"; 
-        case NimbleErrorCode::notSynced: return "Attempt to use the host before it is synced with controller"; 
-        case NimbleErrorCode::insufficientAuthen:  return "Insufficient authentication"; 
-        case NimbleErrorCode::insufficientAuthor: return "Insufficient authorization"; 
-        case NimbleErrorCode::insufficientEncLvl: return "Insufficient encryption level"; 
-        case NimbleErrorCode::insufficientKeySize: return "Insufficient key size"; 
-        case NimbleErrorCode::storageFull: return "Storage at capacity"; 
-        case NimbleErrorCode::storageIO: return "Storage IO error"; 
-        case NimbleErrorCode::preemptedOperation: return "Operation preempted"; 
-        case NimbleErrorCode::disabledFeature: return "FDisabled feature"; 
-        case NimbleErrorCode::operationStalled: return "Operation stalled"; 
+        case NimbleErrorCode::success: { static constexpr std::string_view str = "Success"; return str; }
+        case NimbleErrorCode::temporaryFailure: { static constexpr std::string_view str = "Temporary failure; try again"; return str; }  
+        case NimbleErrorCode::inProgressOrCompleted: { static constexpr std::string_view str = "Operation already in progress or completed"; return str; } 
+        case NimbleErrorCode::invalidArguments: { static constexpr std::string_view str = "One or more arguments are invalid"; return str; } 
+        case NimbleErrorCode::toSmallBuffer: { static constexpr std::string_view str = "The provided buffer is too small"; return str; } 
+        case NimbleErrorCode::noEntry: { static constexpr std::string_view str = "No entry matching the specified criteria"; return str; } 
+        case NimbleErrorCode::resourceExhaustion: { static constexpr std::string_view str = "Operation failed due to resource exhaustion"; return str; }  
+        case NimbleErrorCode::noConnection: { static constexpr std::string_view str = "No open connection with the specified handle"; return str; } 
+        case NimbleErrorCode::operationDisabled: { static constexpr std::string_view str = "Operation disabled at compile time"; return str; } 
+        case NimbleErrorCode::unexpectedCallbackBehavior: { static constexpr std::string_view str = "Application callback behaved unexpectedly"; return str; } 
+        case NimbleErrorCode::invalidPeerCommand: { static constexpr std::string_view str = "Command from peer is invalid"; return str; } 
+        case NimbleErrorCode::osError: { static constexpr std::string_view str = "Mynewt OS error"; return str; }  
+        case NimbleErrorCode::invalidControllerEvent: { static constexpr std::string_view str = "Event from controller is invalid"; return str; }  
+        case NimbleErrorCode::operationTimeOut: { static constexpr std::string_view str = "Operation timed out"; return str; }  
+        case NimbleErrorCode::operationCompleted: { static constexpr std::string_view str = "Operation completed successfully"; return str; }  
+        case NimbleErrorCode::isBusy: { static constexpr std::string_view str = "Operation cannot be performed until procedure completes"; return str; }  
+        case NimbleErrorCode::peerRejectedConnectionParam: { static constexpr std::string_view str = "Peer rejected a connection parameter update request"; return str; }  
+        case NimbleErrorCode::unexpectedFailure: { static constexpr std::string_view str = "Unexpected failure; catch all"; return str; }  
+        case NimbleErrorCode::wrongRole: { static constexpr std::string_view str = "Operation requires different role (e.g., central vs. peripheral)"; return str; }  
+        case NimbleErrorCode::requestTimeOut: { static constexpr std::string_view str = "HCI request timed out; controller unresponsiv"; return str; }  
+        case NimbleErrorCode::eventMemoryExhaustion: { static constexpr std::string_view str = "Controller failed to send event due to memory exhaustion (combined host-controller only)"; return str; }  
+        case NimbleErrorCode::noConfiguredIdentityAddress: { static constexpr std::string_view str = "Operation requires an identity address but none configured"; return str; }  
+        case NimbleErrorCode::notSynced: { static constexpr std::string_view str = "Attempt to use the host before it is synced with controller"; return str; }  
+        case NimbleErrorCode::insufficientAuthen:  { static constexpr std::string_view str = "Insufficient authentication"; return str; } 
+        case NimbleErrorCode::insufficientAuthor: { static constexpr std::string_view str = "Insufficient authorization"; return str; }  
+        case NimbleErrorCode::insufficientEncLvl: { static constexpr std::string_view str = "Insufficient encryption level"; return str; }
+        case NimbleErrorCode::insufficientKeySize: { static constexpr std::string_view str = "Insufficient key size"; return str; }  
+        case NimbleErrorCode::storageFull: { static constexpr std::string_view str = "Storage at capacity"; return str; }  
+        case NimbleErrorCode::storageIO: { static constexpr std::string_view str = "Storage IO error"; return str; }  
+        case NimbleErrorCode::preemptedOperation: { static constexpr std::string_view str = "Operation preempted"; return str; }
+        case NimbleErrorCode::disabledFeature: { static constexpr std::string_view str = "FDisabled feature"; return str; }
+        case NimbleErrorCode::operationStalled: { static constexpr std::string_view str = "Operation stalled"; return str; }
 	}
 	UNHANDLED_CASE_PROTECTION_OFF
 
 	__builtin_unreachable();
 }
-inline ble_uuid128_t make_ble_uuid128(uint16_t uniqueValue)
+[[nodiscard]] inline ble_uuid128_t make_ble_uuid128(uint16_t uniqueValue)
 {
 	ble_uuid128_t uuid{};
 	uuid.u.type = BLE_UUID_TYPE_128;
@@ -118,6 +140,47 @@ inline ble_uuid128_t make_ble_uuid128(uint16_t uniqueValue)
   	uuid.value[3] = uniqueValue & 0x00FF;
 
 	return uuid;
+}
+template<typename return_t>
+requires std::is_same_v<return_t, std::string> || std::is_same_v<return_t, std::array<uint8_t, 6u>>
+[[nodiscard]] Result<return_t, NimbleErrorCode> current_mac_address(AddressType type)
+{
+	uint8_t addressType = static_cast<uint8_t>(type);
+	std::array<uint8_t, 6u> addr{ 0u };
+	auto returnCode = NimbleErrorCode{ ble_hs_id_copy_addr(addressType, addr.data(), nullptr) };
+	
+	Result<return_t, NimbleErrorCode> r{
+		.value = std::nullopt,
+		.error = returnCode
+	};
+	if(returnCode == NimbleErrorCode::success)
+	{
+		if constexpr(std::is_same_v<return_t, std::string>)
+		{
+			r.value = std::make_optional<std::string>(FMT("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+                                           addr[5], addr[4], addr[3], 
+                                           addr[2], addr[1], addr[0]));
+		}
+		else if constexpr(std::is_same_v<return_t, std::array<uint8_t, 6u>>)
+		{
+			r.value = std::make_optional<std::array<uint8_t, 6u>>(addr);
+		}
+	}
+	else if(returnCode == NimbleErrorCode::noConfiguredIdentityAddress)
+	{
+		LOG_WARN_FMT("Could not retrieve Mac address for type: \"{}\", because no address has been configured for that type.", address_type_to_str(type));
+	}
+	else if(returnCode == NimbleErrorCode::invalidArguments)
+	{
+		LOG_ERROR_FMT("Could not retrieve Mac address because the passed adress type parameter: \"{}\" is invalid.", addressType);
+	}
+	else
+	{
+		LOG_ERROR_FMT("Unexpected error: \"{}\" - \"{}\", when trying to retrieve MAC address.", 
+						static_cast<int32_t>(returnCode), 
+						nimble_error_to_string(returnCode));
+	}
 
+	return r;
 }
 }	  // namespace ble
