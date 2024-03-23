@@ -1,12 +1,103 @@
 #pragma once
 
+#include "nvs_flash.h"
+#include <vector>
+#include <string>
+#include <string_view>
+#include <optional>
 
 namespace storage
 {
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html#introduction
+
+
+// reader and readwrite subtypes
+// return the subtyp
+enum class NvsErrorCode : int32_t
+{
+	success = ESP_OK,
+	fail = ESP_FAIL,
+	notInitilized = ESP_ERR_NVS_NOT_INITIALIZED, // /*!< The storage driver is not initialized */
+	namespaceNotFound = ESP_ERR_NVS_NOT_FOUND, /*!< A requested entry couldn't be found or namespace doesn’t exist yet and mode is NVS_READONLY */
+	typeMismatch = ESP_ERR_NVS_TYPE_MISMATCH, /*!< The type of set or get operation doesn't match the type of value stored in NVS */
+	readOnly = ESP_ERR_NVS_READ_ONLY, /*!< Storage handle was opened as read only */
+	noSpaceForNewEntry = ESP_ERR_NVS_NOT_ENOUGH_SPACE, /*!< There is not enough space in the underlying storage to save the value */
+	namespaceInvalidName = ESP_ERR_NVS_INVALID_NAME, /*!< Namespace name doesn’t satisfy constraints */
+	invalidHandle = ESP_ERR_NVS_INVALID_HANDLE, /*!< Handle has been closed or is NULL */
+	failedWriteOperation = ESP_ERR_NVS_REMOVE_FAILED, /*!< The value wasn’t updated because flash write operation has failed. The value was written however, and update will be finished after re-initialization of nvs, provided that flash operation doesn’t fail again. */
+	keyNameToLong = ESP_ERR_NVS_KEY_TOO_LONG, /*!< Key name is too long */
+	invalidState = ESP_ERR_NVS_INVALID_STATE, /*!< NVS is in an inconsistent state due to a previous error. Call nvs_flash_init and nvs_open again, then retry. */
+	invalidDataLenght = ESP_ERR_NVS_INVALID_LENGTH, /*!< String or blob length is not sufficient to store data */
+	noFreePages = ESP_ERR_NVS_NO_FREE_PAGES, /*!< NVS partition doesn't contain any empty pages. This may happen if NVS partition was truncated. Erase the whole partition and call nvs_flash_init again. */
+	dataToLarge = ESP_ERR_NVS_VALUE_TOO_LONG, /*!< Value doesn't fit into the entry or string or blob length is longer than supported by the implementation */
+	partitionNotFound = ESP_ERR_NVS_PART_NOT_FOUND, /*!< Partition with specified name is not found in the partition table */
+	unrecognizedDataFormat = ESP_ERR_NVS_NEW_VERSION_FOUND, /*!< NVS partition contains data in new format and cannot be recognized by this version of code */
+	xtsEncryptWriteFail = ESP_ERR_NVS_XTS_ENCR_FAILED, /*!< XTS encryption failed while writing NVS entry */
+	xtsDecryptReadFail = ESP_ERR_NVS_XTS_DECR_FAILED, /*!< XTS decryption failed while reading NVS entry */
+	xtsConfigFail = ESP_ERR_NVS_XTS_CFG_FAILED, /*!< XTS configuration setting failed */
+	xtsConfigNotFound = ESP_ERR_NVS_XTS_CFG_NOT_FOUND, /*!< XTS configuration not found */
+	encryptionNotSupported = ESP_ERR_NVS_ENCR_NOT_SUPPORTED, /*!< NVS encryption is not supported in this version */
+	keyPartNotInitilized = ESP_ERR_NVS_KEYS_NOT_INITIALIZED, /*!< NVS key partition is uninitialized */
+	corruptedKey = ESP_ERR_NVS_CORRUPT_KEY_PART, /*!< NVS key partition is corrupt */
+	wrongEncryption = ESP_ERR_NVS_WRONG_ENCRYPTION, /*!< NVS partition is marked as encrypted with generic flash encryption. This is forbidden since the NVS encryption works differently. */
+	unknown = INT32_MAX
+};
+
+
 class CNonVolatileStorage
 {
+enum class OpenMode
+{
+	readOnly = NVS_READONLY,
+	readAndWrite = NVS_READWRITE
+};
+struct Error
+{
+	NvsErrorCode code;
+	std::string msg;
+};
+struct ReadBinaryResult // make template ??
+{
+	std::optional<std::vector<uint8_t>> data;
+	NvsErrorCode code;
+};
 public:
+class CReader 
+{
+friend class CNonVolatileStorage;
+private:
+    CReader(std::string_view nameSpace);
+public:
+	~CReader();
+	CReader(const CReader& other) = delete;
+	CReader(CReader&& other) = default;
+	CReader& operator=(const CReader& other) = delete;
+	CReader& operator=(CReader&& other) = default;
+public:
+	[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
+	//[[nodiscard]] std::string read_string();
+private:
+	nvs_handle_t m_Handle;
+}; // class NvsReader
+class CReadWriter // inherit from reader?
+{
+friend class CNonVolatileStorage;
+private:
+    CReadWriter(std::string_view nameSpace);
+public:
+	~CReadWriter();
+	CReadWriter(const CReadWriter& other) = delete;
+	CReadWriter(CReadWriter&& other) = default;
+	CReadWriter& operator=(const CReadWriter& other) = delete;
+	CReadWriter& operator=(CReadWriter&& other) = default;
+private:
+	[[nodiscard]] Error commit();
+public:
+	//[[nodiscard]] std::vector<uint8_t> read_binary();
+	//[[nodiscard]] std::string read_string();
+private:
+	nvs_handle_t m_Handle;
+}; // class CReadWriter
 	CNonVolatileStorage();
 	~CNonVolatileStorage();
 	CNonVolatileStorage(const CNonVolatileStorage& other) = delete;	// Deleted for now..
@@ -15,7 +106,24 @@ public:
 	CNonVolatileStorage& operator=(CNonVolatileStorage&& other) = delete;
 
 	[[nodiscard]] static CNonVolatileStorage& instance();
-	// TODO:: read/write
+	[[nodiscard]] std::optional<CReader> make_reader(std::string_view nameSpace);
+	[[nodiscard]] std::optional<CReadWriter> make_read_writer(std::string_view nameSpace);
+
+	void erase_key();
+	void erase_partition();
+	void erase_all_key_value_pairs();
+	//[[nodiscard]] std::optional<StatsError> stats(std::string_view partition);
+	void partition_size();
 private:
-};
-}	// namespace storage
+	//void open(std::string_view key, CNonVolatileStorage::OpenMode openMode);
+	//void close();
+	//void commit();
+
+	// esp_err_t nvs_erase_key(nvs_handle_t handle, const char *key)
+	// esp_err_t nvs_flash_erase(void) // Erase the default NVS partition.
+	// esp_err_t nvs_erase_all(nvs_handle_t handle) // Erase all key-value pairs in a namespace.
+	// esp_err_t nvs_get_stats(const char *part_name, nvs_stats_t *nvs_stats)
+	// esp_err_t nvs_get_used_entry_count(nvs_handle_t handle, size_t *used_entries)
+private:
+}; // CNonVolatileStorage
+}// namespace storage
