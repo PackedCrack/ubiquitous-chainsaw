@@ -7,6 +7,7 @@
 #include "esp_err.h"
 
 
+
 inline std::string esp_err_to_str(esp_err_t code)
 {
 	std::string err{};
@@ -17,14 +18,12 @@ inline std::string esp_err_to_str(esp_err_t code)
 
 	return err;
 }
-
 template<typename value_t, typename error_t>
 struct Result
 {
 	std::optional<value_t> value;
 	error_t error;
 };
-
 template<typename error_t>
 constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
 {

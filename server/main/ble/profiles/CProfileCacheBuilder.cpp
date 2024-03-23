@@ -32,8 +32,9 @@ CProfileCache CProfileCacheBuilder::build()
 			// TODO:: This is not fatal and should be handled somehow
 			LOG_FATAL("CProfileBuilder failed to build CProfileCache because heap memory is full!");
 		}
-		else if(result.error == Error::invalidResource)
+		else
 		{
+			ASSERT(result.error == Error::invalidResource, "There should only be three Error alternatives.. Expected invalidResource.");
 			LOG_FATAL("Invalid arguments passed to CProfileConstructor from CProfileBuilder");
 		}
 	}

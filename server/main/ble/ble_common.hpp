@@ -141,6 +141,12 @@ enum class NimbleErrorCode : int32_t
 
 	return uuid;
 }
+/// @brief Retrieves the MAC address for the choosen address type.
+/// @tparam return_t How the returned MAC address should be represented. Can be either std::string or std::array<uint8_t, 6u>
+/// @param type Decides the type of MAC address to try and retrieve.
+/// @return Returns a Result<return_t, NimbleErrorCode> with the MAC address on success or a NimbleErrorCode on failure.
+/// Possible error codes: "noConfiguredIdentityAddress" indicates that there is no configured MAC address for the choosen type. 
+/// "invalidArguments" indicates that the passed type is not a valid type.
 template<typename return_t>
 requires std::is_same_v<return_t, std::string> || std::is_same_v<return_t, std::array<uint8_t, 6u>>
 [[nodiscard]] Result<return_t, NimbleErrorCode> current_mac_address(AddressType type)
@@ -182,5 +188,14 @@ requires std::is_same_v<return_t, std::string> || std::is_same_v<return_t, std::
 	}
 
 	return r;
+}
+template<typename buffer_t>
+requires common::ConstBuffer<buffer_t>
+[[nodiscard]] NimbleErrorCode append_read_data(os_mbuf* om, buffer_t&& data)
+{
+	ASSERT(data.size() <= UINT16_MAX, "Buffer is too big!");
+	ASSERT(om != nullptr, "A os buffer is required!");
+
+	return NimbleErrorCode{ os_mbuf_append(om, data.data(), static_cast<uint16_t>(data.size())) };
 }
 }	  // namespace ble

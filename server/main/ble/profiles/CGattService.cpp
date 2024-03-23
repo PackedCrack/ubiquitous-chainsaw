@@ -72,6 +72,8 @@ CGattService CGattService::copy(const CGattService& source) const
 }
 CGattService::operator ble_gatt_svc_def() const
 {
+	//LOG_WARN_FMT("Service pointers: uuid - {:p}. characteristic array - {:p}",
+	//					(void*)&(m_pUUID->u), (void*)m_Characteristics.data());
 	return ble_gatt_svc_def{
 		.type = BLE_GATT_SVC_TYPE_PRIMARY,
 		.uuid = &(m_pUUID->u),

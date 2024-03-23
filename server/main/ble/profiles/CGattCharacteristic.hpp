@@ -74,6 +74,7 @@ public:
 		: m_Data{ copy_data(other.m_Data.get()) }
 		, m_Callback{ other.m_Callback }
 	{}
+	~CGattCharacteristic() = default;
 	CGattCharacteristic(CGattCharacteristic&& other) = default;
 	CGattCharacteristic& operator=(const CGattCharacteristic& other)
 	{
@@ -88,6 +89,8 @@ public:
 	CGattCharacteristic& operator=(CGattCharacteristic&& other) = default;
 	explicit operator ble_gatt_chr_def()
 	{
+		//LOG_WARN_FMT("Characteristic pointers: uuid - {:p}. callback - {:p}. valueHandle - {:p}",
+		//				(void*)&(m_Data->uuid.u), static_cast<void*>(&m_Callback), (void*)&(m_Data->valueHandle));
 		return ble_gatt_chr_def{
 			.uuid = &(m_Data->uuid.u),
 			.access_cb = callback_caller,

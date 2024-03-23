@@ -1,22 +1,37 @@
 #pragma once
+#include "../../../common/SharableThis.hpp"
 #include "../../server_common.hpp"
 #include "CGattService.hpp"
+#include <memory>
 
 
 namespace ble
 {
-class CWhoAmI
+class CWhoAmI : public SharableThis<CWhoAmI>
 {
 public:
 	CWhoAmI();
 	~CWhoAmI() = default;
-	CWhoAmI(const CWhoAmI& other) = default;
+	CWhoAmI(const CWhoAmI& other);
 	CWhoAmI(CWhoAmI&& other) = default;
-	CWhoAmI& operator=(const CWhoAmI& other) = default;
-	CWhoAmI& operator=(CWhoAmI&& other) = default;
+	CWhoAmI& operator=(const CWhoAmI& other);
+	CWhoAmI& operator=(CWhoAmI&& other) noexcept;
 public:
+	void register_with_nimble();
 	[[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
+
+	inline void print_this(const char* str)
+	{
+		LOG_INFO_FMT("{} LOCAL THIS!: {:p}", str, (void*)m_pSelf.get());
+	}
 private:
+	void retrieve_server_mac();
+	[[nodiscard]] std::vector<CCharacteristic> make_characteristics();
+	[[nodiscard]] auto make_callback_server_auth();
+	[[nodiscard]] CCharacteristic make_characteristic_server_auth();
+public:
+	std::string m_ServerMac;
+	std::string m_ClientMac;
 	std::vector<CCharacteristic> m_Characteristics;
 	CGattService m_Service;
 };
