@@ -17,7 +17,24 @@ namespace storage
 CNonVolatileStorage::CReader::CReader(std::string_view nameSpace)
 	: m_Handle {}
 {
-    esp_err_t result = nvs_open(nameSpace.data(), static_cast<nvs_open_mode_t >(OpenMode::readOnly), &m_Handle);
+	// NOTE: can return 2 error types
+    esp_err_t  result = nvs_open(nameSpace.data(), static_cast<nvs_open_mode_t >(OpenMode::readOnly), &m_Handle);
+	//NvsErrorCode error = static_cast<NvsErrorCode>(result);
+		//storage::CNonVolatileStorage::ReadBinaryResult tmp = read_binary("BinaryData");
+		//if (!tmp.data.has_value())
+		//{
+		//	std::printf("Error %d\n", static_cast<esp_err_t>(tmp.code)); // invalidHandle ???
+		//	LOG_ERROR("Error reading data");
+		//}
+		//
+		//std::vector<uint8_t> data = tmp.data.value();
+		//std::printf("Data size=%d\n", data.size());
+		//for (uint8_t byte : data) 
+		//{
+        //	std::printf("%02X ", byte);
+    	//}
+
+
 	if (result != static_cast<esp_err_t>(NvsErrorCode::success))
 	{
 		if (result == static_cast<esp_err_t>(NvsErrorCode::fail))
@@ -37,7 +54,7 @@ CNonVolatileStorage::CReader::CReader(std::string_view nameSpace)
 			std::string msg = "Namespace with id '" + std::string(nameSpace) + "' doesen't exist";
 			throw std::runtime_error(msg);
 		}
-		else if (result == static_cast<esp_err_t>(NvsErrorCode::namespaceInvalidName))
+		else if (result == static_cast<esp_err_t>(NvsErrorCode::invalidName))
 		{
 			std::string msg = "'" + std::string(nameSpace) + "' is an invalid namespace name";
 			throw std::runtime_error(msg);
@@ -63,7 +80,7 @@ CNonVolatileStorage::CReader::~CReader()
 CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(std::string_view key)
 {
 	// Key = "BinaryData"
-	ASSERT(key.size() > (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
+	ASSERT(key.size() < (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
 
 	// Read binary data from NVS
 	size_t requiredSize {};
@@ -75,7 +92,6 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 		std::vector<uint8_t> retrievedData {};
 		retrievedData.reserve(requiredSize);
 		result = nvs_get_blob(m_Handle, key.data(), retrievedData.data(), &requiredSize);
-
 		error = static_cast<NvsErrorCode>(result);
 		if (error == NvsErrorCode::success)
 		{
@@ -89,13 +105,14 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 				return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::namespaceNotFound };
 			else if (error == NvsErrorCode::invalidHandle)
 				return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::invalidHandle };
-			else if (error == NvsErrorCode::namespaceInvalidName)
-				return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::namespaceInvalidName };
+			else if (error == NvsErrorCode::invalidName)
+				return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::invalidName };
 			else if (error == NvsErrorCode::invalidDataLenght)
 				return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::invalidDataLenght };
 			else
 			{
 				LOG_FATAL("CReader::read_binary(): Unknown error occured!");
+				return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::unknown }; // to disable control reaches end of non-void func
 			}
 		}
 	}
@@ -107,23 +124,25 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 			return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::namespaceNotFound };
 		else if (error == NvsErrorCode::invalidHandle)
 			return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::invalidHandle };
-		else if (error == NvsErrorCode::namespaceInvalidName)
-			return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::namespaceInvalidName };
+		else if (error == NvsErrorCode::invalidName)
+			return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::invalidName };
 		else if (error == NvsErrorCode::invalidDataLenght)
 			return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::invalidDataLenght };
 		else
 		{
 			LOG_FATAL("CReader::read_binary(): Unknown error occured!");
+			return ReadBinaryResult { .data = std::nullopt, .code = NvsErrorCode::unknown }; // to disable control reaches end of non-void func
 		}
 	} 
 }
 CNonVolatileStorage::CReadWriter::CReadWriter(std::string_view nameSpace)
 	: m_Handle {}
 {
+	// NOTE: Can return 2 types of errors
     esp_err_t result = nvs_open(nameSpace.data(), static_cast<nvs_open_mode_t >(OpenMode::readAndWrite), &m_Handle);
-	if (result != static_cast<esp_err_t>(ble::EspErrorCode::success))
+	if (result != static_cast<esp_err_t>(NvsErrorCode::success))
 	{
-		if (result == static_cast<esp_err_t>(ble::EspErrorCode::fail))
+		if (result == static_cast<esp_err_t>(NvsErrorCode::fail))
 		{
 			throw std::runtime_error("Internal error when trying to open NVS in CReader constructor. Most likely due to corrupted NVS partition!");
 		}
@@ -140,7 +159,7 @@ CNonVolatileStorage::CReadWriter::CReadWriter(std::string_view nameSpace)
 			std::string msg = "Namespace with id '" + std::string(nameSpace) + "' doesen't exist";
 			throw std::runtime_error(msg);
 		}
-		else if (result == static_cast<esp_err_t>(NvsErrorCode::namespaceInvalidName))
+		else if (result == static_cast<esp_err_t>(NvsErrorCode::invalidName))
 		{
 			std::string msg = "'" + std::string(nameSpace) + "' is an invalid namespace name";
 			throw std::runtime_error(msg);
@@ -163,12 +182,68 @@ CNonVolatileStorage::CReadWriter::~CReadWriter()
 {
 	nvs_close(m_Handle);
 }
+CNonVolatileStorage::Error CNonVolatileStorage::CReadWriter::write_binary(std::string_view key, const std::vector<uint8_t>& data)
+{
+
+// "BinaryData"
+	// SAVE BINARY DATA
+	//std::vector<uint8_t> binaryData = { 0xBA, 0xBE, 0xBA, 0xBe, 0xBA, 0xBE, 0xBA, 0xBE, 0xBA, 0xBE, 0xBA, 0xBE, 0xBA, 0xBE, 0xBA, 0xBE };
+
+	// Write binary data to NVS
+	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_set_blob(m_Handle, key.data(), data.data(), (data.size() * sizeof(uint8_t))));
+	if (result == NvsErrorCode::success)
+		return commit();
+	else if (result == NvsErrorCode::fail)
+		return Error { .code = NvsErrorCode::fail, .msg = "Internal error; most likely due to corrupted NVS partition" };
+	else if (result == NvsErrorCode::invalidHandle)
+		return Error { .code = NvsErrorCode::invalidHandle, .msg = "Handle has been closed or is NULL" };
+	else if (result == NvsErrorCode::readOnly)
+		return Error { .code = NvsErrorCode::readOnly, .msg = "Handle was opened as read only" };
+	else if (result == NvsErrorCode::invalidName)
+		return Error { .code = NvsErrorCode::invalidName, .msg = "Key name doesn't satisfy constraints" };
+	else if (result == NvsErrorCode::noSpaceForNewEntry)
+		return Error { .code = NvsErrorCode::noSpaceForNewEntry, .msg = "There is not enough space to save the value" };
+	else if (result == NvsErrorCode::failedWriteOperation)
+		return Error { .code = NvsErrorCode::failedWriteOperation, .msg = "write operation has failed. The value was written however." };
+	else if (result == NvsErrorCode::dataToLarge)
+		return Error { .code = NvsErrorCode::dataToLarge, .msg = "The given data is to large" };
+	else
+		return Error { .code = NvsErrorCode::unknown, .msg = "Unknown error occured" };
+
+	// TODO: Check if this is more optimal
+	//size_t existingDataSize = 0;
+	//esp_err_t result = nvs_get_blob(m_Handle, key.data(), NULL, &existingDataSize);
+	//if (result != ESP_OK && result != ESP_ERR_NVS_NOT_FOUND) 
+	//{
+	//    nvs_close(m_Handle);
+	//    return result;
+	//}
+	//if (existingDataSize > 0) 
+	//{
+	//	//// Allocate memory to store the existing blob
+	//	//std::vector<uint8_t> existingBinaryData(existingSize);
+	//	//err = nvs_get_blob(my_handle, "BinaryData", existingBinaryData.data(), &existingSize);
+	//	//if (err != ESP_OK) 
+	//	//{
+	//	//	nvs_close(my_handle);
+	//	//	return err;
+	//	//}
+//
+	//	bool isEqual = vectors_is_equal(binaryData, existingBinaryData);
+	//	if (isEqual)
+	//	{
+	//		std::printf("vectors are equal no need to add again!\n");
+	//		nvs_close(my_handle);
+	//		return err;
+	//	}
+	//}
+}
 CNonVolatileStorage::Error CNonVolatileStorage::CReadWriter::commit()
 {
-	esp_err_t result = nvs_commit(m_Handle);
-	if (result != static_cast<esp_err_t>(NvsErrorCode::success))
+	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_commit(m_Handle));
+	if (result != NvsErrorCode::success)
 	{
-		if (result == static_cast<esp_err_t>(NvsErrorCode::invalidHandle))
+		if (result == NvsErrorCode::invalidHandle)
 		{
 			return Error {
 				.code = NvsErrorCode::invalidHandle,

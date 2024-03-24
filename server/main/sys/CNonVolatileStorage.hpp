@@ -22,7 +22,7 @@ enum class NvsErrorCode : int32_t
 	typeMismatch = ESP_ERR_NVS_TYPE_MISMATCH, /*!< The type of set or get operation doesn't match the type of value stored in NVS */
 	readOnly = ESP_ERR_NVS_READ_ONLY, /*!< Storage handle was opened as read only */
 	noSpaceForNewEntry = ESP_ERR_NVS_NOT_ENOUGH_SPACE, /*!< There is not enough space in the underlying storage to save the value */
-	namespaceInvalidName = ESP_ERR_NVS_INVALID_NAME, /*!< Namespace name doesn’t satisfy constraints */
+	invalidName = ESP_ERR_NVS_INVALID_NAME, /*!< Namespace name doesn’t satisfy constraints */
 	invalidHandle = ESP_ERR_NVS_INVALID_HANDLE, /*!< Handle has been closed or is NULL */
 	failedWriteOperation = ESP_ERR_NVS_REMOVE_FAILED, /*!< The value wasn’t updated because flash write operation has failed. The value was written however, and update will be finished after re-initialization of nvs, provided that flash operation doesn’t fail again. */
 	keyNameToLong = ESP_ERR_NVS_KEY_TOO_LONG, /*!< Key name is too long */
@@ -56,12 +56,13 @@ struct Error
 	NvsErrorCode code;
 	std::string msg;
 };
+
+public:
 struct ReadBinaryResult // make template ??
 {
 	std::optional<std::vector<uint8_t>> data;
 	NvsErrorCode code;
 };
-public:
 class CReader 
 {
 friend class CNonVolatileStorage;
@@ -90,9 +91,11 @@ public:
 	CReadWriter(CReadWriter&& other) = default;
 	CReadWriter& operator=(const CReadWriter& other) = delete;
 	CReadWriter& operator=(CReadWriter&& other) = default;
+public:
+	[[nodiscard]] Error write_binary(std::string_view key, const std::vector<uint8_t>& data);
 private:
 	[[nodiscard]] Error commit();
-public:
+
 	//[[nodiscard]] std::vector<uint8_t> read_binary();
 	//[[nodiscard]] std::string read_string();
 private:

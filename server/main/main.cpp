@@ -289,11 +289,54 @@ extern "C" void app_main(void)
 
 
 		storage::CNonVolatileStorage nvs{};
-		std::optional<storage::CNonVolatileStorage::CReader> reader = nvs.make_reader("STORAGE");
-		if (!reader.has_value())
+		std::optional<storage::CNonVolatileStorage::CReader> optReader = nvs.make_reader("STORAGE");
+		if (!optReader.has_value())
 		{
-			LOG_FATAL("Read creation error");
+			LOG_FATAL("CReader creation error");
 		}
+
+		storage::CNonVolatileStorage::CReader reader = std::move(optReader.value());
+		
+		//storage::CNonVolatileStorage::ReadBinaryResult tmp = reader.read_binary("BinaryData");
+		//if (!tmp.data.has_value())
+		//{
+		//	std::printf("Error %d\n", static_cast<esp_err_t>(tmp.code)); // invalidHandle ???
+		//	LOG_ERROR("Error reading data");
+		//}
+//
+		//std::vector<uint8_t> data = tmp.data.value();
+		//std::printf("Data size=%d\n", data.size());
+		//for (uint8_t byte : data) 
+		//{
+        //	std::printf("%02X ", byte);
+    	//}
+		//storage::CNonVolatileStorage::ReadBinaryResult result = reader.read_binary("BinaryData");
+		//if (!result.data.has_value())
+		//{
+		//	std::printf("Error %d\n", static_cast<esp_err_t>(result.code)); // invalidHandle ???
+		//	LOG_ERROR("Error reading data");
+		//}
+
+		//std::vector<uint8_t> data = result.data.value();
+		//for (uint8_t byte : data) 
+		//{
+        //	std::printf("%02X ", byte);
+    	//}
+
+
+
+
+
+
+
+		//if (!result.has_value()) 
+		//{
+		//	LOG_ERROR("Failed to read binary data from NVS");
+		//} 
+//
+		//ReadBinaryResult data = result.value();
+
+
 
 		std::optional<storage::CNonVolatileStorage::CReadWriter> writer = nvs.make_read_writer("STORAGE");
 		if (!writer.has_value())
