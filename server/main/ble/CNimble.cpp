@@ -155,10 +155,9 @@ CNimble::CNimble()
 	std::unique_lock lock{ *pMutex };
 
     configure_nimble_host();
-	CProfileCache cache = CProfileCacheBuilder()
+	m_pProfileCache = CProfileCacheBuilder()
 							.add_whoami()
 							.build();
-	m_pProfileCache = std::make_unique<CProfileCache>(std::move(cache));
 
 
     nimble_port_freertos_init(make_host_task());
