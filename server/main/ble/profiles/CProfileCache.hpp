@@ -1,10 +1,12 @@
 #pragma once
 #include "../../server_common.hpp"
+#include "CWhoAmI.hpp"
 // std
 #include <memory>
 #include <vector>
 #include <map>
 #include <concepts>
+#include <variant>
 // esp
 #include "host/ble_gatt.h"
 
@@ -112,6 +114,16 @@ requires NimbleProfile<profile_t>
 }
 
 
+
+template<typename... profile_t>
+class Profile2
+{
+public:
+private:
+	std::variant<profile_t...> m_Profile;
+};
+
+using Profile = std::variant<CWhoAmI>;
 class CProfileCache
 {
 	using KeyType = std::string_view;
@@ -122,19 +134,19 @@ public:
 		outOfHeapMemory,
 		invalidResource
 	};
-	static constexpr std::string_view KEY_WHOAMI = "whoami";
-	static constexpr std::string_view KEY_RANGE = "range";
+	static constexpr KeyType KEY_WHOAMI = "whoami";
+	static constexpr KeyType KEY_RANGE = "range";
 public:
-	[[nodiscard]] static Result<CProfileCache, CProfileCache::Error> make_profile_cache(std::map<KeyType, CProfile>&& profiles);
+	[[nodiscard]] static Result<CProfileCache, CProfileCache::Error> make_profile_cache(std::map<KeyType, std::shared_ptr<Profile>>&& profiles);
 	~CProfileCache() = default;
 	CProfileCache(const CProfileCache& other) = default;
 	CProfileCache(CProfileCache&& other) = default;
 	CProfileCache& operator=(const CProfileCache& other) = default;
 	CProfileCache& operator=(CProfileCache&& other) = default;
 private:
-	CProfileCache(std::map<KeyType, CProfile>&& profiles);
+	CProfileCache(std::map<KeyType, std::shared_ptr<Profile>>&& profiles);
 public:
-	std::map<KeyType, CProfile> m_Profiles;
+	std::map<KeyType, std::shared_ptr<Profile>> m_Profiles;
 	std::vector<ble_gatt_svc_def> m_Services;
 };
 }	// namespace ble

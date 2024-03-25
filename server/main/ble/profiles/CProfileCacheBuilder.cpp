@@ -1,5 +1,4 @@
 #include "CProfileCacheBuilder.hpp"
-#include "CWhoAmI.hpp"
 
 
 namespace ble

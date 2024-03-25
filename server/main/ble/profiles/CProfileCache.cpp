@@ -18,7 +18,7 @@ namespace
 }	// namespace
 namespace ble
 {
-Result<CProfileCache, CProfileCache::Error> CProfileCache::make_profile_cache(std::map<CProfileCache::KeyType, CProfile>&& profiles)
+Result<CProfileCache, CProfileCache::Error> CProfileCache::make_profile_cache(std::map<CProfileCache::KeyType, std::shared_ptr<Profile>>&& profiles)
 {
 	try
 	{
@@ -54,12 +54,12 @@ Result<CProfileCache, CProfileCache::Error> CProfileCache::make_profile_cache(st
 
 	__builtin_unreachable();
 }
-CProfileCache::CProfileCache(std::map<CProfileCache::KeyType, CProfile>&& profiles)
+CProfileCache::CProfileCache(std::map<CProfileCache::KeyType, std::shared_ptr<Profile>>&& profiles)
 	: m_Profiles{ std::move(profiles) }
 {
 	for(auto&& kvPair : m_Profiles)
 	{
-		m_Services.emplace_back(kvPair.second.nimble_service());
+		m_Services.emplace_back(kvPair.second->get().nimble_service());
 	}
 	m_Services.emplace_back(end_of_array());
 
