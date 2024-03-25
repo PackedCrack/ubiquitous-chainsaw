@@ -33,8 +33,6 @@ class CProfile
 		//virtual std::unique_ptr<Concept> copy() const = 0;
 		virtual ble_gatt_svc_def exec_nimble_service() const = 0;
 		virtual void exec_register_with_nimble() = 0;
-
-		virtual void exec_print_this(const char* str) = 0;
 	};
 	template<typename profile_t>
 	requires NimbleProfile<profile_t>
@@ -55,13 +53,9 @@ class CProfile
 	{
 		return m_Profile.as_nimble_service();
 	}
-	void exec_register_with_nimble()
+	void exec_register_with_nimble() override
 	{
 		m_Profile.register_with_nimble();
-	}
-	void exec_print_this(const char* str) override
-	{
-		m_Profile.print_this(str);
 	}
 	private:
 		profile_t m_Profile;
@@ -96,10 +90,6 @@ public:
 	void register_with_nimble()
 	{
 		m_pProfile->exec_register_with_nimble();
-	}
-	void print_this(const char* str)
-	{
-		m_pProfile->exec_print_this(str);
 	}
 private:
 	std::unique_ptr<Concept> m_pProfile = nullptr;

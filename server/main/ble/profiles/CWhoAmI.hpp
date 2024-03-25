@@ -19,11 +19,6 @@ public:
 public:
 	void register_with_nimble();
 	[[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
-
-	inline void print_this(const char* str)
-	{
-		LOG_INFO_FMT("{} LOCAL THIS!: {:p}", str, (void*)m_pSelf.get());
-	}
 private:
 	void retrieve_server_mac();
 	[[nodiscard]] std::vector<CCharacteristic> make_characteristics();

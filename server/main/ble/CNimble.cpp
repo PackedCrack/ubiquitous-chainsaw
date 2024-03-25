@@ -160,11 +160,6 @@ CNimble::CNimble()
 							.build();
 	m_pProfileCache = std::make_unique<CProfileCache>(std::move(cache));
 
-	auto iter = m_pProfileCache->m_Profiles.find(m_pProfileCache->KEY_WHOAMI);
-	ASSERT(iter != std::end(m_pProfileCache->m_Profiles), "should not be end");
-	LOG_INFO("GETTING GATT SVC STRUCT AFTER MOVE");
-	ble_gatt_svc_def tmp = iter->second.nimble_service();
-	iter->second.print_this("NIMBLE CONSTUCROTR");
 
     nimble_port_freertos_init(make_host_task());
 	pCV->wait(lock);

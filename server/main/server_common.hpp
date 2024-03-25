@@ -5,7 +5,8 @@
 #include <optional>
 // esp
 #include "esp_err.h"
-
+// freertos
+#include "freertos/task.h"
 
 
 inline std::string esp_err_to_str(esp_err_t code)
@@ -40,3 +41,11 @@ constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_e
 	// So CPPCHECk stops complaining
 	return 0;
 }
+inline void print_task_info(const char* str)
+{
+    TaskHandle_t xHandle = xTaskGetHandle(str);
+	TaskStatus_t status{};
+	vTaskGetInfo(xHandle, &status, true, eInvalid);
+	LOG_INFO_FMT("Task \"{}\" info:\nTask Number: {}\nStack base: {:p}\nStack min stack space remaining: {}\n", 
+					str == nullptr ? "Caller" : str, status.xTaskNumber, (void*)status.pxStackBase, status.usStackHighWaterMark);
+};

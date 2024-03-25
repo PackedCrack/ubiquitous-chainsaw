@@ -1,28 +1,16 @@
 #include "CWhoAmI.hpp"
 #include "../../../common/ble_services.hpp"
+#include "../../server_common.hpp"
 #include "CGattCharacteristic.hpp"
 // std
 #include <cstdint>
 #include <stdexcept>
 #include <array>
 
-// freertos
-#include "freertos/task.h"
 
-static void print_task_info(const char* str)
-{
-    TaskHandle_t xHandle = xTaskGetHandle( str );
-	TaskStatus_t status{};
-	vTaskGetInfo(xHandle, &status, true, eInvalid);
-	LOG_INFO_FMT("Task \"{}\" info:\nTask Number: {}\nStack base: {:p}\nStack min stack space remaining: {}\n", 
-					str == nullptr ? "Caller" : str, status.xTaskNumber, (void*)status.pxStackBase, status.usStackHighWaterMark);
-};
-
-static void* pThis = nullptr;
 
 namespace
 {
-
 //[[nodiscard]] auto make_callback_server_auth()
 //{
 //	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
@@ -73,15 +61,7 @@ CWhoAmI::CWhoAmI()
 	, m_ClientMac{}
 	, m_Characteristics{ make_characteristics() }
 	, m_Service{ ID_SERVICE_WHOAMI, m_Characteristics }
-{
-	pThis = this;
-	print_this("Whoami constructor");
-	LOG_INFO_FMT("Whoami constructor this: {:p}. Global this: {:p}", (void*)this, pThis);
-	m_ServerMac.clear();
-
-	bool test = m_ServerMac.empty();
-	LOG_INFO_FMT("Constructor:::: {}.......... STRING: {}", test, this->m_ServerMac.size());
-}
+{}
 CWhoAmI::CWhoAmI(const CWhoAmI& other)
 	: m_ServerMac{ other.m_ServerMac }
 	, m_ClientMac{ other.m_ClientMac }
@@ -121,20 +101,12 @@ void CWhoAmI::register_with_nimble()
 }
 void CWhoAmI::retrieve_server_mac()
 {
-	std::cout << "retrieve_server_mac THIS POINTER: " << m_pSelf.get() << std::endl;
 	{
-		LOG_INFO("0. BEFORE REMOTE CALL RESULT");
 		Result<std::string, ble::NimbleErrorCode> result = ble::current_mac_address<std::string>(ble::AddressType::randomMac);
 		
 		if(result.value)
 		{
 			m_ServerMac = std::move(result.value.value());
-
-			LOG_INFO("AFTER MOVE");
-			result.value.value() = "aaaaaaaaaaaaaaaaa";
-			LOG_INFO("AFTER result STR DESTRUCTOR");
-			result.value = std::nullopt;
-			LOG_INFO("AFTER result OPTIONAL DESTRUCTOR");
 		}
 		else
 		{
@@ -150,16 +122,13 @@ void CWhoAmI::retrieve_server_mac()
 				LOG_ERROR("CWhoAmI could not retrieve ANY address!");
 			}
 		}
-		LOG_INFO("Calling result destructor");
 	}
 	
-
-	LOG_INFO("BEFORE EMPTY CHECK");
+	
 	if(!m_ServerMac.empty())
 	{
 		// sign mac
 	}
-	LOG_INFO("AFTER EMPTY CHECK");
 }
 ble_gatt_svc_def CWhoAmI::as_nimble_service() const
 {
@@ -175,21 +144,12 @@ std::vector<CCharacteristic> CWhoAmI::make_characteristics()
 }
 auto CWhoAmI::make_callback_server_auth()
 {
-	return [pWeakThis= share_this()](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
+	return [pWeakThis= share_this(), this](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
 	{
-		auto pThis2 = pWeakThis.lock();
-		if(pThis2)
+		auto pThis = pWeakThis.lock();
+		if(pThis)
 		{
-			CWhoAmI* pSelf = *pThis2;
-			pSelf->print_this("make_callback_server_auth");
-			LOG_INFO_FMT("Lambda callback characteristic array size: {}", pSelf->m_Characteristics.size());
-    		
-			//print_task_info("nimble_host");
-			//print_task_info(nullptr);
-			//std::array<uint8_t, 256> arr{};
-			//LOG_INFO("Allocated 256 bytes on stack.");
-			LOG_INFO_FMT("Callback this pointer: {:p}", (void*)(pSelf));
-			LOG_INFO_FMT("String empty: {}. String size: {}", pSelf->m_ServerMac.empty(), pSelf->m_ServerMac.size());
+			CWhoAmI* pSelf = *pThis;
 
 			auto operation = CharacteristicAccess{ pContext->op };
 			UNHANDLED_CASE_PROTECTION_ON
@@ -197,15 +157,9 @@ auto CWhoAmI::make_callback_server_auth()
 			{
 				case CharacteristicAccess::read:
 				{
-					LOG_INFO("BEFORE IF");
 					if(pSelf->m_ServerMac.empty())
-					{
-						LOG_INFO("BEFORE RETRIEVE");
 						pSelf->retrieve_server_mac();
-						LOG_INFO("AFTER RETRIEVE");
-						LOG_INFO_FMT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA string size: \"{}\"", pSelf->m_ServerMac.size());
-					}
-					LOG_INFO("AFTER IF");
+
 
 					NimbleErrorCode code = append_read_data(pContext->om, pSelf->m_ServerMac);
 					if(code != NimbleErrorCode::success)
@@ -213,6 +167,8 @@ auto CWhoAmI::make_callback_server_auth()
 						LOG_ERROR_FMT("Characteristic callback for Server Auth failed to append its data to the client: \"{}\"", 
 										nimble_error_to_string(code));
 					}
+
+					print_task_info("nimble_host");
         		    return static_cast<int32_t>(code);
 				}
 				case CharacteristicAccess::write:
