@@ -51,6 +51,8 @@ extern "C" void app_main(void)
 	catch (const exception::fatal_error& error) 
 	{
 		LOG_ERROR_FMT("Caught exception: {}", error.what());
+
+		// TODO:: we should do more than restart here
 		system.restart();
     }
 }
