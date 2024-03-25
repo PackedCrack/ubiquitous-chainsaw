@@ -74,6 +74,7 @@ public:
 		: m_Data{ copy_data(other.m_Data.get()) }
 		, m_Callback{ other.m_Callback }
 	{}
+	~CGattCharacteristic() = default;
 	CGattCharacteristic(CGattCharacteristic&& other) = default;
 	CGattCharacteristic& operator=(const CGattCharacteristic& other)
 	{

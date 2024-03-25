@@ -12,8 +12,14 @@ namespace common
 template<typename buffer_t>
 concept Buffer = requires(buffer_t buffer)
 {
-    { buffer.size() } -> std::convertible_to<typename decltype(buffer)::size_type>;
-    { buffer.data() } -> std::convertible_to<typename decltype(buffer)::pointer>;
+    { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
+    { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::pointer>;
+};
+template<typename buffer_t>
+concept ConstBuffer = requires(buffer_t buffer)
+{
+    { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
+    { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::const_pointer>;
 };
 template<typename string_t>
 concept BasicString = requires(string_t str)

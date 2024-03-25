@@ -71,6 +71,48 @@ void configure_nimble_host()
     ble_hs_cfg.sm_sc = 1u;
     //ble_store_config_init(); // which header is this?..
 }
+void print_ble_address()
+{
+    std::array<uint8_t, 6> bleDeviceAddr {};
+    ble::NimbleErrorCode result = ble::NimbleErrorCode{ 
+		ble_hs_id_copy_addr(static_cast<uint8_t>(ble::AddressType::randomMac), bleDeviceAddr.data(), nullptr) };
+
+    if (result != ble::NimbleErrorCode::success) 
+        LOG_FATAL_FMT("Adress was unable to be retreived {}", ble::nimble_error_to_string(result));
+
+    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", 
+				bleDeviceAddr[5], 
+				bleDeviceAddr[4],
+				bleDeviceAddr[3],
+				bleDeviceAddr[2],
+				bleDeviceAddr[1],
+				bleDeviceAddr[0]);
+}
+[[nodiscard]] ble::AddressType generate_random_device_address() 
+{
+	static constexpr bool PREFER_RANDOM = true;
+	static constexpr bool USE_PRIVATE_ADDR = false;
+
+    uint8_t expectedAddrType = ble::INVALID_ADDRESS_TYPE;
+    auto result = ble::NimbleErrorCode{ ble_hs_util_ensure_addr(PREFER_RANDOM) };
+    if (result != ble::NimbleErrorCode::success)
+	{
+		LOG_FATAL_FMT("No address was able to be ensured ERROR={}", ble::nimble_error_to_string(result));
+	}
+        
+    result = ble::NimbleErrorCode{ ble_hs_id_infer_auto(USE_PRIVATE_ADDR, &expectedAddrType) }; // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
+    if (result != ble::NimbleErrorCode::success)
+	{
+		LOG_FATAL_FMT("No address was able to be inferred ERROR={}", ble::nimble_error_to_string(result));
+	}
+
+    ASSERT(expectedAddrType == static_cast<uint8_t>(ble::AddressType::randomMac), "Assigned wrong bluetooth address type");
+	#ifndef NDEBUG
+    print_ble_address();
+	#endif
+
+    return ble::AddressType{ expectedAddrType };
+}
 } // namespace
 namespace ble
 {
@@ -113,19 +155,16 @@ CNimble::CNimble()
 	std::unique_lock lock{ *pMutex };
 
     configure_nimble_host();
-
-	CProfileCache cache = CProfileCacheBuilder()
+	m_pProfileCache = CProfileCacheBuilder()
 							.add_whoami()
 							.build();
-	m_pProfileCache = std::make_unique<CProfileCache>(std::move(cache));
 
-  
+
     nimble_port_freertos_init(make_host_task());
-	
 	pCV->wait(lock);
 
-
-	m_pGap = std::make_unique<CGap>();
+	AddressType macType = generate_random_device_address();
+	m_pGap = std::make_unique<CGap>(macType);
 }
 CNimble::~CNimble()
 {
@@ -173,23 +212,4 @@ CNimble::~CNimble()
     I dont know what is causing the 530 error code.
     */
 }
-//CNimble::CNimble(CNimble&& other) noexcept
-//    : //m_gatt { std::move(other.m_gatt) }
-//     m_gap { std::move(other.m_gap) } 
-//{
-//    // no pointers have been moved
-//}
-//CNimble& CNimble::operator=(CNimble&& other)
-//{
-//    /*
-//        1. Clean up all visible resources
-//        2. Transfer the content of other into this
-//        3. Leave other in a valid but undefined state
-//    */
-//    
-//    // Check if other exists?
-//    //m_gatt = std::move(other.m_gatt);
-//    m_gap = std::move(other.m_gap);
-//    return *this;
-//}
 } // namespace ble
