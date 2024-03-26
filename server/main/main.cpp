@@ -33,7 +33,7 @@ extern "C" void app_main(void)
 		print_chip_info();
 		storage::CNonVolatileStorage nvs{};
 
-		security::CWolfCrypt wc{};
+		auto a = security::CWolfCrypt::instance();
 
 
 		// https://mynewt.apache.org/latest/
