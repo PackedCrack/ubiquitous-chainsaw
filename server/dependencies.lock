@@ -1,10 +1,14 @@
 dependencies:
-  nimble_peripheral_utils:
+  idf:
     component_hash: null
     source:
-      path: C:\Users\qwerty\SDKs\esp-idf\examples\bluetooth\nimble\common\nimble_peripheral_utils
-      type: local
-    version: '*'
-manifest_hash: fe46af1ba6edd31adaab9cc0dd7fb40a5128dae7ec78e6222d09021e97ee89eb
-target: esp32
+      type: idf
+    version: 5.2.1
+  wolfssl/wolfssl:
+    component_hash: 72657c301474e7c4685a3ec91726f4f61c76b7135aa8dff89f56b68cb4bfddb5
+    source:
+      type: service
+    version: 5.6.6-stable-update2-esp32
+manifest_hash: 78ed51349d8db327d7bb64f5e772f0ca61b327a27b787239147f82eab267b2ac
+target: esp32s3
 version: 1.0.0

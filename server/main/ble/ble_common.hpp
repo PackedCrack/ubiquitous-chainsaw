@@ -2,6 +2,7 @@
 #include "../../common/ble_services.hpp"
 #include "../server_common.hpp"
 // std
+#include <cstring>
 #include <string_view>
 #include <array>
 // nimble

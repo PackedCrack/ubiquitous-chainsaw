@@ -478,3 +478,6 @@ FodyWeavers.xsd
 
 
 docs/html
+
+# managed esp32 components
+/server/managed_components/*

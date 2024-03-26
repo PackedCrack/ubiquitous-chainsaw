@@ -3,7 +3,7 @@
 
 #include "sys/CNonVolatileStorage.hpp"
 
-
+#include <expected>
 #include "../../client/src/security/CWolfCrypt.hpp"
 
 
@@ -25,11 +25,13 @@ void print_chip_info()
 }
 
 
+
 extern "C" void app_main(void)
 {
 	sys::CSystem system{};
 	try 
 	{
+		std::expected<int, int> test{};
 		print_chip_info();
 		storage::CNonVolatileStorage nvs{};
 
