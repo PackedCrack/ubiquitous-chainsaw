@@ -295,39 +295,25 @@ extern "C" void app_main(void)
 			LOG_FATAL("CReader creation error");
 		}
 
-		storage::CNonVolatileStorage::CReader reader = std::move(optReader.value());
-		
-		//storage::CNonVolatileStorage::ReadBinaryResult tmp = reader.read_binary("BinaryData");
-		//if (!tmp.data.has_value())
-		//{
-		//	std::printf("Error %d\n", static_cast<esp_err_t>(tmp.code)); // invalidHandle ???
-		//	LOG_ERROR("Error reading data");
-		//}
-//
-		//std::vector<uint8_t> data = tmp.data.value();
-		//std::printf("Data size=%d\n", data.size());
-		//for (uint8_t byte : data) 
-		//{
-        //	std::printf("%02X ", byte);
-    	//}
-		//storage::CNonVolatileStorage::ReadBinaryResult result = reader.read_binary("BinaryData");
-		//if (!result.data.has_value())
-		//{
-		//	std::printf("Error %d\n", static_cast<esp_err_t>(result.code)); // invalidHandle ???
-		//	LOG_ERROR("Error reading data");
-		//}
 
-		//std::vector<uint8_t> data = result.data.value();
-		//for (uint8_t byte : data) 
-		//{
-        //	std::printf("%02X ", byte);
-    	//}
+		// TODO CHECK IF OPEN NEEDS TO BE CALLED WHITIN SAME SCOPE
 
 
+		//storage::CNonVolatileStorage::CReader reader = std::move(optReader.value());
 
-
-
-
+		storage::CNonVolatileStorage::ReadBinaryResult tmp = optReader.value().read_binary("BinaryData");
+		if (!tmp.data.has_value())
+		{
+			std::printf("Error %d\n", static_cast<esp_err_t>(tmp.code)); // invalidHandle ???
+			LOG_ERROR("Error reading data");
+		}
+	//
+		std::vector<uint8_t> data = tmp.data.value();
+		std::printf("Data size=%d\n", data.size());
+		for (uint8_t byte : data) 
+		{
+        	std::printf("%02X ", byte);
+    	}
 
 		//if (!result.has_value()) 
 		//{
@@ -338,17 +324,17 @@ extern "C" void app_main(void)
 
 
 
-		std::optional<storage::CNonVolatileStorage::CReadWriter> writer = nvs.make_read_writer("STORAGE");
-		if (!writer.has_value())
-		{
-			LOG_FATAL("Writer creation error");
-		}
+		//std::optional<storage::CNonVolatileStorage::CReadWriter> writer = nvs.make_read_writer("STORAGE");
+		//if (!writer.has_value())
+		//{
+		//	LOG_FATAL("Writer creation error");
+		//}
 
 
-		//esp_err_t err = print_what_saved();
-    	//if (err != ESP_OK) 
-		//	std::printf("Error (%d) reading data from NVS!\n", err);
-		//
+		esp_err_t err = print_what_saved();
+    	if (err != ESP_OK) 
+			std::printf("Error (%d) reading data from NVS!\n", err);
+		
 		//err = save_restart_counter();
     	//if (err != ESP_OK) 
 		//	std::printf("Error (%d) saving restart counter to NVS!\n", err);

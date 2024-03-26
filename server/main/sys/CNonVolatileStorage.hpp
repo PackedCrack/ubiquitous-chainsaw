@@ -77,8 +77,8 @@ public:
 public:
 	[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
 	//[[nodiscard]] std::string read_string();
-private:
-	nvs_handle_t m_Handle;
+public:
+	nvs_handle_t m_Handle; // TODO make optional, implement move constructor with exchange
 }; // class NvsReader
 class CReadWriter // inherit from reader?
 {

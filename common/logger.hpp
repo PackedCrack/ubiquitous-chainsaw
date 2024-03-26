@@ -26,10 +26,13 @@
 	#endif
 #endif
 
+
 #ifdef USING_FMT
     #define FMT_HEADER_ONLY
     #include "fmt/core.h"
-    #undef USING_FMT	// dont leak define
+    #undef USING_FMT    // dont leak define
+#else
+    #include <format>
 #endif
 
 
