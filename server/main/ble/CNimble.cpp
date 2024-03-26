@@ -71,48 +71,6 @@ void configure_nimble_host()
     ble_hs_cfg.sm_sc = 1u;
     //ble_store_config_init(); // which header is this?..
 }
-void print_ble_address()
-{
-    std::array<uint8_t, 6> bleDeviceAddr {};
-    ble::NimbleErrorCode result = ble::NimbleErrorCode{ 
-		ble_hs_id_copy_addr(static_cast<uint8_t>(ble::AddressType::randomMac), bleDeviceAddr.data(), nullptr) };
-
-    if (result != ble::NimbleErrorCode::success) 
-        LOG_FATAL_FMT("Adress was unable to be retreived {}", ble::nimble_error_to_string(result));
-
-    std::printf("BLE Device Address: %02x:%02x:%02x:%02x:%02x:%02x \n", 
-				bleDeviceAddr[5], 
-				bleDeviceAddr[4],
-				bleDeviceAddr[3],
-				bleDeviceAddr[2],
-				bleDeviceAddr[1],
-				bleDeviceAddr[0]);
-}
-[[nodiscard]] ble::AddressType generate_random_device_address() 
-{
-	static constexpr bool PREFER_RANDOM = true;
-	static constexpr bool USE_PRIVATE_ADDR = false;
-
-    uint8_t expectedAddrType = ble::INVALID_ADDRESS_TYPE;
-    auto result = ble::NimbleErrorCode{ ble_hs_util_ensure_addr(PREFER_RANDOM) };
-    if (result != ble::NimbleErrorCode::success)
-	{
-		LOG_FATAL_FMT("No address was able to be ensured ERROR={}", ble::nimble_error_to_string(result));
-	}
-        
-    result = ble::NimbleErrorCode{ ble_hs_id_infer_auto(USE_PRIVATE_ADDR, &expectedAddrType) }; // 1/private do not work here, type will depend ble_hs_util_ensure_addr()
-    if (result != ble::NimbleErrorCode::success)
-	{
-		LOG_FATAL_FMT("No address was able to be inferred ERROR={}", ble::nimble_error_to_string(result));
-	}
-
-    ASSERT(expectedAddrType == static_cast<uint8_t>(ble::AddressType::randomMac), "Assigned wrong bluetooth address type");
-	#ifndef NDEBUG
-    print_ble_address();
-	#endif
-
-    return ble::AddressType{ expectedAddrType };
-}
 } // namespace
 namespace ble
 {
@@ -163,8 +121,7 @@ CNimble::CNimble()
     nimble_port_freertos_init(make_host_task());
 	pCV->wait(lock);
 
-	AddressType macType = generate_random_device_address();
-	m_pGap = std::make_unique<CGap>(macType);
+	m_pGap = std::make_unique<CGap>();
 }
 CNimble::~CNimble()
 {

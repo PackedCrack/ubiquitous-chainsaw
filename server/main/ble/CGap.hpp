@@ -65,7 +65,7 @@ public:
 		std::string msg;
 	};
 public:
-    explicit CGap(AddressType type);
+    CGap();
     ~CGap();
     CGap(const CGap& other) = delete;
     CGap(CGap&& other) noexcept;
