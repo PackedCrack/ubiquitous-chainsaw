@@ -4,6 +4,8 @@
 #include "sys/CNonVolatileStorage.hpp"
 
 
+#include "../../client/src/security/CWolfCrypt.hpp"
+
 
 void print_chip_info()
 {
@@ -30,6 +32,8 @@ extern "C" void app_main(void)
 	{
 		print_chip_info();
 		storage::CNonVolatileStorage nvs{};
+
+		security::CWolfCrypt wc{};
 
 
 		// https://mynewt.apache.org/latest/
