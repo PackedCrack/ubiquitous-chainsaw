@@ -9,10 +9,6 @@
 namespace storage
 {
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html#introduction
-
-
-// reader and readwrite subtypes
-// return the subtyp
 enum class NvsErrorCode : int32_t
 {
 	success = ESP_OK,
@@ -42,8 +38,6 @@ enum class NvsErrorCode : int32_t
 	wrongEncryption = ESP_ERR_NVS_WRONG_ENCRYPTION, /*!< NVS partition is marked as encrypted with generic flash encryption. This is forbidden since the NVS encryption works differently. */
 	unknown = INT32_MAX
 };
-
-
 class CNonVolatileStorage
 {
 enum class OpenMode
@@ -51,17 +45,16 @@ enum class OpenMode
 	readOnly = NVS_READONLY,
 	readAndWrite = NVS_READWRITE
 };
-struct Error
+public:
+struct WriteResult
 {
 	NvsErrorCode code;
 	std::string msg;
 };
-
-public:
 struct ReadBinaryResult // make template ??
 {
-	std::optional<std::vector<uint8_t>> data;
 	NvsErrorCode code;
+	std::optional<std::vector<uint8_t>> data;
 };
 class CReader 
 {
@@ -71,16 +64,16 @@ private:
 public:
 	~CReader();
 	CReader(const CReader& other) = delete;
-	CReader(CReader&& other) = default;
+	CReader(CReader&& other) noexcept;
 	CReader& operator=(const CReader& other) = delete;
-	CReader& operator=(CReader&& other) = default;
+	CReader& operator=(CReader&& other) noexcept;
 public:
 	[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
-	//[[nodiscard]] std::string read_string();
 public:
-	nvs_handle_t m_Handle; // TODO make optional, implement move constructor with exchange
-}; // class NvsReader
-class CReadWriter // inherit from reader?
+	std::optional<nvs_handle_t> m_Handle;
+}; // class CReader
+
+class CReadWriter
 {
 friend class CNonVolatileStorage;
 private:
@@ -88,19 +81,18 @@ private:
 public:
 	~CReadWriter();
 	CReadWriter(const CReadWriter& other) = delete;
-	CReadWriter(CReadWriter&& other) = default;
+	CReadWriter(CReadWriter&& other) noexcept;
 	CReadWriter& operator=(const CReadWriter& other) = delete;
-	CReadWriter& operator=(CReadWriter&& other) = default;
+	CReadWriter& operator=(CReadWriter&& other) noexcept;
 public:
-	[[nodiscard]] Error write_binary(std::string_view key, const std::vector<uint8_t>& data);
+	[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
+	[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
 private:
-	[[nodiscard]] Error commit();
-
-	//[[nodiscard]] std::vector<uint8_t> read_binary();
-	//[[nodiscard]] std::string read_string();
+	[[nodiscard]] WriteResult commit();
 private:
-	nvs_handle_t m_Handle;
+	std::optional<nvs_handle_t> m_Handle;
 }; // class CReadWriter
+
 	CNonVolatileStorage();
 	~CNonVolatileStorage();
 	CNonVolatileStorage(const CNonVolatileStorage& other) = delete;	// Deleted for now..
