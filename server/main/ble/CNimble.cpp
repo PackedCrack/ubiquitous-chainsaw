@@ -113,17 +113,13 @@ CNimble::CNimble()
 	std::unique_lock lock{ *pMutex };
 
     configure_nimble_host();
-
-	CProfileCache cache = CProfileCacheBuilder()
+	m_pProfileCache = CProfileCacheBuilder()
 							.add_whoami()
 							.build();
-	m_pProfileCache = std::make_unique<CProfileCache>(std::move(cache));
 
-  
+
     nimble_port_freertos_init(make_host_task());
-	
 	pCV->wait(lock);
-
 
 	m_pGap = std::make_unique<CGap>();
 }
@@ -173,23 +169,4 @@ CNimble::~CNimble()
     I dont know what is causing the 530 error code.
     */
 }
-//CNimble::CNimble(CNimble&& other) noexcept
-//    : //m_gatt { std::move(other.m_gatt) }
-//     m_gap { std::move(other.m_gap) } 
-//{
-//    // no pointers have been moved
-//}
-//CNimble& CNimble::operator=(CNimble&& other)
-//{
-//    /*
-//        1. Clean up all visible resources
-//        2. Transfer the content of other into this
-//        3. Leave other in a valid but undefined state
-//    */
-//    
-//    // Check if other exists?
-//    //m_gatt = std::move(other.m_gatt);
-//    m_gap = std::move(other.m_gap);
-//    return *this;
-//}
 } // namespace ble

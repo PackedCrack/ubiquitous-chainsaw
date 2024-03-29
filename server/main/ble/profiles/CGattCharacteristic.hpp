@@ -6,6 +6,16 @@
 
 namespace ble
 {
+enum class DescriptorAccess
+{
+	read = BLE_GATT_ACCESS_OP_READ_DSC,
+	write = BLE_GATT_ACCESS_OP_WRITE_DSC
+};
+enum class CharacteristicAccess
+{
+	read = BLE_GATT_ACCESS_OP_READ_CHR,
+	write = BLE_GATT_ACCESS_OP_WRITE_CHR
+};
 enum class CharsPropertyFlag : uint16_t
 {
 	broadcast = BLE_GATT_CHR_F_BROADCAST,
@@ -42,14 +52,12 @@ enum class CharsPropertyFlag : uint16_t
 }
 
 
-struct CharsCallbackArgs
-{
-};
-
 template<typename invocable_t>
-requires std::is_invocable_r_v<int32_t, invocable_t, uint16_t, uint16_t, ble_gatt_access_ctxt*, void*>
+requires std::is_invocable_r_v<int, invocable_t, uint16_t, uint16_t, ble_gatt_access_ctxt*>
 class CGattCharacteristic
 {
+typedef void* function;
+
 struct CharacteristicData
 {
 	CharsPropertyFlag flags;
@@ -61,13 +69,12 @@ public:
 	CGattCharacteristic(uint16_t uuid, invocable_t&& callback, property_flag_t&&... flags)
 		: m_Data{ make_data(uuid, std::forward<property_flag_t>(flags)...) }
 		, m_Callback{ std::forward<invocable_t>(callback) }
-		, m_Args{}
 	{}
 	CGattCharacteristic(const CGattCharacteristic& other)
 		: m_Data{ copy_data(other.m_Data.get()) }
 		, m_Callback{ other.m_Callback }
-		, m_Args{ other.m_Args }
 	{}
+	~CGattCharacteristic() = default;
 	CGattCharacteristic(CGattCharacteristic&& other) = default;
 	CGattCharacteristic& operator=(const CGattCharacteristic& other)
 	{
@@ -75,7 +82,6 @@ public:
 		{
 			m_Data = copy_data(other.m_Data.get());
 			m_Callback = other.m_Callback;
-			m_Args = other.m_Args;
 		}
 
 		return *this;
@@ -85,13 +91,20 @@ public:
 	{
 		return ble_gatt_chr_def{
 			.uuid = &(m_Data->uuid.u),
-			.access_cb = m_Callback,
-			.arg = static_cast<void*>(&m_Args),
+			.access_cb = callback_caller,
+			.arg = static_cast<void*>(&m_Callback),
 			.descriptors = nullptr,
 			.flags = static_cast<ble_gatt_chr_flags>(m_Data->flags),
 			.min_key_size = 0,
 			.val_handle = &(m_Data->valueHandle)
 		};
+	}
+public:
+	[[nodiscard]] static int callback_caller(
+		uint16_t connnectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext, function eventCallback)
+	{
+		invocable_t& cb = *(static_cast<invocable_t*>(eventCallback));
+		return cb(connnectionHandle, attributeHandle, pContext);
 	}
 	[[nodiscard]] ble_gatt_chr_def to_nimble_t()
 	{
@@ -121,8 +134,8 @@ private:
 private:
 	std::unique_ptr<CharacteristicData> m_Data;
 	invocable_t m_Callback;
-	CharsCallbackArgs m_Args;
 };
+
 
 template<typename characteristic_t>
 concept GattCharacteristic = requires(characteristic_t characteristic)
@@ -130,7 +143,6 @@ concept GattCharacteristic = requires(characteristic_t characteristic)
 	{ characteristic.to_nimble_t() } -> std::convertible_to<ble_gatt_chr_def>;
 	{ static_cast<ble_gatt_chr_def>(characteristic) } -> std::convertible_to<ble_gatt_chr_def>;
 };
-
 class CCharacteristic
 {
 	// todo: friend functions

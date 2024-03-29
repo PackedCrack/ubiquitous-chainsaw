@@ -6,15 +6,14 @@ namespace ble
 {
 CProfileCacheBuilder& CProfileCacheBuilder::add_whoami() 
 { 
-	auto[iter, emplaced] = m_Profiles.try_emplace(CProfileCache::KEY_WHOAMI, make_profile<CWhoAmI>());
-	if(!emplaced)
+	if(!try_emplace_profile<CWhoAmI>(CProfileCache::KEY_WHOAMI))
 	{
-		LOG_FATAL("CPRofilesBuilder failed to att CWhoAmI profile to cache.");
+		LOG_FATAL("CProfileCacheBuilder failed to add CWhoAmI profile to the cache.");
 	}
 
 	return *this;
 }
-CProfileCache CProfileCacheBuilder::build() 
+std::unique_ptr<CProfileCache> CProfileCacheBuilder::build() 
 { 
 	using Error = CProfileCache::Error;
 
@@ -23,7 +22,7 @@ CProfileCache CProfileCacheBuilder::build()
 	if(result.error == Error::none)
 	{
 		ASSERT(result.value, "Expected a value in result when error code is none..");
-		return CProfileCache{ std::move(result.value.value()) };
+		return std::make_unique<CProfileCache>(std::move(result.value.value()));
 	}
 	else
 	{
@@ -32,8 +31,9 @@ CProfileCache CProfileCacheBuilder::build()
 			// TODO:: This is not fatal and should be handled somehow
 			LOG_FATAL("CProfileBuilder failed to build CProfileCache because heap memory is full!");
 		}
-		else if(result.error == Error::invalidResource)
+		else
 		{
+			ASSERT(result.error == Error::invalidResource, "There should only be three Error alternatives.. Expected invalidResource.");
 			LOG_FATAL("Invalid arguments passed to CProfileConstructor from CProfileBuilder");
 		}
 	}

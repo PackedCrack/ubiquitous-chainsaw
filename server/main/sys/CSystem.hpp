@@ -3,6 +3,7 @@
 #include "CChip.hpp"
 // std
 #include <array>
+#include <type_traits>
 // esp
 #include "esp_system.h"
 #include "esp_mac.h"
@@ -77,10 +78,14 @@ public:
 	template<size_t size>
 	[[nodiscard]] MacError set_interface_mac_address(MacType type, const std::array<uint8_t, size>& address)
 	{
-		if constexpr(std::is_same_v<MacType::IEEE802154, decltype(type)>)
-			static_assert(address.size() == 8u);
+		if (MacType::IEEE802154 == type)
+		{
+			ASSERT(address.size() == 8u, "IEEE802154 Address requires 8 bytes!");
+		}
 		else
-			static_assert(address.size() == 6u);
+		{
+			ASSERT(address.size() == 6u, "Non IEEE802154 address' should be 6 bytes!");
+		}
 
 		// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv422esp_iface_mac_addr_setPK7uint8_t14esp_mac_type_t
 		esp_err_t result = esp_iface_mac_addr_set(address.data(), static_cast<esp_mac_type_t>(type));

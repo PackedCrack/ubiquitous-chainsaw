@@ -5,6 +5,8 @@
 
 #include "esp_system.h"
 
+#include <expected>
+#include "../../client/src/security/CWolfCrypt.hpp"
 
 
 void print_chip_info()
@@ -32,6 +34,7 @@ extern "C" void app_main(void)
 	sys::CSystem system{};
 	try 
 	{
+		std::expected<int, int> test{};
 		print_chip_info();
 
 		using namespace storage;
@@ -78,6 +81,8 @@ extern "C" void app_main(void)
     	}
 		std::printf("\n");
 
+		auto a = security::CWolfCrypt::instance();
+
 
 		// https://mynewt.apache.org/latest/
 		//{
@@ -98,6 +103,8 @@ extern "C" void app_main(void)
 	catch (const exception::fatal_error& error) 
 	{
 		LOG_ERROR_FMT("Caught exception: {}", error.what());
+
+		// TODO:: we should do more than restart here
 		system.restart();
     }
 }

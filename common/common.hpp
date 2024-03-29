@@ -13,8 +13,14 @@ namespace common
 template<typename buffer_t>
 concept Buffer = requires(buffer_t buffer)
 {
-    { buffer.size() } -> std::convertible_to<typename decltype(buffer)::size_type>;
-    { buffer.data() } -> std::convertible_to<typename decltype(buffer)::pointer>;
+    { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
+    { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::pointer>;
+};
+template<typename buffer_t>
+concept ConstBuffer = requires(buffer_t buffer)
+{
+    { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
+    { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::const_pointer>;
 };
 template<typename string_t>
 concept BasicString = requires(string_t str)
@@ -40,7 +46,7 @@ template<typename enum_t>
 requires std::is_enum_v<enum_t>
 [[nodiscard]] constexpr bool enum_to_bool(enum_t&& properties)
 {
-	#if __cplusplus > 202002L
+	#ifdef __cpp_lib_to_underlying
 	return static_cast<bool>(std::to_underlying(std::forward<enum_t>(properties)));
 	#else
 	return static_cast<bool>(static_cast<int64_t>(std::forward<enum_t>(properties)));

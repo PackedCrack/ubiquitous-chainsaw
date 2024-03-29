@@ -67,18 +67,9 @@ CGattService CGattService::copy(const CGattService& source) const
 	
 	
 	cpy.m_Characteristics = source.m_Characteristics;
-	//cpy.m_Service = cpy.make_nimble_svc_arr();
 
 	return cpy;
 }
-//std::vector<ble_gatt_svc_def> CGattService::make_nimble_svc_arr() const
-//{
-//	std::vector<ble_gatt_svc_def> arr{};
-//	arr.emplace_back(static_cast<ble_gatt_svc_def>(*this));
-//	arr.emplace_back(end_of_array<ble_gatt_svc_def>());
-//
-//	return arr;
-//}
 CGattService::operator ble_gatt_svc_def() const
 {
 	return ble_gatt_svc_def{
@@ -88,8 +79,4 @@ CGattService::operator ble_gatt_svc_def() const
 		.characteristics = m_Characteristics.data()
 	};
 }
-//const std::vector<ble_gatt_svc_def>& CGattService::as_nimble_arr() const
-//{
-//	return m_Service;
-//}	
 }	// namespace ble
