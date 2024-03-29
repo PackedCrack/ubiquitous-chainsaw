@@ -79,25 +79,11 @@ extern "C" void app_main(void)
 		std::printf("\n");
 
 
-		//std::printf("Total entries: %d\n", stats.total_entries); // This represents the total number of key-value pairs that can be stored in the NVS partition
-		//std::printf("Used entries: %d\n", stats.used_entries); //: This indicates the number of key-value pairs that are currently stored in the NVS partition.
-		//std::printf("Free entries: %d\n", stats.free_entries); // This represents the number of available slots for storing additional key-value pairs in the NVS partition. 
-		//std::printf("Namespace entries: %d\n", stats.namespace_count);
-
-
-		// esp_err_t nvs_erase_key(nvs_handle_t handle, const char *key)
-		// esp_err_t nvs_flash_erase(void) // Erase the default NVS partition.
-		// esp_err_t nvs_erase_all(nvs_handle_t handle) // Erase all key-value pairs in a namespace.
-		// esp_err_t nvs_get_stats(const char *part_name, nvs_stats_t *nvs_stats)
-		// esp_err_t nvs_get_used_entry_count(nvs_handle_t handle, size_t *used_entries)
-		// esp_err_t nvs_get_stats(const char *part_name, nvs_stats_t *nvs_stats)
-
-
 		// https://mynewt.apache.org/latest/
 		//{
         //ble::CNimble tmp {};
 		//}
-		//ble::CNimble nimble {};
+		ble::CNimble nimble {};
 		//ble::CNimble nimble {std::move(tmp)};
 		//ble::CNimble nimble = std::move(tmp);
 

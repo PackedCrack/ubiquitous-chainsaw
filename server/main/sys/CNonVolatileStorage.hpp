@@ -72,7 +72,6 @@ public:
 public:
 	std::optional<nvs_handle_t> m_Handle;
 }; // class CReader
-
 class CReadWriter
 {
 friend class CNonVolatileStorage;
@@ -92,7 +91,6 @@ private:
 private:
 	std::optional<nvs_handle_t> m_Handle;
 }; // class CReadWriter
-
 	CNonVolatileStorage();
 	~CNonVolatileStorage();
 	CNonVolatileStorage(const CNonVolatileStorage& other) = delete;	// Deleted for now..
@@ -103,17 +101,8 @@ private:
 	[[nodiscard]] static CNonVolatileStorage& instance();
 	[[nodiscard]] std::optional<CReader> make_reader(std::string_view nameSpace);
 	[[nodiscard]] std::optional<CReadWriter> make_read_writer(std::string_view nameSpace);
-
-	void erase_key();
-	void erase_partition();
-	void erase_all_key_value_pairs();
-	//[[nodiscard]] std::optional<StatsError> stats(std::string_view partition);
-	void partition_size();
+	//void erase_all_key_value_pairs();
 private:
-	//void open(std::string_view key, CNonVolatileStorage::OpenMode openMode);
-	//void close();
-	//void commit();
-
 	// esp_err_t nvs_erase_key(nvs_handle_t handle, const char *key)
 	// esp_err_t nvs_flash_erase(void) // Erase the default NVS partition.
 	// esp_err_t nvs_erase_all(nvs_handle_t handle) // Erase all key-value pairs in a namespace.

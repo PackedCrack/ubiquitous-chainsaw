@@ -331,65 +331,8 @@ std::optional<CNonVolatileStorage::CReadWriter> CNonVolatileStorage::make_read_w
 	}
 }
 
-//std::optional<StatsError> CNonVolatileStorage::stats(std::string_view partition)
+//void CNonVolatileStorage::erase_all_key_value_pairs()
 //{
-//	nvs_stats_t stats {};
-//	esp_err_t result = nvs_get_stats(NULL, &stats);
-//		if (result != static_cast<esp_err_t>(NvsErrorCode::success)) 
-//		{
-//			
-//			if (result == static_cast<esp_err_t>(NvsErrorCode::partitionNotFound))
-//			{
-//				return StatsError 
-//				{
-//					.stats = std::nullopt,
-//					.msg =  FMT("Partition with name "{}" was not found", partition.data());
-//				};
-//			}
-//			else if (result == static_cast<esp_err_t>(NvsErrorCode::partitionNotFound))
-//			{
-//				return StatsError 
-//				{
-//					.stats = std::nullopt,
-//					.msg =  ""
-//				};
-//			}
-//			else if (result == static_cast<esp_err_t>(NvsErrorCode::notInitilized))
-//			{
-//				return StatsError 
-//				{
-//					.stats = std::nullopt,
-//					.msg =  ""
-//				};
-//
-//			}
-//			else if (result == static_cast<esp_err_t>(NvsErrorCode::invalidArg))
-//			{
-//				return StatsError 
-//				{
-//					.stats = std::nullopt,
-//					.msg =  ""
-//				};
-//
-//			}
-//			else if (result == static_cast<esp_err_t>(NvsErrorCode::invalidState))
-//			{
-//				return StatsError 
-//				{
-//					.stats = std::nullopt,
-//					.msg =  ""
-//				};
-//
-//			}
-//
-//	
-//		}
-//	return stats;
-//} 
-
-
-}	// namespace storage
-
-namespace storage
-{
-}
+//	// esp_err_t nvs_erase_all(nvs_handle_t handle)
+//}
+} // namespace storage
