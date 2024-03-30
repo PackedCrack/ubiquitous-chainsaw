@@ -81,7 +81,7 @@ extern "C" void app_main(void)
     	}
 		std::printf("\n");
 
-		auto a = security::CWolfCrypt::instance();
+		//auto a = security::CWolfCrypt::instance();
 
 
 		// https://mynewt.apache.org/latest/
