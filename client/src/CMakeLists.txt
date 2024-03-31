@@ -2,6 +2,7 @@ SET(MAIN_SRCS
     main.cpp
 )
 
+add_subdirectory("system")
 add_subdirectory("gfx")
 add_subdirectory("gui")
 add_subdirectory("common")

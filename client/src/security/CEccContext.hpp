@@ -5,6 +5,7 @@
 #pragma once
 #include "CRandom.hpp"
 // third-party
+// #define HAVE_ECC_ENCRYPT - required option for encrytion. But simple encrytion with public key does not seem to exist
 #include "wolfssl/options.h"
 #include "wolfcrypt/ecc.h"
 

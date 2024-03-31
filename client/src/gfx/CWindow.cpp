@@ -1,8 +1,6 @@
 #include "CWindow.hpp"
 #include "SDL_Defines.hpp"
 // third_party
-#include "SDL3/SDL.h"
-#include "SDL3/SDL_events.h"
 #include "imgui/imgui_impl_sdl3.h"
 
 
@@ -62,7 +60,7 @@ uint32_t CWindow::id() const
     return windowID;
 }
 
-SDL_Window* CWindow::handle() const
+SDL_Window* CWindow::handle()
 {
     ASSERT(m_pWindow, "Window handle is null!");
 

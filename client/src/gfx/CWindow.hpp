@@ -1,7 +1,8 @@
 #pragma once
 #include "defines.hpp"
 // third_party
-#include "SDL3/SDL_video.h"
+#include <windows.h>
+#include "SDL3/SDL.h"
 
 
 namespace gfx
@@ -18,8 +19,22 @@ public:
 
 	void process_events(bool* pExit) const;
 	[[nodiscard]] uint32_t id() const;
-	[[nodiscard]] SDL_Window* handle() const;
+	[[nodiscard]] SDL_Window* handle();
 private:
 	SDL_Window* m_pWindow = nullptr;
 };
+
+#ifdef WIN32
+[[nodiscard]] inline std::expected<HWND, std::string_view> get_system_window_handle(CWindow& window)
+{
+    uint32_t propID = SDL_GetWindowProperties(window.handle());
+    HWND hWindow = static_cast<HWND>(SDL_GetProperty(propID, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    if(hWindow != nullptr)
+        return std::expected<HWND, std::string_view>{ hWindow };
+    else
+        return std::unexpected(std::format("Failed to retrieve handle to system window from SDL. Error: \"{}\"", SDL_GetError()));
+}
+#else
+    #error Only windows implemented
+#endif
 }	// namespace gfx

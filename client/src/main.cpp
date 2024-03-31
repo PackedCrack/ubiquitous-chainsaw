@@ -1,8 +1,6 @@
-#include "defines.hpp"
-#include "gfx/CRenderer.hpp"
-#include "gui/CGui.hpp"
-
-
+// Taskflow must be included BEFORE windows.h
+#include "taskflow/taskflow.hpp"
+// Wolfcrypt must be included BEFORE windows.h
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
@@ -10,7 +8,9 @@
 #include "security/ecc_key.hpp"
 
 
-#include "taskflow/taskflow.hpp"
+#include "defines.hpp"
+#include "gfx/CRenderer.hpp"
+#include "gui/CGui.hpp"
 
 
 #include <winrt/Windows.Foundation.h>
@@ -18,11 +18,7 @@
 
 #include "bluetoothLE/CBLEScanner.hpp"
 #include "bluetoothLE/windows/CDevice.hpp"
-#include "bluetoothLE/windows/SystemAPI.h"
-
-
-
-
+#include "system/windows/System.h"
 
 
 
@@ -116,36 +112,39 @@ int main(int argc, char** argv)
     
     
     auto result = security::CWolfCrypt::instance();
-    ble::win::SystemAPI system{};
-    
-    ble::CBLEScanner scanner = ble::make_scanner();
-    scanner.begin_scan();
+    sys::System system{};
     
     
-    tf::Executor executor{};
     
-    executor.silent_async([&scanner]()
-    {
-        while(true)
-        {
-            std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-            if(!infos.empty())
-            {
-                
-                for(const auto& info : infos)
-                {
-                    LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-                                 ble::hex_addr_to_str(info.address.value()),
-                                 ble::address_type_to_str(info.addressType));
-                    
-                    query_device(info.address.value());
-                }
-                break;
-            }
-            
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    });
+    
+    //ble::CBLEScanner scanner = ble::make_scanner();
+    //scanner.begin_scan();
+    //
+    //
+    //tf::Executor executor{};
+    //
+    //executor.silent_async([&scanner]()
+    //{
+    //    while(true)
+    //    {
+    //        std::vector<ble::DeviceInfo> infos = scanner.found_devices();
+    //        if(!infos.empty())
+    //        {
+    //
+    //            for(const auto& info : infos)
+    //            {
+    //                LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
+    //                             ble::hex_addr_to_str(info.address.value()),
+    //                             ble::address_type_to_str(info.addressType));
+    //
+    //                query_device(info.address.value());
+    //            }
+    //            break;
+    //        }
+    //
+    //        std::this_thread::sleep_for(std::chrono::seconds(1));
+    //    }
+    //});
     
     
     
@@ -159,7 +158,21 @@ int main(int argc, char** argv)
         gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
         gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
         gui::CGui gui{};
+
         
+        std::expected<HWND, std::string_view> hWindow = gfx::get_system_window_handle(window)
+        .and_then([&system](const std::expected<HWND, std::string_view>& result) ->  std::expected<HWND, std::string_view>
+        {
+            bool success = system.make_system_tray(*result);
+            if(success)
+                return std::expected<HWND, std::string_view>{ result };
+            else
+                return std::unexpected("Failed to create system tray!");
+        });
+        if(!hWindow)
+        {
+            LOG_ERROR_FMT("{}", hWindow.error());
+        }
         
         
         bool exit = false;
@@ -172,8 +185,22 @@ int main(int argc, char** argv)
 
             renderer.end_frame();
         }
+        
+        hWindow = gfx::get_system_window_handle(window)
+        .and_then([&system](const std::expected<HWND, std::string_view>& result) ->  std::expected<HWND, std::string_view>
+                  {
+                      bool success = system.free_system_tray(*result);
+                      if(success)
+                          return std::expected<HWND, std::string_view>{ result };
+                      else
+                          return std::unexpected("Failed to free system tray!");
+                  });
+        if(!hWindow)
+        {
+            LOG_ERROR_FMT("{}", hWindow.error());
+        }
 
-
+        
         return EXIT_SUCCESS;
     }
     catch(const exception::fatal_error& err)

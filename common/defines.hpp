@@ -56,6 +56,8 @@ _Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
 	}
 
 #ifdef WIN32
+    //#include <errhandlingapi.h>
+    
     #define WIN_CHECK(expr) \
     if(expr){}              \
     else{ LOG_ERROR_FMT("Win32 failed with error code: \"{}\"", GetLastError()); }

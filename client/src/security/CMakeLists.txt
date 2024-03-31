@@ -3,7 +3,7 @@ SET(SECURITY_SRCS
         CRandom.cpp
         ecc_key.cpp
         CHash.hpp
-        CEccContext.cpp
+        #CEccContext.cpp
         sha.hpp)
 
 target_sources(${MAIN_PROJECT} PRIVATE ${SECURITY_SRCS})

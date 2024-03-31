@@ -43,7 +43,7 @@ private:
     winrt::Windows::Foundation::IAsyncAction init(uint64_t address);
 public:
     std::optional<winrt::Windows::Devices::Bluetooth::BluetoothLEDevice> m_Device;
-    State m_State;
+    State m_State = State::uninitialized;
     std::unordered_map<ble::UUID, CService, ble::UUID::Hasher> m_Services;
 };
 }   // namespace ble::win
