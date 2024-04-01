@@ -1,5 +1,5 @@
 # This script checks whether or not any of the child headers of Windows.h has been included on its own.
-# These child headers should never be included as it can break dependencies - instead Windows.h should be included.
+# These child headers shouldn't be included as it can break dependencies - instead Windows.h should be included.
 # See: https://en.wikipedia.org/wiki/Windows.h
 
 import os
@@ -54,17 +54,16 @@ def find_child_header_includes(directory) -> int:
                 try:
                     with open(filePath, 'r') as file:
                         for line in file:
-                            if line.startswith(("\n", "//")): # Files might have comments or new lines before any includes
-                                continue	
-                            elif line.startswith('#'):
+                            line = line.lower()
+                            if line.startswith('#include'):
                                 headerName = extract_header_name(line)
                                 if headerName in CHILD_HEADERS:
                                     print("\033[31;1m" + "Found \"{}\" in file \"{}\"".format(headerName, filePath) + "\033[0m")
                                     return EXIT_FAILURE
+                            elif line.startswith(("\n", "//", "#")): # Files might have comments, defines or new lines before any includes
+                                continue	
                             else:
                                 break
-                                
-                    return EXIT_SUCCESS
                 except Exception as e:
                     print("An error occurred while trying to read the file {}: {}".format(filePath, e))
                     return EXIT_FAILURE

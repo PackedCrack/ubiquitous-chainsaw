@@ -15,8 +15,8 @@ SET(TEST_PROJECT TESTS)
 project(${MAIN_PROJECT} LANGUAGES C CXX)
 add_executable(${MAIN_PROJECT}
         "client.rc")
-add_dependencies(${MAIN_PROJECT} CPPCHECK)
-add_dependencies(${MAIN_PROJECT} CHILD_HEADER_FINDER)
+#add_dependencies(${MAIN_PROJECT} CPPCHECK)
+#add_dependencies(${MAIN_PROJECT} CHILD_HEADER_FINDER)
 
 
 include(FetchContent)

@@ -1,12 +1,12 @@
 // Taskflow must be included BEFORE windows.h
 #include "taskflow/taskflow.hpp"
+
 // Wolfcrypt must be included BEFORE windows.h
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
-
 
 #include "defines.hpp"
 #include "gfx/CRenderer.hpp"
@@ -19,7 +19,7 @@
 #include "bluetoothLE/CBLEScanner.hpp"
 #include "bluetoothLE/windows/CDevice.hpp"
 #include "system/windows/System.h"
-
+#include "system/windows/CTrayIcon.hpp"
 
 
 
@@ -61,7 +61,7 @@ void query_device(uint64_t bluetoothAddress)
     auto iter = services.find(whoami);
     if(iter != std::end(services))
     {
-        ble::win::CService& service = iter->second;
+        const ble::win::CService& service = iter->second;
         ble::UUID characteristicUuid = ble::BaseUUID;
         characteristicUuid.custom = ble::ID_CHARS_SERVER_AUTH;
         
@@ -160,20 +160,20 @@ int main(int argc, char** argv)
         gui::CGui gui{};
 
         
-        std::expected<HWND, std::string_view> hWindow = gfx::get_system_window_handle(window)
-        .and_then([&system](const std::expected<HWND, std::string_view>& result) ->  std::expected<HWND, std::string_view>
-        {
-            bool success = system.make_system_tray(*result);
-            if(success)
-                return std::expected<HWND, std::string_view>{ result };
-            else
-                return std::unexpected("Failed to create system tray!");
-        });
-        if(!hWindow)
-        {
-            LOG_ERROR_FMT("{}", hWindow.error());
-        }
         
+        [[maybe_unused]] std::expected<sys::CTrayIcon, sys::CTrayIcon::Error> expected = sys::CTrayIcon::make(window);
+        
+        tf::Executor executor{};
+        executor.silent_async([&expected]()
+        {
+            for(int i = 0; i < 1; ++i)
+            {
+                std::this_thread::sleep_for(std::chrono::seconds(4));
+                using IconType = sys::CTrayIcon::BalloonIcon;
+                if(expected)
+                    expected.value().send_balloon_info("Balloon Title", "This is the message", IconType::warning);
+            }
+        });
         
         bool exit = false;
         while (!exit)
@@ -186,20 +186,6 @@ int main(int argc, char** argv)
             renderer.end_frame();
         }
         
-        hWindow = gfx::get_system_window_handle(window)
-        .and_then([&system](const std::expected<HWND, std::string_view>& result) ->  std::expected<HWND, std::string_view>
-                  {
-                      bool success = system.free_system_tray(*result);
-                      if(success)
-                          return std::expected<HWND, std::string_view>{ result };
-                      else
-                          return std::unexpected("Failed to free system tray!");
-                  });
-        if(!hWindow)
-        {
-            LOG_ERROR_FMT("{}", hWindow.error());
-        }
-
         
         return EXIT_SUCCESS;
     }
