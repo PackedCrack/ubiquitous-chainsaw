@@ -85,6 +85,7 @@ constexpr const char* gatt_communication_status_to_str(winrt::Windows::Devices::
     
     UNHANDLED_CASE_PROTECTION_ON
     switch(status)
+    // cppcheck-suppress missingReturn
     {
         case GattCommunicationStatus::Unreachable:
             return "Unreachable";
@@ -96,5 +97,7 @@ constexpr const char* gatt_communication_status_to_str(winrt::Windows::Devices::
             return "Success";
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    
+    std::unreachable();
 }
 }   // namespace ble::win

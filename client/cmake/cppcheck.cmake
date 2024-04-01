@@ -1,6 +1,6 @@
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	add_custom_target(CPPCHECK
-		COMMAND cppcheck.sh
+		COMMAND "C:/Program Files/Git/bin/bash.exe" "${PROJECT_SOURCE_DIR}/cppcheck.sh"
 		WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 		COMMENT "Running CppCheck.."
 		VERBATIM

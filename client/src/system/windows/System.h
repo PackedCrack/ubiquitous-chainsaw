@@ -3,7 +3,7 @@
 //
 #pragma once
 // win32
-#include <windows.h>
+#include "../../win32.hpp"
 
 
 namespace sys
@@ -17,8 +17,5 @@ public:
     System(System&& other) = delete;
     System& operator=(const System& other) = delete;
     System& operator=(System&& other) = delete;
-public:
-    [[nodiscard]] bool make_system_tray(HWND hWindow) const;
-    [[nodiscard]] bool free_system_tray(HWND hWindow) const;
 };
 }   // namespace sys

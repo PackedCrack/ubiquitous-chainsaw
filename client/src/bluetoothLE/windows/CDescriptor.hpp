@@ -43,6 +43,7 @@ private:
     
     UNHANDLED_CASE_PROTECTION_ON
     switch (level)
+    // cppcheck-suppress missingReturn
     {
         case GattProtectionLevel::AuthenticationRequired:
             return ProtectionLevel::authenticationRequired;
@@ -64,6 +65,7 @@ private:
     
     UNHANDLED_CASE_PROTECTION_ON
     switch (level)
+    // cppcheck-suppress missingReturn
     {
         case ProtectionLevel::authenticationRequired:
             return "Authentication Required";

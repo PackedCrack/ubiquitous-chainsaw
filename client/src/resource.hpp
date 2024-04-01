@@ -3,4 +3,5 @@
 //
 
 #pragma once
+#define APPNAME "Ubiquitous Chainsaw"
 #define IDI_APPICON 101
