@@ -1,1 +1,2 @@
-IDI_ICON1 ICON DISCARDABLE "icon.ico"
+#include "src/resource.hpp"
+IDI_APPICON ICON "icon.ico"

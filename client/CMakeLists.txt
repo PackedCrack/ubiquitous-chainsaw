@@ -15,7 +15,8 @@ SET(TEST_PROJECT TESTS)
 project(${MAIN_PROJECT} LANGUAGES C CXX)
 add_executable(${MAIN_PROJECT}
         "client.rc")
-#add_dependencies(${MAIN_PROJECT} CPPCHECK)
+add_dependencies(${MAIN_PROJECT} CPPCHECK)
+add_dependencies(${MAIN_PROJECT} CHILD_HEADER_FINDER)
 
 
 include(FetchContent)
@@ -23,6 +24,7 @@ include(cmake/dependencies.cmake)
 include(../cmake/CompilerWarnings.cmake)
 include(../cmake/pch.cmake)
 include(cmake/cppcheck.cmake)
+include(cmake/child_header_finder.cmake)
 
 fetch_third_party()
 
