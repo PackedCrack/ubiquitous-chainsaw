@@ -4,6 +4,7 @@
 #include "CTrayIcon.hpp"
 #include "defines.hpp"
 #include "../../resource.hpp"
+#include "../../gfx/CWindow.hpp"
 
 
 namespace
@@ -18,7 +19,7 @@ namespace
     static size_t inUse = 0u;
     ASSERT(inUse < guids.size(), "TODO: an actual guid generating function..");
     
-    return std::make_unique<GUID>(guids[inUse++]);
+    return std::make_unique<GUID>(guids[inUse]);
 }
 [[nodiscard]] std::optional<HMODULE> get_module_handle()
 {
@@ -52,9 +53,9 @@ namespace
         return NOTIFYICONDATAA{
                 .cbSize = sizeof(NOTIFYICONDATA),
                 .hWnd = hWindow,
-                .uID = 0,
-                .uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_GUID,    // NIF_INFO | NIF_REALTIME
-                .uCallbackMessage = 0,
+                .uID = APPICON_UID,
+                .uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP, //| NIF_GUID,    // NIF_INFO | NIF_REALTIME
+                .uCallbackMessage = SYSTRAY_ICON_EVNT,
                 .hIcon = static_cast<HICON>(iconHandle),
                 .szTip = APPNAME,
                 .dwState = NIS_SHAREDICON,
@@ -62,6 +63,7 @@ namespace
                 .szInfo = { 0 },
                 //.uTimeout = 0, // This member is deprecated as of Windows Vista. Notification display times are now based on system accessibility settings
                 //.uVersion = 0 Union with uTimeout (deprecated as of Windows Vista).
+                //.uVersion = NOTIFYICON_VERSION_4,
                 .uVersion = NOTIFYICON_VERSION_4,
                 .szInfoTitle = { 0 },
                 .dwInfoFlags = NIIF_WARNING | NIIF_USER, // https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ne-shellapi-shstockiconid
@@ -105,23 +107,29 @@ namespace
         data->dwInfoFlags = std::to_underlying(iconType);
     }
     
-    return data;
-    
     /*
      * The handle of a customized notification icon provided by the application that should be used independently
      * of the notification area icon. If this member is non-NULL and the NIIF_USER (CTrayIcon::BalloonIcon::user) flag is set in the dwInfoFlags member,
      * this icon is used as the notification icon. If this member is NULL, the legacy behavior is carried out.
     */
     // data.hBalloonIcon = static_cast<HICON>(balloonIcon);
+    
+    
+    return data;
 }
-
 }   // namespace
 namespace sys
 {
+SDL_bool SDLCALL CTrayIcon::message_hook_caller(void* pMessageCallback, MSG* pMsg)
+{
+    MessageCallback& cb = *static_cast<MessageCallback*>(pMessageCallback);
+    return cb(nullptr, pMsg);
+}
 std::expected<CTrayIcon, CTrayIcon::Error> CTrayIcon::make(gfx::CWindow& window)
 {
     try
     {
+        // This move is not cheap ... TODO:: fix api
         return std::expected<CTrayIcon, CTrayIcon::Error>{ CTrayIcon{ window } };
     }
     catch(const std::runtime_error& err)
@@ -132,19 +140,22 @@ std::expected<CTrayIcon, CTrayIcon::Error> CTrayIcon::make(gfx::CWindow& window)
 }
 CTrayIcon::CTrayIcon(gfx::CWindow& window)
     : m_pGuid{ make_guid() }
-    , m_Window{ window }
+    , m_pWindow{ &window }
+    , m_MessageCallback{ make_message_callback() }
 {
-    std::expected<HWND, std::string_view> expected = gfx::get_system_window_handle(m_Window);
-    if(expected)
+    HWND hWindow = win32_window_handle();
+    if(hWindow != nullptr)
     {
         // make_tray_icon
-        std::optional<NOTIFYICONDATAA> data = make_notify_con_data(expected.value(), *m_pGuid);
+        std::optional<NOTIFYICONDATAA> data = make_notify_con_data(hWindow, *m_pGuid);
         if(data)
         {
             NOTIFYICONDATAA& d = *data;
             BOOL result = Shell_NotifyIcon(NIM_ADD, &d);
-            if(result == false)
+            if(result == FALSE)
                 throw std::runtime_error{ "Failed to create system try icon. Requested version is not supported" };
+            
+            SDL_SetWindowsMessageHook(message_hook_caller, &m_MessageCallback);
         }
         else
         {
@@ -153,7 +164,7 @@ CTrayIcon::CTrayIcon(gfx::CWindow& window)
     }
     else
     {
-        throw std::runtime_error{ std::format("Failed to obtain Win32 window handle from SDL: {}", expected.error()) };
+        throw std::runtime_error{ "CTrayIcon constructor cannot continue without a handle to win32 window" };
     }
 }
 CTrayIcon::~CTrayIcon()
@@ -161,8 +172,11 @@ CTrayIcon::~CTrayIcon()
     if(m_pGuid)
     {
         HWND wHandle = win32_window_handle();
+        
         if(wHandle != nullptr)
         {
+            SDL_SetWindowsMessageHook(nullptr, nullptr);
+            
             std::optional<NOTIFYICONDATAA> data = make_notify_con_data(wHandle, *m_pGuid);
             if(data)
             {
@@ -179,6 +193,23 @@ CTrayIcon::~CTrayIcon()
             }
         }
     }
+}
+CTrayIcon::CTrayIcon(CTrayIcon&& other) noexcept
+    : m_pGuid{ std::move(other.m_pGuid) }
+    , m_pWindow{ std::exchange(other.m_pWindow, nullptr) }
+    , m_MessageCallback{ std::move(other.m_MessageCallback) }
+{
+    SDL_SetWindowsMessageHook(message_hook_caller, &m_MessageCallback);
+}
+CTrayIcon& CTrayIcon::operator=(CTrayIcon&& other) noexcept
+{
+    m_pGuid = std::move(other.m_pGuid);
+    m_pWindow = std::exchange(other.m_pWindow, nullptr);
+    m_MessageCallback = std::move(other.m_MessageCallback);
+    
+    SDL_SetWindowsMessageHook(message_hook_caller, &m_MessageCallback);
+    
+    return *this;
 }
 void CTrayIcon::send_balloon_info(std::string_view title, std::string_view msg, BalloonIcon iconType)
 {
@@ -206,7 +237,7 @@ void CTrayIcon::send_balloon_info(std::string_view title, std::string_view msg, 
 }
 HWND CTrayIcon::win32_window_handle() const
 {
-    std::expected<HWND, std::string_view> expected = gfx::get_system_window_handle(m_Window);
+    std::expected<HWND, std::string_view> expected = gfx::get_system_window_handle(*m_pWindow);
     if(!expected)
     {
         LOG_ERROR_FMT("Failed to obtain Win32 window handle from SDL: {}", expected.error());
@@ -214,5 +245,24 @@ HWND CTrayIcon::win32_window_handle() const
     }
     
     return *expected;
+}
+sys::CTrayIcon::MessageCallback CTrayIcon::make_message_callback()
+{
+    // TODO: SDL does not forward this Notify Icon Tray message correctly.
+    return [pWindow = m_pWindow]([[maybe_unused]] void* pMessageCallback, MSG* pMsg)
+    {
+        switch (pMsg->message)
+        {
+            case SYSTRAY_ICON_EVNT:
+            {
+                LOG_INFO("Tray Event");
+                break;
+            }
+            //default:
+            //    LOG_INFO_FMT("Unknown message: \"{}\"", pMsg->message);
+        }
+        
+        return SDL_TRUE;
+    };
 }
 }   // namespace sys

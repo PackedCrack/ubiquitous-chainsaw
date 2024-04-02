@@ -105,7 +105,6 @@ void test_ecc_sign()
     }
 }
 
-
 int main(int argc, char** argv)
 {
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
@@ -158,20 +157,16 @@ int main(int argc, char** argv)
         gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
         gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
         gui::CGui gui{};
-
         
         
-        [[maybe_unused]] std::expected<sys::CTrayIcon, sys::CTrayIcon::Error> expected = sys::CTrayIcon::make(window);
+        
         
         tf::Executor executor{};
-        executor.silent_async([&expected]()
+        executor.silent_async([&window]() mutable
         {
             for(int i = 0; i < 1; ++i)
             {
-                std::this_thread::sleep_for(std::chrono::seconds(4));
-                using IconType = sys::CTrayIcon::BalloonIcon;
-                if(expected)
-                    expected.value().send_balloon_info("Balloon Title", "This is the message", IconType::warning);
+                window.popup_warning("Potential Masquerading", "Identified two BLE Servers with the same signed MAC address");
             }
         });
         

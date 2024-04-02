@@ -1,5 +1,6 @@
 #pragma once
 #include "defines.hpp"
+#include "../system/CTrayIcon.hpp"
 // third_party
 #include "../win32.hpp"
 #include "SDL3/SDL.h"
@@ -16,12 +17,16 @@ public:
 	CWindow(CWindow&& other) noexcept;
 	CWindow& operator=(const CWindow& other) = delete;
 	CWindow& operator=(CWindow&& other) noexcept;
-
+public:
+    void show();
+    void hide();
 	void process_events(bool* pExit) const;
+    void popup_warning(std::string_view title, std::string_view msg);
 	[[nodiscard]] uint32_t id() const;
 	[[nodiscard]] SDL_Window* handle();
 private:
 	SDL_Window* m_pWindow = nullptr;
+    std::optional<sys::CTrayIcon> m_SystemTray;
 };
 
 #ifdef WIN32
