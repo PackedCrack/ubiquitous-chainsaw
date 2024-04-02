@@ -14,7 +14,7 @@ namespace ble
 template<typename device_t, typename... make_args_t>
 concept Device = requires()
 {
-    awaitable<device_t, make_args_t...>;
+    awaitable_make<device_t, make_args_t...>;
 };
 
 template<typename device_t, typename... ctor_args_t>

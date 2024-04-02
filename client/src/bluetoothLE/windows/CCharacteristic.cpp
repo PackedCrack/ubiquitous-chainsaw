@@ -115,25 +115,6 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
         , m_Properties{}
         , m_State{ State::uninitialized }
 {}
-//winrt::Windows::Foundation::IAsyncAction CCharacteristic::init()
-//{
-//    std::printf("\nCharacteristic UUID: %ws", to_hstring(m_Characteristic.Uuid()).data());
-//
-//    // Storing this mostly for debug purposes for now..
-//    m_Properties = to_props_from_winrt(m_Characteristic.CharacteristicProperties());
-//    std::vector<std::string> properties = properties_to_str(m_Properties);
-//    std::printf("\nCharacteristic properties: ");
-//    for(auto&& property : properties)
-//    {
-//        std::printf("%s, ", property.c_str());
-//    }
-//    // TODO:: might not need this
-//    m_ProtLevel = prot_level_from_winrt(m_Characteristic.ProtectionLevel());
-//    // TODO:: Debug print
-//    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(m_ProtLevel)).c_str());
-//
-//    co_await query_descriptors();
-//}
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
@@ -141,10 +122,6 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
 bool CCharacteristic::ready() const
 {
     return m_State == State::ready;
-}
-CCharacteristic::State CCharacteristic::state() const
-{
-    return m_State;
 }
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
@@ -180,7 +157,7 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     
     m_State = State::ready;
 }
-void CCharacteristic::read_value() const
+CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
 {
     using namespace winrt;
     using namespace Windows::Foundation;
@@ -188,35 +165,29 @@ void CCharacteristic::read_value() const
     using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace Windows::Storage::Streams;
     
-    IAsyncOperation<GattReadResult> operation = m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
-    while(operation.Status() != AsyncStatus::Completed)
-    {
-        if(operation.Status() == AsyncStatus::Error)
-            std::cout << "AsyncStatus Error!" << std::endl;
-        if(operation.Status() == AsyncStatus::Started)
-            std::cout << "AsyncStatus Started!" << std::endl;
-        if(operation.Status() == AsyncStatus::Canceled)
-            std::cout << "AsyncStatus Canceled!" << std::endl;
-    }
+    GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
     
-    GattReadResult result = operation.GetResults();
-    if (result.Status() == GattCommunicationStatus::Success)
+    GattCommunicationStatus status = result.Status();
+    if (status == GattCommunicationStatus::Success)
     {
         IBuffer buffer = result.Value();
-        std::span<uint8_t> dataView(buffer.data(), buffer.Length());
-        std::vector<uint8_t> data{ std::begin(dataView), std::end(dataView) };
-        std::string str{ std::begin(dataView), std::end(dataView) };
         
-        LOG_INFO_FMT("Data as str: \"{}\"", str);
+        read_t data{};
+        data->resize(buffer.Length());
+        size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
+        std::memcpy(data->data(), buffer.data(), smallestSize);
+        
         std::cout << "\nPrinting raw bytes: ";
-        for(uint8_t byte : data)
+        for(uint8_t byte : *data)
             std::cout << byte;
         std::cout << std::endl;
         
+        co_return data;
     }
     else
     {
-        std::cout << "Read failed: " << static_cast<int32_t>(result.Status()) << std::endl;
+        LOG_ERROR_FMT("Read failed with: \"{}\"", gatt_communication_status_to_str(status));
+        co_return std::unexpected(status);
     }
 }
 }   // namespace ble

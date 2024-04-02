@@ -16,7 +16,7 @@ namespace ble
 template<typename service_t, typename... make_args_t>
 concept Service = requires()
 {
-    awaitable<service_t, make_args_t...>;
+    awaitable_make<service_t, make_args_t...>;
 };
 
 template<typename service_t, typename... ctor_args_t>

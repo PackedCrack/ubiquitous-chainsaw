@@ -13,7 +13,7 @@ template<typename int_t>
 concept unsigned_integral = std::integral<int_t> && std::is_unsigned_v<int_t>;
 
 template<typename async_t, typename... make_args_t>
-concept awaitable = requires
+concept awaitable_make = requires
 {
     typename async_t::awaitable_t;
     requires std::is_invocable_r_v<typename async_t::awaitable_t, decltype(&async_t::make), make_args_t...>;

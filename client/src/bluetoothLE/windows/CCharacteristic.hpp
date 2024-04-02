@@ -19,6 +19,8 @@ class CCharacteristic
 {
 public:
     using awaitable_t = concurrency::task<CCharacteristic>;
+    using read_t = std::expected<std::vector<uint8_t>, winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
+    using awaitable_read_t = concurrency::task<read_t>;
     enum class State : uint32_t
     {
         uninitialized,
@@ -56,31 +58,28 @@ public:
         return Properties{ std::to_underlying(prop) };
     }
 private:
-private:
     using GattCharacteristic = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic;
 public:
     CCharacteristic() = default;
     [[nodiscard]] static awaitable_t make(const GattCharacteristic& characteristic);
     ~CCharacteristic() = default;
     CCharacteristic(const CCharacteristic& other) = default;
-    CCharacteristic(CCharacteristic&& other) = default;
+    CCharacteristic(CCharacteristic&& other) noexcept = default;    // unsure why clang tidy warns that the default move constructor must be marked noexcept
     CCharacteristic& operator=(const CCharacteristic& other) = default;
     CCharacteristic& operator=(CCharacteristic&& other) = default;
 public:
     [[nodiscard]] std::string uuid_as_str() const;
     [[nodiscard]] bool ready() const;
-    [[nodiscard]] State state() const;
-    winrt::Windows::Foundation::IAsyncAction query_descriptors();
-    void read_value() const;
+    [[nodiscard]] awaitable_read_t read_value() const;
 private:
+    winrt::Windows::Foundation::IAsyncAction query_descriptors();
     explicit CCharacteristic(GattCharacteristic characteristic);
-    //winrt::Windows::Foundation::IAsyncAction init();
 public:
     std::shared_ptr<GattCharacteristic> m_pCharacteristic;
     std::unordered_map<ble::UUID, CDescriptor, ble::UUID::Hasher> m_Descriptors;
     ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
     Properties m_Properties = Properties::none;
-    State m_State = State::uninitialized;
+    State m_State = State::uninitialized;   // keep this for debugging purposes
 };
 
 constexpr const char* gatt_communication_status_to_str(
