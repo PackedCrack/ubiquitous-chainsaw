@@ -27,8 +27,8 @@ public:
 private:
     using GattDescriptor = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
 public:
-    CDescriptor() = default;
     [[nodiscard]] static awaitable_t make(const GattDescriptor& descriptor);
+    CDescriptor() = default;
     ~CDescriptor() = default;
     CDescriptor(const CDescriptor& other) = default;
     CDescriptor(CDescriptor&& other) = default;

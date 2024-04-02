@@ -73,14 +73,22 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
         {
             LOG_INFO("Reading characteristic value!");
             const ble::CCharacteristic* pCharacteristic = result.value();
-            pCharacteristic->read_value();
+            auto data = co_await pCharacteristic->read_value();
+            if(data)
+            {
+                std::cout << "\nPrinting raw bytes: ";
+                for(uint8_t byte : *data)
+                    std::cout << byte;
+                std::cout << std::endl;
+            }
+            else
+            {
+                LOG_ERROR("characteristic.read_value() returned no data.");
+            }
         }
         else
         {
-            if(result.error() == ble::CService::Error::characteristicNotFound)
-            {
-                LOG_ERROR("Failed to find characteristic");
-            }
+            LOG_ERROR("Failed to find characteristic");
         }
     }
     else

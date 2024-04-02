@@ -17,11 +17,11 @@ template<typename characteristic_t, typename... make_args_t>
 concept Characteristic = requires(const characteristic_t constCharacteristic, characteristic_t characteristic)
 {
     awaitable_make<characteristic_t, make_args_t...>;
+    string_uuid<characteristic_t>;
     // Required type alias
     typename characteristic_t::read_t;
     typename characteristic_t::awaitable_read_t;
     // Required public const function
-    { constCharacteristic.uuid_as_str() } -> std::convertible_to<std::string>;
     { constCharacteristic.ready() } -> std::convertible_to<bool>;
     { constCharacteristic.read_value() } -> std::convertible_to<typename characteristic_t::awaitable_read_t>;
 };

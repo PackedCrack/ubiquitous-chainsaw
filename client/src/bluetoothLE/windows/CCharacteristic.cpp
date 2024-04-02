@@ -177,11 +177,6 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
         size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
         std::memcpy(data->data(), buffer.data(), smallestSize);
         
-        std::cout << "\nPrinting raw bytes: ";
-        for(uint8_t byte : *data)
-            std::cout << byte;
-        std::cout << std::endl;
-        
         co_return data;
     }
     else

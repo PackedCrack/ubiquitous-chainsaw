@@ -14,11 +14,12 @@
 namespace ble
 {
 template<typename service_t, typename... make_args_t>
-concept Service = requires()
+concept Service = requires(const service_t constService, const UUID uuid)
 {
     awaitable_make<service_t, make_args_t...>;
+    string_uuid<service_t>;
+    { constService.characteristic(uuid) } -> std::convertible_to<std::optional<const CCharacteristic*>>;
 };
-
 template<typename service_t, typename... ctor_args_t>
 requires Service<service_t, ctor_args_t ...>
 [[nodiscard]] typename service_t::awaitable_t make_service(ctor_args_t&&... args)

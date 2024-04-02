@@ -18,33 +18,18 @@ CService::awaitable_t CService::make(const winrt::Windows::Devices::Bluetooth::G
 CService::CService(GattDeviceService service)
     : m_pService{ std::make_shared<GattDeviceService>(std::move(service)) }
     , m_Characteristics{}
-    , m_State{ State::uninitialized }
 {}
-//winrt::Windows::Foundation::IAsyncAction CService::init()
-//{
-//    std::printf("\nService UUID: %ws", to_hstring(m_Service.Uuid()).data());
-//
-//    co_await query_characteristics();
-//}
-std::expected<const CCharacteristic*, CService::Error> CService::characteristic(const UUID& uuid) const
+std::optional<const CCharacteristic*> CService::characteristic(const UUID& uuid) const
 {
     auto iter = m_Characteristics.find(uuid);
     if(iter == std::end(m_Characteristics))
-        return std::unexpected{ Error::characteristicNotFound };
+        return std::nullopt;
     
-    return &(iter->second);
+    return std::make_optional<const CCharacteristic*>(&(iter->second));
 }
 std::string CService::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_pService->Uuid()));
-}
-bool CService::ready() const
-{
-    return m_State == State::ready;
-}
-CService::State CService::state() const
-{
-    return m_State;
 }
 winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
 {
@@ -52,7 +37,6 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     using namespace winrt::Windows::Foundation::Collections;
     
     
-    m_State = State::queryingCharacteristics;
     m_Characteristics.clear();
     
     GattCharacteristicsResult result = co_await m_pService->GetCharacteristicsAsync();
@@ -77,7 +61,5 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
                       gatt_communication_status_to_str(result.Status()),
                       uuid_as_str());
     }
-    
-    m_State = State::ready;
 }
 }   // namespace ble

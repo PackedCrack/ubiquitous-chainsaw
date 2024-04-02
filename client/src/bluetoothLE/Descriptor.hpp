@@ -17,7 +17,7 @@ template<typename descriptor_t, typename... make_args_t>
 concept Descriptor = requires(const descriptor_t constDescriptor)
 {
     awaitable_make<descriptor_t, make_args_t...>;
-    { constDescriptor.uuid_as_str() } -> std::convertible_to<std::string>;
+    string_uuid<descriptor_t>;
     { constDescriptor.protection_level() } -> std::convertible_to<ProtectionLevel>;
 };
 
