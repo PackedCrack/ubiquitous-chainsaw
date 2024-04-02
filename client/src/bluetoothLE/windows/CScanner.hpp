@@ -28,6 +28,7 @@ public:
 public:
     void begin_scan() const;
     void end_scan() const;
+    [[nodiscard]] const std::atomic<size_t>& num_devices() const;
     [[nodiscard]] std::vector<ble::DeviceInfo> found_devices();
 private:
     void move_impl(CScanner& other);
@@ -40,6 +41,8 @@ private:
 private:
     BluetoothLEAdvertisementWatcher m_Watcher;
     winrt::event_revoker<IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
+    // TODO: This should probably just be a BST
     CThreadSafeHashMap<std::string, DeviceInfo> m_FoundDevices;
+    std::atomic<size_t> m_Count;
 };
 }   // namespace ble

@@ -23,7 +23,7 @@ concept Hash = requires(hash_t hash)
 template<typename algorithm_t, typename buffer_t>
 concept HashAlgorithm = requires(algorithm_t alg, std::string_view msg, buffer_t&& hashBuf)
 {
-    requires common::Buffer<buffer_t>;
+    requires common::buffer<buffer_t>;
     { std::is_same_v<typename algorithm_t::buffer_t, buffer_t> };
     
     { algorithm_t::HASH_NAME } -> std::convertible_to<const std::string_view>;

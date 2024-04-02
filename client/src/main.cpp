@@ -50,9 +50,7 @@ void process_cmd_line_args(int argc, char** argv)
 
 winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
 {
-    LOG_INFO("Before creation");
     ble::CDevice device = co_await ble::make_device<ble::CDevice>(bluetoothAddress);
-    LOG_INFO("After creation");
     
     ble::UUID whoami = ble::BaseUUID;
     whoami.custom = ble::ID_SERVICE_WHOAMI;
@@ -121,7 +119,7 @@ int main(int argc, char** argv)
     auto result = security::CWolfCrypt::instance();
     sys::System system{};
     
-    ble::CBLEScanner scanner = ble::make_scanner();
+    ble::CScanner scanner = ble::make_scanner<ble::CScanner>();
     scanner.begin_scan();
     
     std::this_thread::sleep_for(std::chrono::seconds(1));
