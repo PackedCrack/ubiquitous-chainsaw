@@ -6,8 +6,11 @@ endif()
 
 
 SET(BLUETOOTH_SRCS
-        common.hpp
+        ble_common.hpp
         Device.hpp
+        Service.hpp
+        Characteristic.hpp
+        Descriptor.hpp
         CBLEScanner.hpp
 )
 

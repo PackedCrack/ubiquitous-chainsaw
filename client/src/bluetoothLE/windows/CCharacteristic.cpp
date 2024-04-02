@@ -9,7 +9,6 @@
 #include <winrt/Windows.Storage.Streams.h>
 #include <iostream>
 
-
 #define TO_BOOL(expr) common::enum_to_bool(expr)
 
 namespace
@@ -87,42 +86,57 @@ namespace
 }   // namespace
 namespace ble
 {
-CCharacteristic CCharacteristic::make_characteristic(
-        const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic& characteristic)
+CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& characteristic)
 {
     CCharacteristic charac{ characteristic };
-    charac.init();
     
-    return charac;
-}
-CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
-        : m_Characteristic{ std::move(characteristic) }
-        , m_ProtLevel{}
-        , m_Properties{}
-        , m_State{ State::uninitialized }
-{}
-winrt::Windows::Foundation::IAsyncAction CCharacteristic::init()
-{
-    std::printf("\nCharacteristic UUID: %ws", to_hstring(m_Characteristic.Uuid()).data());
+    std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
     
     // Storing this mostly for debug purposes for now..
-    m_Properties = to_props_from_winrt(m_Characteristic.CharacteristicProperties());
-    std::vector<std::string> properties = properties_to_str(m_Properties);
+    charac.m_Properties = to_props_from_winrt(charac.m_pCharacteristic->CharacteristicProperties());
+    std::vector<std::string> properties = properties_to_str(charac.m_Properties);
     std::printf("\nCharacteristic properties: ");
     for(auto&& property : properties)
     {
         std::printf("%s, ", property.c_str());
     }
     // TODO:: might not need this
-    m_ProtLevel = prot_level_from_winrt(m_Characteristic.ProtectionLevel());
+    charac.m_ProtLevel = prot_level_from_winrt(charac.m_pCharacteristic->ProtectionLevel());
     // TODO:: Debug print
-    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(m_ProtLevel)).c_str());
+    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.m_ProtLevel)).c_str());
     
-    co_await query_descriptors();
+    co_await charac.query_descriptors();
+    
+    co_return charac;
 }
+CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
+        : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
+        , m_ProtLevel{}
+        , m_Properties{}
+        , m_State{ State::uninitialized }
+{}
+//winrt::Windows::Foundation::IAsyncAction CCharacteristic::init()
+//{
+//    std::printf("\nCharacteristic UUID: %ws", to_hstring(m_Characteristic.Uuid()).data());
+//
+//    // Storing this mostly for debug purposes for now..
+//    m_Properties = to_props_from_winrt(m_Characteristic.CharacteristicProperties());
+//    std::vector<std::string> properties = properties_to_str(m_Properties);
+//    std::printf("\nCharacteristic properties: ");
+//    for(auto&& property : properties)
+//    {
+//        std::printf("%s, ", property.c_str());
+//    }
+//    // TODO:: might not need this
+//    m_ProtLevel = prot_level_from_winrt(m_Characteristic.ProtectionLevel());
+//    // TODO:: Debug print
+//    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(m_ProtLevel)).c_str());
+//
+//    co_await query_descriptors();
+//}
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
-    return winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid()));
+    return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
 }
 bool CCharacteristic::ready() const
 {
@@ -141,7 +155,7 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     m_State = State::queryingDescriptors;
     m_Descriptors.clear();
     
-    GattDescriptorsResult result = co_await m_Characteristic.GetDescriptorsAsync();
+    GattDescriptorsResult result = co_await m_pCharacteristic->GetDescriptorsAsync();
     if(result.Status() == GattCommunicationStatus::Success)
     {
         IVectorView<GattDescriptor> descriptors = result.Descriptors();
@@ -149,7 +163,8 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
         
         for(auto&& descriptor : descriptors)
         {
-            auto[iter, emplaced] = m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), CDescriptor{ descriptor });
+            auto[iter, emplaced] =
+                    m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), co_await make_descriptor<CDescriptor>(descriptor));
             if(!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
@@ -173,7 +188,7 @@ void CCharacteristic::read_value() const
     using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace Windows::Storage::Streams;
     
-    IAsyncOperation<GattReadResult> operation = m_Characteristic.ReadValueAsync(BluetoothCacheMode::Uncached);
+    IAsyncOperation<GattReadResult> operation = m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
     while(operation.Status() != AsyncStatus::Completed)
     {
         if(operation.Status() == AsyncStatus::Error)

@@ -3,7 +3,7 @@
 //
 #include "CDevice.hpp"
 #include "../ble_common.hpp"
-#include "../Service.hpp"
+
 
 namespace
 {

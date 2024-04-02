@@ -8,6 +8,7 @@
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
+#include <pplawait.h>
 
 
 namespace ble
@@ -19,21 +20,28 @@ enum class ProtectionLevel : int32_t
     encryptionRequired = 2,
     encryptionAndAuthenticationRequired = 3,
 };
-
 class CDescriptor
 {
 public:
-    explicit CDescriptor(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor descriptor);
+    using awaitable_t = concurrency::task<CDescriptor>;
+private:
+    using GattDescriptor = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
+public:
+    CDescriptor() = default;
+    [[nodiscard]] static awaitable_t make(const GattDescriptor& descriptor);
     ~CDescriptor() = default;
     CDescriptor(const CDescriptor& other) = default;
     CDescriptor(CDescriptor&& other) = default;
     CDescriptor& operator=(const CDescriptor& other) = default;
     CDescriptor& operator=(CDescriptor&& other) = default;
+private:
+    explicit CDescriptor(GattDescriptor descriptor);
 public:
     [[nodiscard]] std::string uuid_as_str() const;
+    [[nodiscard]] ProtectionLevel protection_level() const;
 private:
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor m_Descriptor;
-    ProtectionLevel m_ProtLevel;
+    std::shared_ptr<GattDescriptor> m_pDescriptor;
+    ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
 };
 
 [[nodiscard]] constexpr ProtectionLevel prot_level_from_winrt(

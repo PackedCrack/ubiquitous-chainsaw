@@ -10,13 +10,13 @@ namespace ble
 CService::awaitable_t CService::make(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
 {
     CService sv{ service };
-    std::printf("\nService UUID: %ws", to_hstring(sv.m_Service.value().Uuid()).data());
+    std::printf("\nService UUID: %ws", to_hstring(sv.m_pService->Uuid()).data());
     co_await sv.query_characteristics();
     
     co_return sv;
 }
 CService::CService(GattDeviceService service)
-    : m_Service{ std::make_optional<GattDeviceService>(std::move(service)) }
+    : m_pService{ std::make_shared<GattDeviceService>(std::move(service)) }
     , m_Characteristics{}
     , m_State{ State::uninitialized }
 {}
@@ -36,7 +36,7 @@ std::expected<const CCharacteristic*, CService::Error> CService::characteristic(
 }
 std::string CService::uuid_as_str() const
 {
-    return winrt::to_string(winrt::to_hstring(m_Service.value().Uuid()));
+    return winrt::to_string(winrt::to_hstring(m_pService->Uuid()));
 }
 bool CService::ready() const
 {
@@ -55,7 +55,7 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     m_State = State::queryingCharacteristics;
     m_Characteristics.clear();
     
-    GattCharacteristicsResult result = co_await m_Service.value().GetCharacteristicsAsync();
+    GattCharacteristicsResult result = co_await m_pService->GetCharacteristicsAsync();
     if(result.Status() == GattCommunicationStatus::Success)
     {
         IVectorView<GattCharacteristic> characteristics = result.Characteristics();
@@ -64,7 +64,7 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
         for(auto&& characteristic : characteristics)
         {
             auto[iter, emplaced] = m_Characteristics.try_emplace(
-                    make_uuid(characteristic.Uuid()), CCharacteristic::make_characteristic(characteristic));
+                    make_uuid(characteristic.Uuid()), co_await make_characteristic<CCharacteristic>(characteristic));
             if(!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace characteristic with UUID: \"{}\"", uuid_as_str());

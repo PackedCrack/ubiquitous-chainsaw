@@ -14,7 +14,7 @@
 namespace ble
 {
 template<typename service_t, typename... make_args_t>
-concept Service = requires(uint64_t address)
+concept Service = requires()
 {
     awaitable<service_t, make_args_t...>;
 };

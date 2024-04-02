@@ -5,7 +5,7 @@
 #pragma
 #include "defines.hpp"
 #include "../../common/ble_services.hpp"
-#include "CDescriptor.hpp"
+#include "../Descriptor.hpp"
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -18,6 +18,7 @@ namespace ble
 class CCharacteristic
 {
 public:
+    using awaitable_t = concurrency::task<CCharacteristic>;
     enum class State : uint32_t
     {
         uninitialized,
@@ -54,9 +55,12 @@ public:
     {
         return Properties{ std::to_underlying(prop) };
     }
+private:
+private:
+    using GattCharacteristic = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic;
 public:
-    [[nodiscard]] static CCharacteristic make_characteristic(
-            const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic& characteristic);
+    CCharacteristic() = default;
+    [[nodiscard]] static awaitable_t make(const GattCharacteristic& characteristic);
     ~CCharacteristic() = default;
     CCharacteristic(const CCharacteristic& other) = default;
     CCharacteristic(CCharacteristic&& other) = default;
@@ -69,17 +73,18 @@ public:
     winrt::Windows::Foundation::IAsyncAction query_descriptors();
     void read_value() const;
 private:
-    explicit CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic);
-    winrt::Windows::Foundation::IAsyncAction init();
+    explicit CCharacteristic(GattCharacteristic characteristic);
+    //winrt::Windows::Foundation::IAsyncAction init();
 public:
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic m_Characteristic;
+    std::shared_ptr<GattCharacteristic> m_pCharacteristic;
     std::unordered_map<ble::UUID, CDescriptor, ble::UUID::Hasher> m_Descriptors;
-    ProtectionLevel m_ProtLevel;
-    Properties m_Properties;
-    State m_State;
+    ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
+    Properties m_Properties = Properties::none;
+    State m_State = State::uninitialized;
 };
 
-constexpr const char* gatt_communication_status_to_str(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
+constexpr const char* gatt_communication_status_to_str(
+        winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
     
