@@ -86,7 +86,6 @@ private:
 template<typename... ctor_args_t>
 [[nodiscard]] CBLEScanner make_scanner(ctor_args_t&&... args)
 {
-    using namespace win;
     // TODO: ifdef for linux?
     return CBLEScanner{ CScanner{ std::forward<ctor_args_t>(args)... }};
 }

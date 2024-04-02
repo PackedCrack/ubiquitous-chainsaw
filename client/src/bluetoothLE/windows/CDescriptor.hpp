@@ -10,7 +10,7 @@
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 
 
-namespace ble::win
+namespace ble
 {
 enum class ProtectionLevel : int32_t
 {
@@ -80,4 +80,4 @@ private:
     
     std::unreachable();
 }
-}   // namespace ble::win
+}   // namespace ble

@@ -13,7 +13,7 @@
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 
 
-namespace ble::win
+namespace ble
 {
 class CCharacteristic
 {
@@ -100,4 +100,4 @@ constexpr const char* gatt_communication_status_to_str(winrt::Windows::Devices::
     
     std::unreachable();
 }
-}   // namespace ble::win
+}   // namespace ble

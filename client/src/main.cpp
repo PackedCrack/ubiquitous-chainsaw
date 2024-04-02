@@ -17,7 +17,8 @@
 
 
 #include "bluetoothLE/CBLEScanner.hpp"
-#include "bluetoothLE/windows/CDevice.hpp"
+//#include "bluetoothLE/windows/CDevice.hpp"
+#include "bluetoothLE/Device.hpp"
 #include "system/windows/System.h"
 #include "system/windows/CTrayIcon.hpp"
 
@@ -47,9 +48,11 @@ void process_cmd_line_args(int argc, char** argv)
 
 
 
-void query_device(uint64_t bluetoothAddress)
+winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
 {
-    ble::win::CDevice device = ble::win::CDevice::make_device(bluetoothAddress);
+    LOG_INFO("Before creation");
+    ble::CDevice device = co_await ble::make_device<ble::CDevice>(bluetoothAddress);
+    LOG_INFO("After creation");
     while(!device.ready())
     {
     }
@@ -61,7 +64,7 @@ void query_device(uint64_t bluetoothAddress)
     auto iter = services.find(whoami);
     if(iter != std::end(services))
     {
-        const ble::win::CService& service = iter->second;
+        const ble::CService& service = iter->second;
         ble::UUID characteristicUuid = ble::BaseUUID;
         characteristicUuid.custom = ble::ID_CHARS_SERVER_AUTH;
         
@@ -69,12 +72,12 @@ void query_device(uint64_t bluetoothAddress)
         if(result)
         {
             LOG_INFO("Reading characteristic value!");
-            const ble::win::CCharacteristic* pCharacteristic = result.value();
+            const ble::CCharacteristic* pCharacteristic = result.value();
             pCharacteristic->read_value();
         }
         else
         {
-            if(result.error() == ble::win::CService::Error::characteristicNotFound)
+            if(result.error() == ble::CService::Error::characteristicNotFound)
             {
                 LOG_ERROR("Failed to find characteristic");
             }
@@ -114,14 +117,30 @@ int main(int argc, char** argv)
     sys::System system{};
     
     
+    LOG_INFO("Before scanner");
     
+    ble::CBLEScanner scanner = ble::make_scanner();
+    scanner.begin_scan();
     
-    //ble::CBLEScanner scanner = ble::make_scanner();
-    //scanner.begin_scan();
-    //
-    //
-    //tf::Executor executor{};
-    //
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    
+    std::vector<ble::DeviceInfo> infos = scanner.found_devices();
+    if(!infos.empty())
+    {
+        LOG_INFO("Looping over infos");
+        for(const auto& info : infos)
+        {
+            LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
+                         ble::hex_addr_to_str(info.address.value()),
+                         ble::address_type_to_str(info.addressType));
+            
+            query_device(info.address.value());
+        }
+        LOG_INFO("Done looping over infos");
+    }
+    
+    tf::Executor executor{};
+    
     //executor.silent_async([&scanner]()
     //{
     //    while(true)
@@ -129,7 +148,6 @@ int main(int argc, char** argv)
     //        std::vector<ble::DeviceInfo> infos = scanner.found_devices();
     //        if(!infos.empty())
     //        {
-    //
     //            for(const auto& info : infos)
     //            {
     //                LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",

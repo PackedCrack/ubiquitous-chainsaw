@@ -5,7 +5,7 @@
 #include "CDescriptor.hpp"
 
 
-namespace ble::win
+namespace ble
 {
 CDescriptor::CDescriptor(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor descriptor)
     : m_Descriptor{ std::move(descriptor) }
@@ -19,4 +19,4 @@ std::string CDescriptor::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_Descriptor.Uuid()));
 }
-}   // namespace ble::win
+}   // namespace ble

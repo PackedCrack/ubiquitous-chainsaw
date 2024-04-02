@@ -12,11 +12,13 @@
 #include <winrt/Windows.Foundation.Collections.h>
 
 
-namespace ble::win
+
+namespace ble
 {
 class CDevice
 {
 public:
+    using awaitable_t = concurrency::task<CDevice>;
     enum class State : uint32_t
     {
         uninitialized,
@@ -25,7 +27,8 @@ public:
         ready
     };
 public:
-    [[nodiscard]] static CDevice make_device(uint64_t address);
+    CDevice() = default;
+    [[nodiscard]] static awaitable_t make(uint64_t address);
     ~CDevice() = default;
     CDevice(const CDevice& other) = default;
     CDevice(CDevice&& other) = default;
@@ -38,12 +41,19 @@ public:
     [[nodiscard]] State state() const;
     [[nodiscard]] const std::unordered_map<ble::UUID, CService, ble::UUID::Hasher>& services() const;
     winrt::Windows::Foundation::IAsyncAction query_services();
-private:
-    CDevice() = default;
-    winrt::Windows::Foundation::IAsyncAction init(uint64_t address);
 public:
     std::optional<winrt::Windows::Devices::Bluetooth::BluetoothLEDevice> m_Device;
     State m_State = State::uninitialized;
     std::unordered_map<ble::UUID, CService, ble::UUID::Hasher> m_Services;
 };
-}   // namespace ble::win
+
+
+template<typename T>
+class DeviceWrapper
+{
+public:
+private:
+    T m_Device;
+};
+
+}   // namespace ble

@@ -4,14 +4,15 @@
 
 #pragma once
 #include "CCharacteristic.hpp"
+#include <pplawait.h>
 
 
-
-namespace ble::win
+namespace ble
 {
 class CService
 {
 public:
+    using awaitable_t = concurrency::task<CService>;
     enum class State : uint32_t
     {
         uninitialized,
@@ -22,8 +23,11 @@ public:
     {
         characteristicNotFound
     };
+private:
+    using GattDeviceService = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 public:
-    [[nodiscard]] static CService make_service(
+    CService() = default;
+    [[nodiscard]] static awaitable_t make(
             const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service);
     ~CService() = default;
     CService(const CService& other) = default;
@@ -37,11 +41,11 @@ public:
     [[nodiscard]] State state() const;
     winrt::Windows::Foundation::IAsyncAction query_characteristics();
 private:
-    explicit CService(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService service);
-    winrt::Windows::Foundation::IAsyncAction init();
+    explicit CService(GattDeviceService service);
+    //winrt::Windows::Foundation::IAsyncAction init();
 public:
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService m_Service;
+    std::optional<GattDeviceService> m_Service;
     std::unordered_map<ble::UUID, CCharacteristic, ble::UUID::Hasher> m_Characteristics;
     State m_State;
 };
-}   // namespace ble::win
+}   // namespace ble

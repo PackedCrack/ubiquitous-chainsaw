@@ -2,8 +2,8 @@
 // Created by qwerty on 2024-02-23.
 //
 #include "CDevice.hpp"
-#include "../common.hpp"
-
+#include "../ble_common.hpp"
+#include "../Service.hpp"
 
 namespace
 {
@@ -18,37 +18,33 @@ namespace
     return uuid;
 }
 }   // namespace
-namespace ble::win
+namespace ble
 {
-CDevice CDevice::make_device(uint64_t address)
-{
-    CDevice dev{};
-    dev.m_State = State::uninitialized;
-    
-    dev.init(address);
-    
-    return dev;
-}
-winrt::Windows::Foundation::IAsyncAction CDevice::init(uint64_t address)
+CDevice::awaitable_t CDevice::make(uint64_t address)
 {
     using namespace winrt::Windows::Devices::Bluetooth;
     
-    /*
+    CDevice dev{};
+    {
+        /*
      * The returned BluetoothLEDevice is set to null if
      * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
      * */
-    //BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
-    BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
-    if(dev != nullptr)
-    {
-        m_Device.emplace(std::move(dev));
-        co_await query_services();
+        //BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
+        BluetoothLEDevice device = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
+        if(device != nullptr)
+        {
+            dev.m_Device.emplace(std::move(device));
+            co_await dev.query_services();
+        }
+        else
+        {
+            dev.m_State = State::invalidAddress;
+            LOG_ERROR_FMT("Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
+        }
     }
-    else
-    {
-        m_State = State::invalidAddress;
-        LOG_ERROR_FMT("Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
-    }
+    
+    co_return dev;
 }
 uint64_t CDevice::address() const
 {
@@ -89,7 +85,7 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
         
         for(auto&& service : services)
         {
-            auto[iter, emplaced] = m_Services.try_emplace(make_uuid(service.Uuid()), CService::make_service(service));
+            auto[iter, emplaced] = m_Services.try_emplace(make_uuid(service.Uuid()), co_await make_service<CService>(service));
             if(!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(service.Uuid())));
@@ -105,4 +101,4 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
     
     m_State = State::ready;
 }
-}   // namespace ble::win
+}   // namespace ble

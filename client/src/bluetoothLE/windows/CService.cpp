@@ -2,30 +2,30 @@
 // Created by qwerty on 2024-03-01.
 //
 #include "CService.hpp"
-#include "../common.hpp"
+#include "../ble_common.hpp"
 
 
-namespace ble::win
+namespace ble
 {
-
-CService CService::make_service(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
+CService::awaitable_t CService::make(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
 {
     CService sv{ service };
-    sv.init();
+    std::printf("\nService UUID: %ws", to_hstring(sv.m_Service.value().Uuid()).data());
+    co_await sv.query_characteristics();
     
-    return sv;
+    co_return sv;
 }
-CService::CService(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService service)
-    : m_Service{ std::move(service) }
+CService::CService(GattDeviceService service)
+    : m_Service{ std::make_optional<GattDeviceService>(std::move(service)) }
     , m_Characteristics{}
     , m_State{ State::uninitialized }
 {}
-winrt::Windows::Foundation::IAsyncAction CService::init()
-{
-    std::printf("\nService UUID: %ws", to_hstring(m_Service.Uuid()).data());
-    
-    co_await query_characteristics();
-}
+//winrt::Windows::Foundation::IAsyncAction CService::init()
+//{
+//    std::printf("\nService UUID: %ws", to_hstring(m_Service.Uuid()).data());
+//
+//    co_await query_characteristics();
+//}
 std::expected<const CCharacteristic*, CService::Error> CService::characteristic(const UUID& uuid) const
 {
     auto iter = m_Characteristics.find(uuid);
@@ -36,7 +36,7 @@ std::expected<const CCharacteristic*, CService::Error> CService::characteristic(
 }
 std::string CService::uuid_as_str() const
 {
-    return winrt::to_string(winrt::to_hstring(m_Service.Uuid()));
+    return winrt::to_string(winrt::to_hstring(m_Service.value().Uuid()));
 }
 bool CService::ready() const
 {
@@ -55,7 +55,7 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     m_State = State::queryingCharacteristics;
     m_Characteristics.clear();
     
-    GattCharacteristicsResult result = co_await m_Service.GetCharacteristicsAsync();
+    GattCharacteristicsResult result = co_await m_Service.value().GetCharacteristicsAsync();
     if(result.Status() == GattCommunicationStatus::Success)
     {
         IVectorView<GattCharacteristic> characteristics = result.Characteristics();
@@ -80,4 +80,4 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     
     m_State = State::ready;
 }
-}   // namespace ble::win
+}   // namespace ble

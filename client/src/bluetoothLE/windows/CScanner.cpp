@@ -20,13 +20,9 @@ namespace
     else
         return ble::AddressType::none;
 }
-
-
 }   // namespace
 
 namespace ble
-{
-namespace win
 {
 CScanner::CScanner()
     : m_Watcher{}
@@ -113,5 +109,4 @@ std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisem
             m_FoundDevices.insert(std::move(strAddress), std::move(devInfo));
     };
 }
-}   // namespace win
 }   // namespace ble

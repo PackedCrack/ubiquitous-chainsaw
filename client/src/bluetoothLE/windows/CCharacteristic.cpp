@@ -3,7 +3,7 @@
 //
 
 #include "CCharacteristic.hpp"
-#include "../common.hpp"
+#include "../ble_common.hpp"
 #include "../../common/common.hpp"
 
 #include <winrt/Windows.Storage.Streams.h>
@@ -14,15 +14,15 @@
 
 namespace
 {
-[[nodiscard]] ble::win::CCharacteristic::Properties operator|(
-        ble::win::CCharacteristic::Properties lhs,
+[[nodiscard]] ble::CCharacteristic::Properties operator|(
+        ble::CCharacteristic::Properties lhs,
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
 {
-    return ble::win::CCharacteristic::Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
+    return ble::CCharacteristic::Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
 }
-[[nodiscard]] std::vector<std::string> properties_to_str(ble::win::CCharacteristic::Properties properties)
+[[nodiscard]] std::vector<std::string> properties_to_str(ble::CCharacteristic::Properties properties)
 {
-    using Properties = ble::win::CCharacteristic::Properties;
+    using Properties = ble::CCharacteristic::Properties;
     
     std::vector<std::string>  props{};
     if(static_cast<bool>(properties & Properties::authenticatedSignedWrites))
@@ -51,11 +51,11 @@ namespace
     
     return props;
 }
-[[nodiscard]] ble::win::CCharacteristic::Properties to_props_from_winrt(
+[[nodiscard]] ble::CCharacteristic::Properties to_props_from_winrt(
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties properties)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    using Properties = ble::win::CCharacteristic::Properties;
+    using Properties = ble::CCharacteristic::Properties;
     
     Properties props{ 0 };
     if(TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
@@ -85,7 +85,7 @@ namespace
 }
 
 }   // namespace
-namespace ble::win
+namespace ble
 {
 CCharacteristic CCharacteristic::make_characteristic(
         const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic& characteristic)
@@ -204,4 +204,4 @@ void CCharacteristic::read_value() const
         std::cout << "Read failed: " << static_cast<int32_t>(result.Status()) << std::endl;
     }
 }
-}   // namespace ble::win
+}   // namespace ble

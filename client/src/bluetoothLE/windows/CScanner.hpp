@@ -2,15 +2,13 @@
 // Created by qwerty on 2024-01-26.
 //
 #pragma once
-#include "../common.hpp"
+#include "../ble_common.hpp"
 #include "../../common/CThreadSafeHashMap.hpp"
 // windows
 #include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
 
 
 namespace ble
-{
-namespace win
 {
 class CScanner
 {
@@ -38,5 +36,4 @@ private:
     winrt::event_revoker<winrt::Windows::Devices::Bluetooth::Advertisement::IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
     CThreadSafeHashMap<std::string, DeviceInfo> m_FoundDevices;
 };
-}   // namespace win
 }   // namespace ble
