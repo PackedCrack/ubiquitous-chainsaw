@@ -21,12 +21,6 @@ public:
     using awaitable_t = concurrency::task<CCharacteristic>;
     using read_t = std::expected<std::vector<uint8_t>, winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
     using awaitable_read_t = concurrency::task<read_t>;
-    enum class State : uint32_t
-    {
-        uninitialized,
-        queryingDescriptors,
-        ready
-    };
     enum class Properties : uint32_t
     {
         none = 0,
@@ -71,16 +65,14 @@ private:
     explicit CCharacteristic(GattCharacteristic characteristic);
 public:
     [[nodiscard]] std::string uuid_as_str() const;
-    [[nodiscard]] bool ready() const;
     [[nodiscard]] awaitable_read_t read_value() const;
 private:
     winrt::Windows::Foundation::IAsyncAction query_descriptors();
-public:
+private:
     std::shared_ptr<GattCharacteristic> m_pCharacteristic;
     std::unordered_map<ble::UUID, CDescriptor, ble::UUID::Hasher> m_Descriptors;
     ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
     Properties m_Properties = Properties::none;
-    State m_State = State::uninitialized;   // keep this for debugging purposes
 };
 
 constexpr const char* gatt_communication_status_to_str(

@@ -29,7 +29,7 @@ public:
     [[nodiscard]] std::string uuid_as_str() const;
 private:
     winrt::Windows::Foundation::IAsyncAction query_characteristics();
-public:
+private:
     std::shared_ptr<GattDeviceService> m_pService;
     std::unordered_map<ble::UUID, CCharacteristic, ble::UUID::Hasher> m_Characteristics;
 };

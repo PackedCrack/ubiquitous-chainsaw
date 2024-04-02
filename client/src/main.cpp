@@ -53,9 +53,6 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
     LOG_INFO("Before creation");
     ble::CDevice device = co_await ble::make_device<ble::CDevice>(bluetoothAddress);
     LOG_INFO("After creation");
-    while(!device.ready())
-    {
-    }
     
     ble::UUID whoami = ble::BaseUUID;
     whoami.custom = ble::ID_SERVICE_WHOAMI;

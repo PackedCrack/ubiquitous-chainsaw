@@ -113,15 +113,10 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
         : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
         , m_ProtLevel{}
         , m_Properties{}
-        , m_State{ State::uninitialized }
 {}
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
-}
-bool CCharacteristic::ready() const
-{
-    return m_State == State::ready;
 }
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
@@ -129,7 +124,6 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     using namespace winrt::Windows::Foundation::Collections;
     
     
-    m_State = State::queryingDescriptors;
     m_Descriptors.clear();
     
     GattDescriptorsResult result = co_await m_pCharacteristic->GetDescriptorsAsync();
@@ -154,8 +148,6 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
                       gatt_communication_status_to_str(result.Status()),
                       uuid_as_str());
     }
-    
-    m_State = State::ready;
 }
 CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
 {

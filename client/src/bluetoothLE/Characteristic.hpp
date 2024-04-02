@@ -22,7 +22,6 @@ concept Characteristic = requires(const characteristic_t constCharacteristic, ch
     typename characteristic_t::read_t;
     typename characteristic_t::awaitable_read_t;
     // Required public const function
-    { constCharacteristic.ready() } -> std::convertible_to<bool>;
     { constCharacteristic.read_value() } -> std::convertible_to<typename characteristic_t::awaitable_read_t>;
 };
 

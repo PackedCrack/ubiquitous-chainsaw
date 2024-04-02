@@ -18,41 +18,27 @@ class CDevice
 {
 public:
     using awaitable_t = concurrency::task<CDevice>;
-    enum class State : uint32_t
-    {
-        uninitialized,
-        invalidAddress,
-        queryingServices,
-        ready
-    };
+    using service_container_t = std::unordered_map<UUID, CService, UUID::Hasher>;
+private:
+    using BluetoothLEDevice = winrt::Windows::Devices::Bluetooth::BluetoothLEDevice;
+    using IAsyncAction = winrt::Windows::Foundation::IAsyncAction;
 public:
-    CDevice() = default;
     [[nodiscard]] static awaitable_t make(uint64_t address);
+    CDevice() = default;
     ~CDevice() = default;
     CDevice(const CDevice& other) = default;
-    CDevice(CDevice&& other) = default;
+    CDevice(CDevice&& other) noexcept = default;
     CDevice& operator=(const CDevice& other) = default;
     CDevice& operator=(CDevice&& other) = default;
 public:
     [[nodiscard]] uint64_t address() const;
     [[nodiscard]] std::string address_as_str() const;
-    [[nodiscard]] bool ready() const;
-    [[nodiscard]] State state() const;
-    [[nodiscard]] const std::unordered_map<ble::UUID, CService, ble::UUID::Hasher>& services() const;
-    winrt::Windows::Foundation::IAsyncAction query_services();
-public:
-    std::optional<winrt::Windows::Devices::Bluetooth::BluetoothLEDevice> m_Device;
-    State m_State = State::uninitialized;
-    std::unordered_map<ble::UUID, CService, ble::UUID::Hasher> m_Services;
-};
-
-
-template<typename T>
-class DeviceWrapper
-{
-public:
+    [[nodiscard]] const service_container_t& services() const;
+    [[nodiscard]] std::optional<const CService*> service(const UUID& uuid) const;
 private:
-    T m_Device;
+    IAsyncAction query_services();
+private:
+    std::shared_ptr<BluetoothLEDevice> m_pDevice;
+    service_container_t m_Services;
 };
-
 }   // namespace ble
