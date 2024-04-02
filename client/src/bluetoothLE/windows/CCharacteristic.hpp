@@ -19,8 +19,10 @@ class CCharacteristic
 {
 public:
     using awaitable_t = concurrency::task<CCharacteristic>;
-    using read_t = std::expected<std::vector<uint8_t>, winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
+    using read_t =
+            std::expected<std::vector<uint8_t>, winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
     using awaitable_read_t = concurrency::task<read_t>;
+    using awaitable_write_t = concurrency::task<winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
     enum class Properties : uint32_t
     {
         none = 0,
@@ -53,6 +55,7 @@ public:
     }
 private:
     using GattCharacteristic = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic;
+    using GattWriteOption = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattWriteOption;
 public:
     [[nodiscard]] static awaitable_t make(const GattCharacteristic& characteristic);
     CCharacteristic() = default;
@@ -66,7 +69,10 @@ private:
 public:
     [[nodiscard]] std::string uuid_as_str() const;
     [[nodiscard]] awaitable_read_t read_value() const;
+    [[nodiscard]] awaitable_write_t write_data(const std::vector<uint8_t>& data) const;
+    [[nodiscard]] awaitable_write_t write_data_with_response(const std::vector<uint8_t>& data) const;
 private:
+    [[nodiscard]] awaitable_write_t write_data(const std::vector<uint8_t>& data, GattWriteOption option) const;
     winrt::Windows::Foundation::IAsyncAction query_descriptors();
 private:
     std::shared_ptr<GattCharacteristic> m_pCharacteristic;

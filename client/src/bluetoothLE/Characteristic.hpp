@@ -14,7 +14,7 @@
 namespace ble
 {
 template<typename characteristic_t, typename... make_args_t>
-concept Characteristic = requires(const characteristic_t constCharacteristic, characteristic_t characteristic)
+concept Characteristic = requires(const characteristic_t constCharacteristic, const std::vector<uint8_t>& data)
 {
     awaitable_make<characteristic_t, make_args_t...>;
     string_uuid<characteristic_t>;
@@ -23,6 +23,8 @@ concept Characteristic = requires(const characteristic_t constCharacteristic, ch
     typename characteristic_t::awaitable_read_t;
     // Required public const function
     { constCharacteristic.read_value() } -> std::convertible_to<typename characteristic_t::awaitable_read_t>;
+    { constCharacteristic.write_data(data) } -> std::convertible_to<typename characteristic_t::awaitable_write_t>;
+    { constCharacteristic.write_data_with_response(data) } -> std::convertible_to<typename characteristic_t::awaitable_write_t>;
 };
 
 template<typename characteristic_t, typename... ctor_args_t>

@@ -121,9 +121,6 @@ int main(int argc, char** argv)
     auto result = security::CWolfCrypt::instance();
     sys::System system{};
     
-    
-    LOG_INFO("Before scanner");
-    
     ble::CBLEScanner scanner = ble::make_scanner();
     scanner.begin_scan();
     
@@ -132,7 +129,6 @@ int main(int argc, char** argv)
     std::vector<ble::DeviceInfo> infos = scanner.found_devices();
     if(!infos.empty())
     {
-        LOG_INFO("Looping over infos");
         for(const auto& info : infos)
         {
             LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
@@ -141,7 +137,6 @@ int main(int argc, char** argv)
             
             query_device(info.address.value());
         }
-        LOG_INFO("Done looping over infos");
     }
     
     tf::Executor executor{};

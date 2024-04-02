@@ -12,6 +12,12 @@ namespace ble
 {
 class CScanner
 {
+private:
+    using IBluetoothLEAdvertisementWatcher = winrt::Windows::Devices::Bluetooth::Advertisement::IBluetoothLEAdvertisementWatcher;
+    using BluetoothLEAdvertisementWatcher =
+            winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher;
+    using BluetoothLEAdvertisementReceivedEventArgs =
+            winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs;
 public:
     CScanner();
     ~CScanner();
@@ -29,11 +35,11 @@ private:
     void register_received_event_handler();
     void refresh_received_event_handler();
     [[nodiscard]] std::function<void(
-            const winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher&,
-            winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs)> received_event_handler();
+            const BluetoothLEAdvertisementWatcher&,
+            BluetoothLEAdvertisementReceivedEventArgs)> received_event_handler();
 private:
-    winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher m_Watcher;
-    winrt::event_revoker<winrt::Windows::Devices::Bluetooth::Advertisement::IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
+    BluetoothLEAdvertisementWatcher m_Watcher;
+    winrt::event_revoker<IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
     CThreadSafeHashMap<std::string, DeviceInfo> m_FoundDevices;
 };
 }   // namespace ble

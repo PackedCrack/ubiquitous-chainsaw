@@ -118,6 +118,66 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
 {
     return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
 }
+CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
+{
+    using namespace winrt;
+    using namespace Windows::Foundation;
+    using namespace Windows::Devices::Bluetooth;
+    using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
+    using namespace Windows::Storage::Streams;
+    
+    GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
+    
+    GattCommunicationStatus status = result.Status();
+    if (status == GattCommunicationStatus::Success)
+    {
+        IBuffer buffer = result.Value();
+        
+        read_t data{};
+        data->resize(buffer.Length());
+        size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
+        std::memcpy(data->data(), buffer.data(), smallestSize);
+        
+        co_return data;
+    }
+    else
+    {
+        LOG_ERROR_FMT("Read failed with: \"{}\"", gatt_communication_status_to_str(status));
+        co_return std::unexpected(status);
+    }
+}
+CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data) const
+{
+    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+    GattCommunicationStatus status = co_await write_data(data, GattWriteOption::WriteWithoutResponse);
+    co_return status;
+}
+CCharacteristic::awaitable_write_t CCharacteristic::write_data_with_response(const std::vector<uint8_t>& data) const
+{
+    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+    GattCommunicationStatus status = co_await write_data(data, GattWriteOption::WriteWithResponse);
+    co_return status;
+}
+CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data, GattWriteOption option) const
+{
+    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+    using Buffer = winrt::Windows::Storage::Streams::Buffer;
+    
+    
+    auto buffer = Buffer{ static_cast<uint32_t>(data.size()) };
+    if(buffer.Length() == data.size())
+    {
+        LOG_INFO("Size is correct!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    }
+    else
+    {
+        LOG_INFO("Size is wrong! BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
+    }
+    std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
+    
+    GattCommunicationStatus result = co_await m_pCharacteristic->WriteValueAsync(buffer, option);
+    co_return result;
+}
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
@@ -147,34 +207,6 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
                       gatt_communication_status_to_str(result.Status()),
                       uuid_as_str());
-    }
-}
-CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
-{
-    using namespace winrt;
-    using namespace Windows::Foundation;
-    using namespace Windows::Devices::Bluetooth;
-    using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
-    using namespace Windows::Storage::Streams;
-    
-    GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
-    
-    GattCommunicationStatus status = result.Status();
-    if (status == GattCommunicationStatus::Success)
-    {
-        IBuffer buffer = result.Value();
-        
-        read_t data{};
-        data->resize(buffer.Length());
-        size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
-        std::memcpy(data->data(), buffer.data(), smallestSize);
-        
-        co_return data;
-    }
-    else
-    {
-        LOG_ERROR_FMT("Read failed with: \"{}\"", gatt_communication_status_to_str(status));
-        co_return std::unexpected(status);
     }
 }
 }   // namespace ble
