@@ -16,7 +16,7 @@
 #include <winrt/Windows.Foundation.h>
 
 
-#include "bluetoothLE/CBLEScanner.hpp"
+#include "bluetoothLE/Scanner.hpp"
 //#include "bluetoothLE/windows/CDevice.hpp"
 #include "bluetoothLE/Device.hpp"
 #include "system/windows/System.h"
@@ -92,6 +92,45 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
     }
 }
 
+auto make_save_invokable(std::string filename)
+{
+    return [filename](std::vector<byte>&& key)
+    {
+        std::string filepath = "C:\\Users\\qwerty\\Desktop\\" + filename;
+        std::fstream file{ filepath, std::ios::out | std::ios::binary | std::ios::trunc };
+        LOG_INFO_FMT("Size: {}", key.size());
+        file.write(reinterpret_cast<const char*>(key.data()), key.size());
+        return true;
+    };
+}
+auto make_load_invokable(std::string filename)
+{
+    return [filename]() -> std::expected<std::vector<byte>, std::string>
+    {
+        std::string filepath = "C:\\Users\\qwerty\\Desktop\\" + filename;
+        std::fstream file{ filepath, std::ios::in | std::ios::binary | std::ios::ate };
+        if(file.is_open())
+        {
+            try
+            {
+                std::expected<std::vector<byte>, std::string> expected{};
+                std::streamsize size = file.tellg();
+                expected->resize(size);
+                file.seekg(0);
+                file.read(reinterpret_cast<char*>(expected->data()), size);
+                return expected;
+            }
+            catch(const std::ios::failure& err)
+            {
+                return std::unexpected(std::format("Exception thrown when trying to read file: \"{}\"", err.what()));
+            }
+        }
+        else
+        {
+            return std::unexpected(std::format("Could not open file: \"{}\"", filename));
+        }
+    };
+}
 void test_ecc_sign()
 {
     security::CRandom rng = security::CRandom::make_rng().value();
@@ -99,11 +138,20 @@ void test_ecc_sign()
     security::CEccPublicKey pubKey = keyPair.public_key();
     security::CEccPrivateKey privKey = keyPair.private_key();
     
+    //security::CEccPublicKey pubKey2{ std::move(pubKey) };
+    security::CEccPublicKey pubKey2 = std::move(pubKey);
+    security::CEccPrivateKey privKey2 { std::move(privKey) };
+    
+    privKey2.write_to_disk(make_save_invokable("PRIVATE_KEY"));
+    pubKey2.write_to_disk(make_save_invokable("PUBLIC_KEY"));
+    
+    std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_load_invokable("PUBLIC_KEY"));
+    std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_load_invokable("PRIVATE_KEY"));
     
     const char* msg = "Very nice message";
     security::CHash<security::Sha2_256> hash{ msg };
-    std::vector<byte> signature = privKey.sign_hash(rng, hash);
-    bool verified = pubKey.verify_hash(signature, hash);
+    std::vector<byte> signature = privKey3->sign_hash(rng, hash);
+    bool verified = pubKey2.verify_hash(signature, hash);
     if (verified) {
         std::printf("\nSignature Verified Successfully.\n");
     } else {
@@ -115,14 +163,18 @@ int main(int argc, char** argv)
 {
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
+    test_ecc_sign();
+    
+    return 0;
     
     auto result = security::CWolfCrypt::instance();
     sys::System system{};
     
-    ble::CScanner scanner = ble::make_scanner<ble::CScanner>();
+    auto scanner = ble::make_scanner<ble::CScanner>();
     scanner.begin_scan();
     
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    size_t numDevices = scanner.num_devices().load();
+    scanner.num_devices().wait(numDevices);
     
     std::vector<ble::DeviceInfo> infos = scanner.found_devices();
     if(!infos.empty())

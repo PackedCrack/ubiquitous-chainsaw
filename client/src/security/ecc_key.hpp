@@ -13,9 +13,17 @@
 
 namespace security
 {
+class CEccPublicKey;
+class CEccPrivateKey;
+
 template<typename derived_t>
+requires std::same_as<derived_t, CEccPublicKey> || std::same_as<derived_t, CEccPrivateKey>
 class IEccKey
 {
+public:
+    // we cannot copy because wolfcrypt requires pointer to non const in order to extract the der format of the ecc_key type.
+    IEccKey& operator=(const IEccKey& other) = delete;
+    IEccKey(const IEccKey& other) = delete;
 protected:
     explicit IEccKey(const std::vector<uint8_t>& derData)
         : m_Key{}
@@ -25,9 +33,10 @@ protected:
         // https://www.wolfssl.com/documentation/manuals/wolfssl/ecc_8h.html#function-wc_ecc_init
         WC_CHECK(wc_ecc_init(&m_Key));
         
-        static_cast<derived_t*>(this)->decode(derData);
+        decode(derData);
+        //static_cast<derived_t*>(this)->decode(derData);
     }
-    virtual ~IEccKey()
+    ~IEccKey()
     {
         if(has_been_moved())
             return;
@@ -35,14 +44,12 @@ protected:
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_free
         WC_CHECK(wc_ecc_free(&m_Key));
     };
-    IEccKey(const IEccKey& other) = default;
     IEccKey(IEccKey&& other) noexcept
             : m_Key{ other.m_Key }
     {
         static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
         other.invalidate();
     }
-    IEccKey& operator=(const IEccKey& other) = default;
     IEccKey& operator=(IEccKey&& other) noexcept
     {
         if(this != &other)
@@ -54,7 +61,28 @@ protected:
         
         return *this;
     }
-protected:
+public:
+    template<typename invokable_t>
+    requires std::is_invocable_r_v<bool, invokable_t, std::vector<byte>&&>
+    [[nodiscard]] bool write_to_disk(invokable_t&& save)
+    {
+        return save(static_cast<derived_t*>(this)->to_der());
+    }
+private:
+    void decode(const std::vector<uint8_t>& derData)
+    {
+        word32 index = 0u;
+        if constexpr (std::same_as<derived_t, CEccPublicKey>)
+        {
+            // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
+            WC_CHECK(wc_EccPublicKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
+        }
+        else
+        {
+            // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
+            WC_CHECK(wc_EccPrivateKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
+        }
+    }
     void invalidate()
     {
         m_Key.heap = nullptr;
@@ -67,20 +95,18 @@ protected:
 protected:
     ecc_key m_Key;
 };
-
 /**
  *
  */
 class CEccPublicKey : public IEccKey<CEccPublicKey>
 {
-    friend IEccKey<CEccPublicKey>;
 public:
     explicit CEccPublicKey(const std::vector<uint8_t>& derData);
-    ~CEccPublicKey() override = default;
-    CEccPublicKey(const CEccPublicKey& other);
+    ~CEccPublicKey() = default;
+    CEccPublicKey(const CEccPublicKey& other) = delete;
     CEccPublicKey(CEccPublicKey&& other) = default;
-    CEccPublicKey& operator=(const CEccPublicKey& other);
-    CEccPublicKey& operator=(CEccPublicKey&& other) = default;
+    CEccPublicKey& operator=(const CEccPublicKey& other) = delete;
+    CEccPublicKey& operator=(CEccPublicKey&& other) noexcept;
 public:
     template<typename buffer_t, typename hash_t>
     requires common::buffer<std::remove_cvref_t<buffer_t>> && Hash<std::remove_cvref_t<hash_t>>
@@ -100,24 +126,20 @@ public:
                 &m_Key));
         return result == VALID;
     }
-private:
-    void decode(const std::vector<uint8_t>& derData);
-    void copy(ecc_key cpy);
+    [[nodiscard]] std::vector<byte> to_der();
 };
-
 /**
  *
  */
 class CEccPrivateKey : public IEccKey<CEccPrivateKey>
 {
-    friend IEccKey<CEccPrivateKey>;
 public:
     explicit CEccPrivateKey(const std::vector<uint8_t>& derData);
-    ~CEccPrivateKey() override = default;
-    CEccPrivateKey(const CEccPrivateKey& other);
+    ~CEccPrivateKey() = default;
+    CEccPrivateKey(const CEccPrivateKey& other) = delete;
     CEccPrivateKey(CEccPrivateKey&& other) = default;
-    CEccPrivateKey& operator=(const CEccPrivateKey& other);
-    CEccPrivateKey& operator=(CEccPrivateKey&& other) = default;
+    CEccPrivateKey& operator=(const CEccPrivateKey& other) = delete;
+    CEccPrivateKey& operator=(CEccPrivateKey&& other) noexcept;
 public:
     template<typename hash_t> requires Hash<std::remove_cvref_t<hash_t>>
     [[nodiscard]] std::vector<byte> sign_hash(CRandom& rng, hash_t&& hash)
@@ -139,11 +161,8 @@ public:
         
         return signature;
     }
-private:
-    void decode(const std::vector<uint8_t>& derData);
-    void copy(ecc_key cpy);
+    [[nodiscard]] std::vector<byte> to_der();
 };
-
 /**
  *
  */
@@ -162,4 +181,20 @@ public:
 private:
     ecc_key m_Key;
 };
+
+template<typename key_t, typename invokable_t>
+requires std::is_invocable_r_v<std::expected<std::vector<byte>, std::string>, invokable_t>
+[[nodiscard]] std::optional<key_t> make_ecc_key(invokable_t&& load)
+{
+    auto expected = load();
+    if(expected)
+    {
+        return std::optional<key_t>{ *expected };
+    }
+    else
+    {
+        LOG_ERROR_FMT("Failed to create ecc key: \"{}\"", expected.error());
+        return std::nullopt;
+    }
+}
 }   // namespace security

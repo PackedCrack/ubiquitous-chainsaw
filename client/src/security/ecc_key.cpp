@@ -22,6 +22,7 @@ namespace
     std::vector<byte> buffer{};
     buffer.resize(1024u);
     // Can't find doc page for wc_EccPrivateKeyToDer...
+    // Could be this: https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_ecckeytoder
     WCResult result = wc_EccPrivateKeyToDer(&key, buffer.data(), common::assert_down_cast<word32>(buffer.size()));
     assert(result > 0);
     buffer.resize(result);
@@ -38,60 +39,33 @@ namespace security
 CEccPublicKey::CEccPublicKey(const std::vector<uint8_t>& derData)
         : IEccKey{ derData }
 {}
-CEccPublicKey::CEccPublicKey(const CEccPublicKey& other)
-    : IEccKey{ other }
-{
-    copy(other.m_Key);
-}
-CEccPublicKey& CEccPublicKey::operator=(const CEccPublicKey& other)
+CEccPublicKey& CEccPublicKey::operator=(CEccPublicKey&& other) noexcept
 {
     if(this != &other)
-    {
-        copy(other.m_Key);
-    }
+        IEccKey::operator=(std::move(other));
     
     return *this;
 }
-void CEccPublicKey::copy(ecc_key cpy)
+std::vector<byte> CEccPublicKey::to_der()
 {
-    decode(public_key_to_der(cpy));
+    return public_key_to_der(m_Key);
 }
-void CEccPublicKey::decode(const std::vector<uint8_t>& derData)
-{
-    word32 index = 0u;
-    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
-    WC_CHECK(wc_EccPublicKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
-}
-
 //////////////////////////////////////
 // CEccPrivateKey
 //////////////////////////////////////
 CEccPrivateKey::CEccPrivateKey(const std::vector<uint8_t>& derData)
     : IEccKey{ derData }
 {}
-CEccPrivateKey::CEccPrivateKey(const CEccPrivateKey& other)
-        : IEccKey{ other }
-{
-    copy(other.m_Key);
-}
-CEccPrivateKey& CEccPrivateKey::operator=(const CEccPrivateKey& other)
+CEccPrivateKey& CEccPrivateKey::operator=(CEccPrivateKey&& other) noexcept
 {
     if(this != &other)
-    {
-        copy(other.m_Key);
-    }
+        IEccKey::operator=(std::move(other));
     
     return *this;
 }
-void CEccPrivateKey::copy(ecc_key cpy)
+std::vector<byte> CEccPrivateKey::to_der()
 {
-    decode(private_key_to_der(cpy));
-}
-void CEccPrivateKey::decode(const std::vector<uint8_t>& derData)
-{
-    word32 index = 0u;
-    // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeydecode
-    WC_CHECK(wc_EccPrivateKeyDecode(derData.data(), &index, &m_Key, common::assert_down_cast<word32>(derData.size())));
+    return private_key_to_der(m_Key);
 }
 //////////////////////////////////////
 // EccKeyPair

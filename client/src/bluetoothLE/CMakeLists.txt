@@ -11,7 +11,7 @@ SET(BLUETOOTH_SRCS
         Service.hpp
         Characteristic.hpp
         Descriptor.hpp
-        CBLEScanner.hpp
+        Scanner.hpp
 )
 
 target_sources(${MAIN_PROJECT} PRIVATE ${BLUETOOTH_SRCS})
