@@ -66,14 +66,14 @@ void restrict_file_permissions(const std::filesystem::path& file)
         WIN_CHECK(LocalFree(pDescriptor) == nullptr);
     }
 }
-std::expected<std::filesystem::path, std::string> key_location()
+std::expected<std::filesystem::path, std::string> application_directory()
 {
     std::array<WCHAR, MAX_PATH> location{ 0 };
     // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
     WIN_CHECK_HRESULT(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, NO_FLAGS, location.data()));
     
     // https://learn.microsoft.com/en-us/windows/win32/api/pathcch/nf-pathcch-pathcchappendex
-    HRESULT result = PathCchAppendEx(location.data(), location.size(), L"Ubiquitous-Chainsaw\\Keys", NO_FLAGS);
+    HRESULT result = PathCchAppendEx(location.data(), location.size(), L"Ubiquitous-Chainsaw", NO_FLAGS);
     if(result != S_OK)
     {
         if(result == E_OUTOFMEMORY)
@@ -86,5 +86,13 @@ std::expected<std::filesystem::path, std::string> key_location()
     }
     
     return std::expected<std::filesystem::path, std::string>{ location.data() };
+}
+std::expected<std::filesystem::path, std::string> key_directory()
+{
+    std::expected<std::filesystem::path, std::string> expected = application_directory();
+    if(expected)
+        *expected /= "Keys";
+    
+    return expected;
 }
 }   // namespace sys

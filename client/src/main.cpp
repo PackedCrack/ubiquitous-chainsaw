@@ -25,22 +25,185 @@
 
 namespace
 {
+constexpr std::string_view CLIENT_PUB_NAME = "client_public.der";
+constexpr std::string_view CLIENT_PRIV_NAME = "client_private.der";
+constexpr std::string_view SERVER_PUB_NAME = "server_public.der";
+constexpr std::string_view SERVER_PRIV_NAME = "server_private.der";
+
+void validate_app_directory()
+{
+    auto validate_app_directory = [](const std::filesystem::path& appDirectory)
+    {
+        if(!std::filesystem::exists(appDirectory))
+            std::filesystem::create_directory(appDirectory);
+        
+        ASSERT_FMT(std::filesystem::is_directory(appDirectory), "Expected {} to be a directory.", appDirectory.string());
+        return sys::key_directory();
+    };
+    auto validate_key_directory = [](const std::filesystem::path& keyLocation)
+    {
+        if(!std::filesystem::exists(keyLocation))
+            std::filesystem::create_directory(keyLocation);
+        
+        ASSERT_FMT(std::filesystem::is_directory(keyLocation), "Expected {} to be a directory.", keyLocation.string());
+        return std::expected<std::filesystem::path, std::string>{};
+    };
+    auto log_failure = [](const std::string& err)
+    {
+        LOG_FATAL_FMT("Could not validate Application Directory because key location could not be retrieved. Reason: {}", err);
+        return std::expected<std::filesystem::path, std::string>{};
+    };
+    [[maybe_unused]] auto result = sys::application_directory()
+            .and_then(validate_app_directory)
+            .and_then(validate_key_directory)
+            .or_else(log_failure);
+}
+auto make_save_invokable(std::string_view filename)
+{
+    return [filename = std::filesystem::path{ filename }](std::vector<byte>&& key)
+    {
+        std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
+        if(expected)
+        {
+            std::filesystem::path filepath = expected->string() / filename;
+            std::fstream file{ filepath, std::ios::out | std::ios::binary | std::ios::trunc };
+            
+            static_assert(alignof(const char) == alignof(decltype(*(key.data()))));
+            file.write(reinterpret_cast<const char*>(key.data()), key.size());
+            return true;
+        }
+        else
+        {
+            LOG_ERROR_FMT("Could not retrieve key location. Failed with: \"{}\"", expected.error());
+            return false;
+        }
+    };
+}
+auto make_load_invokable(std::string_view filename)
+{
+    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<byte>, std::string>
+    {
+        std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
+        if(expected)
+        {
+            std::filesystem::path filepath = expected->string() / filename;
+            std::fstream file{ filepath, std::ios::in | std::ios::binary | std::ios::ate };
+            if(file.is_open())
+            {
+                try
+                {
+                    std::expected<std::vector<byte>, std::string> data{};
+                    std::streamsize size = file.tellg();
+                    data->resize(size);
+                    file.seekg(0);
+                    
+                    static_assert(alignof(const char) == alignof(decltype(*(data->data()))));
+                    file.read(reinterpret_cast<char*>(data->data()), size);
+                    
+                    return data;
+                }
+                catch (const std::ios::failure& err)
+                {
+                    return std::unexpected(std::format("Exception thrown when trying to read file: \"{}\"", err.what()));
+                }
+            }
+            else
+            {
+                return std::unexpected(std::format("Could not open file: \'{}\'", filename.string()));
+            }
+        }
+        else
+        {
+            return std::unexpected(std::format("Could not retrieve key location. Failed with: \"{}\"", expected.error()));
+        }
+    };
+}
+std::tuple<security::CEccPublicKey, security::CEccPrivateKey> make_ecc_keys()
+{
+    security::CRandom rng = security::CRandom::make_rng().value();
+    security::CEccKeyPair keyPair{ rng };
+    
+    return { keyPair.public_key(), keyPair.private_key() };
+}
+void save_ecc_keys(security::CEccPublicKey& pub, security::CEccPrivateKey& priv, std::string_view pubkey, std::string_view privkey)
+{
+    if(!pub.write_to_disk(make_save_invokable(pubkey)))
+    {
+        LOG_FATAL("Could not save public key to disk!");
+    }
+    if(!priv.write_to_disk(make_save_invokable(privkey)))
+    {
+        LOG_FATAL("Could not save private key to disk!");
+    }
+    
+    auto restrict_private_key = [privkey](const std::filesystem::path& keyLocation)
+    {
+        sys::restrict_file_permissions(keyLocation / std::filesystem::path{ privkey });
+        return std::expected<std::filesystem::path, std::string>{};
+    };
+    auto log_failure =[](const std::string& err)
+    {
+        LOG_ERROR_FMT("Could not set private key to admin owned - "
+                      "because filepath to key location could not be retrieved: \"{}\"", err);
+        return std::expected<std::filesystem::path, std::string>{};
+    };
+    
+    [[maybe_unused]] auto result = sys::key_directory()
+            .and_then(restrict_private_key)
+            .or_else(log_failure);
+}
 void process_cmd_line_args(int argc, char** argv)
 {
     if (argc < 1)
-        LOG_FATAL_FMT("Not enough command line arguments given, expected at least 1. But {} was provided", argc);
-
-    std::vector<std::string> arguments{};
-    arguments.reserve(static_cast<std::size_t>(argc));
-    for (int32_t i = 0; i < argc; ++i)
+        return;
+    
+    for (int32_t i = 1; i < argc; ++i)
     {
-        arguments.emplace_back(argv[i]);
-    }
-
-
-    for (std::string_view arg : arguments)
-    {
-        // TODO
+        std::string_view arg{ argv[i] };
+        if(arg == "--make-keys")
+        {
+            {
+                auto[pubKey, privKey] = make_ecc_keys();
+                save_ecc_keys(pubKey, privKey, SERVER_PUB_NAME, SERVER_PRIV_NAME);
+            }
+            // Client
+            {
+                auto[pubKey, privKey] = make_ecc_keys();
+                save_ecc_keys(pubKey, privKey, CLIENT_PUB_NAME, CLIENT_PRIV_NAME);
+            }
+        }
+        if(arg == "--print-keys")
+        {
+            auto print_key = [](std::string_view keyName)
+            {
+                return [keyName](const std::vector<byte>& key)
+                {
+                    std::stringstream sstream{};
+                    for(auto&& byte : key)
+                    {
+                        sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
+                    }
+                    LOG_INFO_FMT("{}: {}", keyName, sstream.str());
+                    return std::expected<std::vector<byte>, std::string>{};
+                };
+            };
+            auto log_failure = [](const std::string& err)
+            {
+                LOG_ERROR_FMT("Could not print key contents. Reason: \"{}\"", err);
+                
+                return std::expected<std::vector<byte>, std::string>{};
+            };
+            
+            static constexpr std::array<std::string_view, 4u> keyNames =
+                    { CLIENT_PUB_NAME, CLIENT_PRIV_NAME, SERVER_PUB_NAME, SERVER_PRIV_NAME };
+            for(auto&& keyName : keyNames)
+            {
+                auto load_key = make_load_invokable(keyName);
+                [[maybe_unused]] auto result = load_key()
+                        .and_then(print_key(keyName))
+                        .or_else(log_failure);
+            }
+        }
     }
 }
 }   // namespace
@@ -91,45 +254,7 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
     }
 }
 
-auto make_save_invokable(std::string filename)
-{
-    return [filename](std::vector<byte>&& key)
-    {
-        std::string filepath = "C:\\Users\\qwerty\\Desktop\\" + filename;
-        std::fstream file{ filepath, std::ios::out | std::ios::binary | std::ios::trunc };
-        LOG_INFO_FMT("Size: {}", key.size());
-        file.write(reinterpret_cast<const char*>(key.data()), key.size());
-        return true;
-    };
-}
-auto make_load_invokable(std::string filename)
-{
-    return [filename]() -> std::expected<std::vector<byte>, std::string>
-    {
-        std::string filepath = "C:\\Users\\qwerty\\Desktop\\" + filename;
-        std::fstream file{ filepath, std::ios::in | std::ios::binary | std::ios::ate };
-        if(file.is_open())
-        {
-            try
-            {
-                std::expected<std::vector<byte>, std::string> expected{};
-                std::streamsize size = file.tellg();
-                expected->resize(size);
-                file.seekg(0);
-                file.read(reinterpret_cast<char*>(expected->data()), size);
-                return expected;
-            }
-            catch(const std::ios::failure& err)
-            {
-                return std::unexpected(std::format("Exception thrown when trying to read file: \"{}\"", err.what()));
-            }
-        }
-        else
-        {
-            return std::unexpected(std::format("Could not open file: \'{}\'", filename));
-        }
-    };
-}
+
 void test_ecc_sign()
 {
     security::CRandom rng = security::CRandom::make_rng().value();
@@ -161,12 +286,18 @@ void test_ecc_sign()
     }
 }
 
+
+
 int main(int argc, char** argv)
 {
-    ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
+    sys::CSystem system2{};
+    
+    validate_app_directory();
+    
+    process_cmd_line_args(argc, argv);
     
     
-    auto expected = sys::key_location();
+    auto expected = sys::key_directory();
     if(expected)
     {
         LOG_INFO_FMT("Location: {}", expected->string());
