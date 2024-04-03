@@ -57,9 +57,9 @@ namespace
     	    uint8_t* pDataBuffer = pContext->om->om_databuf;
 
     	    // TODO check if this is always the case! 
-    	    const uint16_t DATA_DELIMITER = 19;
+    	    const uint16_t DATA_OFFSET = 19;
     	    const uint8_t NUM_DATA = *pDataBuffer;
-    	    const uint8_t DATA_END = DATA_DELIMITER + NUM_DATA;
+    	    const uint8_t DATA_END = DATA_OFFSET + NUM_DATA;
 
 			// Print Size of data written to which characteristic
 			const int MAX_UUID_LEN = 128;
@@ -68,7 +68,7 @@ namespace
     	    LOG_INFO_FMT("{} bytes was written to characteristic={}", NUM_DATA, charUuid);
 
 			// Print the written value to terminal
-    	    for (int i = DATA_DELIMITER; i < DATA_END; ++i)
+    	    for (int i = 0; i < DATA_END; ++i)
     	    {
     	        std::printf("Data read[%d]: 0x%02x\n", i, pDataBuffer[i]);
     	    }

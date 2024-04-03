@@ -101,7 +101,7 @@ enum class EspErrorCode : int32_t
     invalidMAC = ESP_ERR_INVALID_MAC, /*!< MAC address was invalid */
     notFinished = ESP_ERR_NOT_FINISHED /*!< There are items remained to retrieve */
 };
-inline std::string_view nimble_error_to_string(NimbleErrorCode error)
+constexpr std::string_view nimble_error_to_string(NimbleErrorCode error)
 {
     UNHANDLED_CASE_PROTECTION_ON
     switch (error)

@@ -39,59 +39,64 @@ extern "C" void app_main(void)
 
 		using namespace storage;
 
-		CNonVolatileStorage nvs{};
+		storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
 
-		// WRITE AND READ EXAMPLE USAGE
-		// TODO where should we store namespace names and keys? in Storage:: as a enum?
+		std::optional<CNonVolatileStorage::CReadWriter> realWriter = CNonVolatileStorage::CReadWriter::make_read_writer("STORAGE");
+		if (!realWriter.has_value())
+		{
+			LOG_ERROR("Real CReader creation error");
+		}
+		else
+		{
+			LOG_INFO("Real CReader just works!");
+			storage::CNonVolatileStorage::ReadBinaryResult readResult = realWriter.value().read_binary("BinaryData");
+			if (readResult.code != NvsErrorCode::success)
+			{
+				LOG_ERROR("Error reading data using REAL CReader");
+			}
+			else
+			{
+				std::printf("Num bytes: %u\n", readResult.data.value().size() );
+				for (uint8_t byte : readResult.data.value()) 
+				{
+        			std::printf("%02X ", byte);
+    			}
+				std::printf("\n");
+			}
+		}
+
+
 		std::optional<CNonVolatileStorage::CReadWriter> writer = nvs.make_read_writer("STORAGE");
 		if (!writer.has_value())
 		{
-			LOG_ERROR("CReadWriter creation error");
+			LOG_ERROR("Not real Creader creation error");
 		}
-		std::vector<uint8_t> newData {0x5,0x5,0x5,0x5,0x5,0x5};
-		CNonVolatileStorage::WriteResult writeResult = writer.value().write_binary("BinaryData", newData);
-		if (writeResult.code != NvsErrorCode::success)
+		else	
 		{
-			LOG_ERROR("Something went wrong when writing to NVS");
+			LOG_INFO("Not real CReader just works!");
+			storage::CNonVolatileStorage::ReadBinaryResult readResult = writer.value().read_binary("BinaryData");
+
+			if (readResult.code != NvsErrorCode::success)
+			{
+				LOG_ERROR("Error reading data using Not Real CReader");
+			}
+			else
+			{
+				std::printf("Num bytes: %u\n", readResult.data.value().size() );
+				for (uint8_t byte : readResult.data.value()) 
+				{
+        			std::printf("%02X ", byte);
+    			}
+				std::printf("\n");
+			}
 		}
-		std::optional<CNonVolatileStorage::CReader> reader = nvs.make_reader("STORAGE");
-		if (!reader.has_value())
-		{
-			LOG_ERROR("CReader creation error");
-		}
-		storage::CNonVolatileStorage::ReadBinaryResult readResult = reader.value().read_binary("BinaryData");
-		if (!readResult.data.has_value())
-		{
-			LOG_ERROR("Error reading data using CReader");
-		}
-		for (uint8_t byte : readResult.data.value()) 
-		{
-        	std::printf("%02X ", byte);
-    	}
-		std::printf("\n");
-		
-		storage::CNonVolatileStorage::ReadBinaryResult readResult2 = writer.value().read_binary("BinaryData");
-		if (!readResult2.data.has_value())
-		{
-			LOG_ERROR("Error reading data using CReadWriter");
-		}
-		for (uint8_t byte : readResult2.data.value()) 
-		{
-        	std::printf("%02X ", byte);
-    	}
-		std::printf("\n");
+
 
 		//auto a = security::CWolfCrypt::instance();
 
-
 		// https://mynewt.apache.org/latest/
-		//{
-        //ble::CNimble tmp {};
-		//}
-		ble::CNimble nimble {};
-		//ble::CNimble nimble {std::move(tmp)};
-		//ble::CNimble nimble = std::move(tmp);
 
+		//ble::CNimble nimble {};
 
 		while (true)
 		{

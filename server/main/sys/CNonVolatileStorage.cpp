@@ -11,21 +11,31 @@
 
 namespace
 {
-
 storage::CNonVolatileStorage::ReadBinaryResult handle_nvs_read_error(storage::NvsErrorCode error)
 {
 	using namespace storage;
-
 	if (error == NvsErrorCode::fail)
+	{
 		return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::fail, .data = std::nullopt };
+	}
 	else if (error == NvsErrorCode::namespaceNotFound)
+	{
 		return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::namespaceNotFound, .data = std::nullopt };
+	}
 	else if (error == NvsErrorCode::invalidHandle)
+	{
 		return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidHandle, .data = std::nullopt };
+
+	}
 	else if (error == NvsErrorCode::invalidName)
+	{
 		return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidName, .data = std::nullopt };
+
+	}
 	else if (error == NvsErrorCode::invalidDataLenght)
+	{
 		return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidDataLenght, .data = std::nullopt };
+	}
 	else
 	{
 		LOG_FATAL("CReader::read_binary(): Unknown error occured!");
@@ -125,13 +135,14 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 	if (error == NvsErrorCode::success)
 	{
 		std::vector<uint8_t> retrievedData {};
-		retrievedData.resize(requiredSize); // make sure this is correct size
+		retrievedData.resize(requiredSize); 
 		result = nvs_get_blob(m_Handle.value(), key.data(), retrievedData.data(), &requiredSize);
 
 		error = static_cast<NvsErrorCode>(result);
 		if (error == NvsErrorCode::success)
 		{
-			return ReadBinaryResult { .code = NvsErrorCode::success, .data = std::move(retrievedData)};
+			return ReadBinaryResult { .code = NvsErrorCode::success, 
+									  .data = std::make_optional<std::vector<uint8_t>>( std::move(retrievedData) )};
 		}
 		else 
 		{
@@ -142,6 +153,20 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 	{
 		return handle_nvs_read_error(error);
 	} 
+}
+
+std::optional<storage::CNonVolatileStorage::CReader> CNonVolatileStorage::CReader::make_reader(std::string_view nameSpace)
+{
+	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	try
+	{
+		return std::make_optional<CReader>( nameSpace );
+	}
+	catch(const std::invalid_argument& e)
+	{
+		// TODO: handle error here
+		return std::nullopt;
+	}
 }
 CNonVolatileStorage::CReadWriter::CReadWriter(std::string_view nameSpace)
 	: m_Handle { UINT32_MAX }
@@ -186,8 +211,8 @@ CNonVolatileStorage::CReadWriter& CNonVolatileStorage::CReadWriter::operator=(CR
 CNonVolatileStorage::WriteResult CNonVolatileStorage::CReadWriter::write_binary(std::string_view key, const std::vector<uint8_t>& data)
 {
 	ASSERT(key.size() < (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
-
-	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_set_blob(m_Handle.value(), key.data(), data.data(), (data.size() * sizeof(uint8_t))));
+	// return std::optional<Error>
+	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_set_blob(m_Handle.value(), key.data(), data.data(), data.size()));
 	if (result == NvsErrorCode::success)
 		return commit();
 	else if (result == NvsErrorCode::fail)
@@ -236,8 +261,22 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReadWriter::read_bin
 		return handle_nvs_read_error(error);
 	} 
 }
+std::optional<storage::CNonVolatileStorage::CReadWriter> CNonVolatileStorage::CReadWriter::make_read_writer(std::string_view nameSpace)
+{
+	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	try
+	{
+		return std::make_optional<CReadWriter>( nameSpace );
+	}
+	catch(const std::invalid_argument& e)
+	{
+		// TODO: handle error here
+		return std::nullopt;
+	}
+}
 CNonVolatileStorage::WriteResult CNonVolatileStorage::CReadWriter::commit()
 {
+	// return std::optional<Error>
 	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_commit(m_Handle.value()));
 	if (result != NvsErrorCode::success)
 	{
@@ -306,30 +345,13 @@ CNonVolatileStorage& CNonVolatileStorage::instance()
 }
 std::optional<CNonVolatileStorage::CReader> CNonVolatileStorage::make_reader(std::string_view nameSpace)
 {
-	try
-	{
-		return std::make_optional<CReader>( nameSpace );
-
-		//return CReader {nameSpace.data()};
-	}
-	catch(const std::invalid_argument& e)
-	{
-		// TODO: handle error here
-		return std::nullopt;
-	}
+	return CReader::make_reader(nameSpace);
 }
 std::optional<CNonVolatileStorage::CReadWriter> CNonVolatileStorage::make_read_writer(std::string_view nameSpace)
 {
-	try
-	{
-		return std::make_optional<CReadWriter>( nameSpace );
-	}
-	catch(const std::invalid_argument& e)
-	{
-		// TODO: handle error here
-		return std::nullopt;
-	}
+	return CReadWriter::make_read_writer(nameSpace);
 }
+
 
 //void CNonVolatileStorage::erase_all_key_value_pairs()
 //{

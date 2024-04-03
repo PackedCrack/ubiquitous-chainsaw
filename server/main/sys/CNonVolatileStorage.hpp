@@ -40,74 +40,73 @@ enum class NvsErrorCode : int32_t
 };
 class CNonVolatileStorage
 {
-enum class OpenMode
-{
-	readOnly = NVS_READONLY,
-	readAndWrite = NVS_READWRITE
-};
+	enum class OpenMode
+	{
+		readOnly = NVS_READONLY,
+		readAndWrite = NVS_READWRITE
+	};
 public:
-struct WriteResult
-{
-	NvsErrorCode code;
-	std::string msg;
-};
-struct ReadBinaryResult // make template ??
-{
-	NvsErrorCode code;
-	std::optional<std::vector<uint8_t>> data;
-};
-class CReader 
-{
-friend class CNonVolatileStorage;
-private:
-    CReader(std::string_view nameSpace);
+	struct WriteResult
+	{
+		NvsErrorCode code;
+		std::string msg; // make optional
+	};
+	struct ReadBinaryResult // make template ??
+	{
+		NvsErrorCode code;
+		std::optional<std::vector<uint8_t>> data;
+	};
+	class CReader 
+	{
+	private:
+	    CReader(std::string_view nameSpace);
+	public:
+		~CReader();
+		CReader(const CReader& other) = delete;
+		CReader(CReader&& other) noexcept;
+		CReader& operator=(const CReader& other) = delete;
+		CReader& operator=(CReader&& other) noexcept;
+	public:
+		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
+		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReader> make_reader(std::string_view nameSpace);
+	public:
+		std::optional<nvs_handle_t> m_Handle;
+	}; // class CReader
+	class CReadWriter
+	{
+	private:
+	    CReadWriter(std::string_view nameSpace);
+	public:
+		~CReadWriter();
+		CReadWriter(const CReadWriter& other) = delete;
+		CReadWriter(CReadWriter&& other) noexcept;
+		CReadWriter& operator=(const CReadWriter& other) = delete;
+		CReadWriter& operator=(CReadWriter&& other) noexcept;
+	public:
+		[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
+		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
+		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReadWriter> make_read_writer(std::string_view nameSpace);
+	private:
+		[[nodiscard]] WriteResult commit();
+	private:
+		std::optional<nvs_handle_t> m_Handle;
+	}; // class CReadWriter
 public:
-	~CReader();
-	CReader(const CReader& other) = delete;
-	CReader(CReader&& other) noexcept;
-	CReader& operator=(const CReader& other) = delete;
-	CReader& operator=(CReader&& other) noexcept;
-public:
-	[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
-public:
-	std::optional<nvs_handle_t> m_Handle;
-}; // class CReader
-class CReadWriter
-{
-friend class CNonVolatileStorage;
-private:
-    CReadWriter(std::string_view nameSpace);
-public:
-	~CReadWriter();
-	CReadWriter(const CReadWriter& other) = delete;
-	CReadWriter(CReadWriter&& other) noexcept;
-	CReadWriter& operator=(const CReadWriter& other) = delete;
-	CReadWriter& operator=(CReadWriter&& other) noexcept;
-public:
-	[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
-	[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
-private:
-	[[nodiscard]] WriteResult commit();
-private:
-	std::optional<nvs_handle_t> m_Handle;
-}; // class CReadWriter
-	CNonVolatileStorage();
+	CNonVolatileStorage(); // MAKE PRIVATE
 	~CNonVolatileStorage();
 	CNonVolatileStorage(const CNonVolatileStorage& other) = delete;	// Deleted for now..
 	CNonVolatileStorage(CNonVolatileStorage&& other) = delete;
 	CNonVolatileStorage& operator=(const CNonVolatileStorage& other) = delete;
 	CNonVolatileStorage& operator=(CNonVolatileStorage&& other) = delete;
-
+public:
 	[[nodiscard]] static CNonVolatileStorage& instance();
 	[[nodiscard]] std::optional<CReader> make_reader(std::string_view nameSpace);
 	[[nodiscard]] std::optional<CReadWriter> make_read_writer(std::string_view nameSpace);
-	//void erase_all_key_value_pairs();
-private:
+
 	// esp_err_t nvs_erase_key(nvs_handle_t handle, const char *key)
 	// esp_err_t nvs_flash_erase(void) // Erase the default NVS partition.
 	// esp_err_t nvs_erase_all(nvs_handle_t handle) // Erase all key-value pairs in a namespace.
 	// esp_err_t nvs_get_stats(const char *part_name, nvs_stats_t *nvs_stats)
 	// esp_err_t nvs_get_used_entry_count(nvs_handle_t handle, size_t *used_entries)
-private:
 }; // CNonVolatileStorage
 }// namespace storage
