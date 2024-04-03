@@ -5,7 +5,6 @@
 #pragma once
 #include "../common/defines.hpp"
 
-#ifndef NDEBUG
 #ifdef WIN32
     #include "system/windows/CErrorMessage.hpp"
     
@@ -20,4 +19,3 @@
     if(HRESULT result = expr; result == S_OK){}              \
     else{ LOG_ASSERT_FMT("\"{}\" failed with: \"{}\"", __func__, result);    }
 #endif
-#endif // !NDEBUG

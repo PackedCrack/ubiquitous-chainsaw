@@ -21,7 +21,7 @@ concept chrono_duration = std::is_same_v<clock_t, std::chrono::nanoseconds> ||
                       std::is_same_v<clock_t, std::chrono::years>;
 
 
-template<typename clock_t = std::chrono::steady_clock, typename duration_t = std::chrono::milliseconds>
+template<typename duration_t = std::chrono::milliseconds, typename clock_t = std::chrono::steady_clock>
 requires chrono_clock<clock_t> && chrono_duration<duration_t>
 class CStopWatch
 {
@@ -37,16 +37,18 @@ public:
 public:
     void reset() { m_Timepoint = clock_t::now(); };
     
-    template<typename precision_t>
-    [[nodiscard]] precision_t lap()
+    template<typename real_t>
+    requires std::is_floating_point_v<real_t>
+    [[nodiscard]] real_t lap()
     {
         std::chrono::time_point<clock_t> end = clock_t::now();
-        return std::chrono::duration<precision_t, typename duration_t::period>(end - m_Timepoint).count();
+        return std::chrono::duration<real_t, typename duration_t::period>(end - m_Timepoint).count();
     }
-    template<typename precision_t>
-    [[nodiscard]] precision_t time_elapsed()
+    template<typename real_t>
+    requires std::is_floating_point_v<real_t>
+    [[nodiscard]] real_t time_elapsed()
     {
-        auto elapsed = lap<precision_t>();
+        auto elapsed = lap<real_t>();
         reset();
         return elapsed;
     }

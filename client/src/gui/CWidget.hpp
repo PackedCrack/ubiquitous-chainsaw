@@ -3,21 +3,26 @@
 
 namespace gui
 {
+template<typename gui_t>
+concept imgui_widget = requires(gui_t widget)
+{
+    widget.push();
+};
+
 class CWidget
 {
 private:
     friend void push_widget(CWidget& widget)
     {
-        widget.m_pWidget->push();
+        widget.m_pWidget->exec_push();
     }
-
     class IBase
     {
     public:
         virtual ~IBase() = default;
 
-        virtual void push() = 0;
-        virtual std::unique_ptr<IBase> copy() const = 0;
+        virtual void exec_push() = 0;
+        [[nodiscard]] virtual std::unique_ptr<IBase> copy() const = 0;
     protected:
         IBase() = default;
         IBase(const IBase& other) = default;
@@ -32,17 +37,17 @@ private:
         explicit Concrete(gui_t&& gui)
             : m_Gui{ std::forward<gui_t>(gui) }
         {}
-        ~Concrete() = default;
+        virtual ~Concrete() = default;
         Concrete(const Concrete& other) = default;
         Concrete(Concrete&& other) = default;
         Concrete& operator=(const Concrete& other) = default;
         Concrete& operator=(Concrete&& other) = default;
-
-        void push() override
+    public:
+        void exec_push() override
         {
             m_Gui.push();
         }
-        std::unique_ptr<IBase> copy() const override
+        [[nodiscard]] std::unique_ptr<IBase> copy() const override
         {
             return std::make_unique<Concrete>(*this);
         }
@@ -52,16 +57,15 @@ private:
 public:
     CWidget() = default;
     template<typename widget_t>
+    requires imgui_widget<widget_t>
     explicit CWidget(widget_t&& gui)
         : m_pWidget{ std::make_unique<Concrete<widget_t>>(std::forward<widget_t>(gui)) }
     {}
     ~CWidget() = default;
-    //CWidget(const CWidget& other) = delete;
     CWidget(const CWidget& other)
         : m_pWidget{ other.m_pWidget->copy() }
     {};
     CWidget(CWidget&& other) = default;
-   // CWidget& operator=(const CWidget& other) = delete;
     CWidget& operator=(const CWidget& other)
     {
         m_pWidget = other.m_pWidget->copy();
@@ -69,19 +73,20 @@ public:
         return *this;
     };
     CWidget& operator=(CWidget&& other) = default;
-
+public:
+    void push()
+    {
+        m_pWidget->exec_push();
+    }
 private:
     std::unique_ptr<IBase> m_pWidget;
 };
 
-template<typename gui_t>
-concept imgui_widget = requires (gui_t widget)
-{
-    widget.push();
-};
+
 
 template<typename widget_t, typename... args>
-[[nodiscard]] CWidget make_widget(args&&... constrArgs) requires imgui_widget<widget_t>
+requires imgui_widget<widget_t>
+[[nodiscard]] CWidget make_widget(args&&... constrArgs)
 {
     return CWidget{ widget_t{ std::forward<args>(constrArgs)... } };
 };

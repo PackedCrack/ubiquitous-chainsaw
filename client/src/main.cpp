@@ -1,6 +1,3 @@
-// Taskflow must be included BEFORE windows.h
-#include "taskflow/taskflow.hpp"
-
 // Wolfcrypt must be included BEFORE windows.h
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
@@ -21,6 +18,7 @@
 #include "bluetoothLE/Device.hpp"
 #include "system/System.hpp"
 #include "system/TrayIcon.hpp"
+#include "common/CStopWatch.hpp"
 
 
 namespace
@@ -29,6 +27,7 @@ constexpr std::string_view CLIENT_PUB_NAME = "client_public.der";
 constexpr std::string_view CLIENT_PRIV_NAME = "client_private.der";
 constexpr std::string_view SERVER_PUB_NAME = "server_public.der";
 constexpr std::string_view SERVER_PRIV_NAME = "server_private.der";
+
 
 void validate_app_directory()
 {
@@ -58,7 +57,7 @@ void validate_app_directory()
             .and_then(validate_key_directory)
             .or_else(log_failure);
 }
-auto make_save_invokable(std::string_view filename)
+[[nodiscard]] auto make_save_invokable(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }](std::vector<byte>&& key)
     {
@@ -79,7 +78,7 @@ auto make_save_invokable(std::string_view filename)
         }
     };
 }
-auto make_load_invokable(std::string_view filename)
+[[nodiscard]] auto make_load_invokable(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<byte>, std::string>
     {
@@ -206,6 +205,15 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
+[[nodiscard]] auto time_limited_scan(ble::CScanner& scanner, std::chrono::seconds seconds)
+{
+    return [&scanner, seconds]()
+    {
+        scanner.begin_scan();
+        std::this_thread::sleep_for(seconds);
+        scanner.end_scan();
+    };
+}
 }   // namespace
 
 
@@ -287,51 +295,75 @@ void test_ecc_sign()
 }
 
 
-
 int main(int argc, char** argv)
 {
-    sys::CSystem system2{};
+    tf::Executor& executor = sys::executor();
     
-    validate_app_directory();
-    
-    process_cmd_line_args(argc, argv);
-    
-    
-    auto expected = sys::key_directory();
-    if(expected)
-    {
-        LOG_INFO_FMT("Location: {}", expected->string());
-    }
-    
-    return 0;
-    
-    test_ecc_sign();
-    
-    
-    
-    auto result = security::CWolfCrypt::instance();
     sys::CSystem system{};
     
-    auto scanner = ble::make_scanner<ble::CScanner>();
-    scanner.begin_scan();
-    
-    size_t numDevices = scanner.num_devices().load();
-    scanner.num_devices().wait(numDevices);
-    
-    std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-    if(!infos.empty())
+    executor.silent_async([argc, argv]()
     {
-        for(const auto& info : infos)
-        {
-            LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-                         ble::hex_addr_to_str(info.address.value()),
-                         ble::address_type_to_str(info.addressType));
-            
-            query_device(info.address.value());
-        }
+        auto wc = security::CWolfCrypt::instance();
+        validate_app_directory();
+        process_cmd_line_args(argc, argv);
+    });
+    
+    auto scanner = ble::make_scanner<ble::CScanner>();
+    executor.silent_async(time_limited_scan(scanner, std::chrono::seconds(1)));
+    
+    
+    gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
+    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
+    gui::CGui gui{};
+    
+    
+    bool exit = false;
+    while (!exit)
+    {
+        renderer.begin_frame();
+        
+        window.process_events(&exit);
+        gui.push();
+        
+        renderer.end_frame();
     }
     
-    tf::Executor executor{};
+    return EXIT_SUCCESS;
+    
+    
+    
+    
+    
+    
+    
+    
+    //test_ecc_sign();
+    
+    
+    
+    //auto result = security::CWolfCrypt::instance();
+    //sys::CSystem system{};
+    
+    //auto scanner = ble::make_scanner<ble::CScanner>();
+    //scanner.begin_scan();
+    //
+    //size_t numDevices = scanner.num_devices().load();
+    //scanner.num_devices().wait(numDevices);
+    //
+    //std::vector<ble::DeviceInfo> infos = scanner.found_devices();
+    //if(!infos.empty())
+    //{
+    //    for(const auto& info : infos)
+    //    {
+    //        LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
+    //                     ble::hex_addr_to_str(info.address.value()),
+    //                     ble::address_type_to_str(info.addressType));
+    //
+    //        query_device(info.address.value());
+    //    }
+    //}
+    //
+    //tf::Executor executor{};
     
     //executor.silent_async([&scanner]()
     //{
@@ -358,45 +390,39 @@ int main(int argc, char** argv)
     
     
 
-    try
-    {
-        process_cmd_line_args(argc, argv);
-        
-
-        
-        gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
-        gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
-        gui::CGui gui{};
-        
-        
-        
-        
-        tf::Executor executor{};
-        executor.silent_async([&window]() mutable
-        {
-            for(int i = 0; i < 1; ++i)
-            {
-                window.popup_warning("Potential Masquerading", "Identified two BLE Servers with the same signed MAC address");
-            }
-        });
-        
-        bool exit = false;
-        while (!exit)
-        {
-            renderer.begin_frame();
-
-            window.process_events(&exit);
-            gui.push();
-
-            renderer.end_frame();
-        }
-        
-        
-        return EXIT_SUCCESS;
-    }
-    catch(const exception::fatal_error& err)
-    {
-        LOG_ERROR_FMT("Fatal exception: {}", err.what());
-        return EXIT_FAILURE;
-    }
+    //try
+    //{
+    //    process_cmd_line_args(argc, argv);
+    //
+//
+    //
+    //    gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
+    //    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
+    //    gui::CGui gui{};
+    //
+    //
+    //
+    //
+    //    tf::Executor executor{};
+    //    executor.silent_async(time_limited_scan(scanner, std::chrono::seconds(10)));
+    //
+    //    bool exit = false;
+    //    while (!exit)
+    //    {
+    //        renderer.begin_frame();
+//
+    //        window.process_events(&exit);
+    //        gui.push();
+//
+    //        renderer.end_frame();
+    //    }
+    //
+    //
+    //    return EXIT_SUCCESS;
+    //}
+    //catch(const exception::fatal_error& err)
+    //{
+    //    LOG_ERROR_FMT("Fatal exception: {}", err.what());
+    //    return EXIT_FAILURE;
+    //}
 }

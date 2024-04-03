@@ -54,6 +54,9 @@ _Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
 		LOG_ASSERT_FMT(msg, __VA_ARGS__); \
 		HW_INTERRUPT;	\
 	}
+#else
+    #define ASSERT(expr, msg) expr
+    #define ASSERT_FMT(expr, msg, ...) expr
 #endif // !NDEBUG
 
 

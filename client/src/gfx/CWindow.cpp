@@ -51,12 +51,14 @@ CWindow::~CWindow()
     SDL_DestroyWindow(m_pWindow);
 }
 CWindow::CWindow(CWindow&& other) noexcept
+    : m_SystemTray{ std::move(other.m_SystemTray) }
 {
     std::swap(m_pWindow, other.m_pWindow);
 }
 CWindow& CWindow::operator=(CWindow&& other) noexcept
 {
     std::swap(m_pWindow, other.m_pWindow);
+    m_SystemTray = std::move(other.m_SystemTray);
 
     return *this;
 }
