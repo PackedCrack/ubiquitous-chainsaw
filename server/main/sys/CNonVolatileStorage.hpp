@@ -1,11 +1,14 @@
 #pragma once
 
+/* NVS */
 #include "nvs_flash.h"
+/* Project*/
+#include "defines.hpp"
+/* STD*/
 #include <vector>
 #include <string>
 #include <string_view>
 #include <optional>
-
 namespace storage
 {
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html#introduction
@@ -56,7 +59,87 @@ public:
 		NvsErrorCode code;
 		std::optional<std::vector<uint8_t>> data;
 	};
-	class CReader 
+	template<typename DerivedReader>
+	class CBaseReader
+	{
+	public:
+		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key)
+		{
+			ASSERT(key.size() < (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
+			size_t requiredSize {};
+			NvsErrorCode result = static_cast<NvsErrorCode>(nvs_get_blob(static_cast<DerivedReader*>(this)->m_Handle.value(), 
+																		key.data(), nullptr, &requiredSize));
+			if (result == NvsErrorCode::success)
+			{
+				std::vector<uint8_t> retrievedData {};
+				retrievedData.resize(requiredSize); 
+				result = static_cast<NvsErrorCode>(nvs_get_blob(static_cast<DerivedReader*>(this)->m_Handle.value(), 
+																key.data(), retrievedData.data(), &requiredSize));
+				if (result == NvsErrorCode::success)
+				{
+					return ReadBinaryResult { .code = NvsErrorCode::success, 
+											  .data = std::make_optional<std::vector<uint8_t>>( std::move(retrievedData) )};
+				}
+				else 
+				{
+					if (result == NvsErrorCode::fail)
+					{
+						return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::fail, .data = std::nullopt };
+					}
+					else if (result == NvsErrorCode::namespaceNotFound)
+					{
+						return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::namespaceNotFound, .data = std::nullopt };
+					}
+					else if (result == NvsErrorCode::invalidHandle)
+					{
+						return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidHandle, .data = std::nullopt };
+					}
+					else if (result == NvsErrorCode::invalidName)
+					{
+						return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidName, .data = std::nullopt };
+					}
+					else if (result == NvsErrorCode::invalidDataLenght)
+					{
+						return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidDataLenght, .data = std::nullopt };
+					}
+					else
+					{
+						LOG_FATAL("CReader::read_binary(): Unknown error occured!");
+						return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::unknown, .data = std::nullopt };
+					}
+				}
+			}
+			else
+			{
+				if (result == NvsErrorCode::fail)
+				{
+					return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::fail, .data = std::nullopt };
+				}
+				else if (result == NvsErrorCode::namespaceNotFound)
+				{
+					return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::namespaceNotFound, .data = std::nullopt };
+				}
+				else if (result == NvsErrorCode::invalidHandle)
+				{
+					return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidHandle, .data = std::nullopt };
+				}
+				else if (result == NvsErrorCode::invalidName)
+				{
+					return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidName, .data = std::nullopt };
+				}
+				else if (result == NvsErrorCode::invalidDataLenght)
+				{
+					return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::invalidDataLenght, .data = std::nullopt };
+				}
+				else
+				{
+					LOG_FATAL("CReader::read_binary(): Unknown error occured!");
+					return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::unknown, .data = std::nullopt };
+				}
+			} 
+		} // function bracket
+	}; // class CBaseReader
+	class CReader : public CBaseReader<CReader>
 	{
 	private:
 	    CReader(std::string_view nameSpace);
@@ -67,12 +150,11 @@ public:
 		CReader& operator=(const CReader& other) = delete;
 		CReader& operator=(CReader&& other) noexcept;
 	public:
-		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
 		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReader> make_reader(std::string_view nameSpace);
 	public:
 		std::optional<nvs_handle_t> m_Handle;
 	}; // class CReader
-	class CReadWriter
+	class CReadWriter : public CBaseReader<CReader>
 	{
 	private:
 	    CReadWriter(std::string_view nameSpace);
@@ -84,7 +166,6 @@ public:
 		CReadWriter& operator=(CReadWriter&& other) noexcept;
 	public:
 		[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
-		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
 		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReadWriter> make_read_writer(std::string_view nameSpace);
 	private:
 		[[nodiscard]] WriteResult commit();
