@@ -64,18 +64,12 @@ CNonVolatileStorage::CReader::CReader(std::string_view nameSpace)
 } // CReader constructor
 CNonVolatileStorage::CReader::~CReader()
 {	
-	if (m_Handle.has_value())
+	if (!m_Handle.has_value())
 	{
-		if (m_Handle.value() != UINT32_MAX)
-		{
-			return;
-		}
-		else
-		{
-			nvs_close(m_Handle.value());
-			m_Handle = std::nullopt;
-		}
+		return;
 	}
+	nvs_close(m_Handle.value());
+	m_Handle = std::nullopt;
 }
 CNonVolatileStorage::CReader::CReader(CReader&& other) noexcept
 	: m_Handle { std::exchange(other.m_Handle, std::nullopt) }
@@ -117,18 +111,12 @@ CNonVolatileStorage::CReadWriter::CReadWriter(std::string_view nameSpace)
 } // CReader constructor
 CNonVolatileStorage::CReadWriter::~CReadWriter()
 {
-	if (m_Handle.has_value())
+	if (!m_Handle.has_value())
 	{
-		if (m_Handle.value() != UINT32_MAX)
-		{
-			return;
-		}
-		else
-		{
-			nvs_close(m_Handle.value());
-			m_Handle = std::nullopt;
-		}
+		return;
 	}
+	nvs_close(m_Handle.value());
+	m_Handle = std::nullopt;
 }
 CNonVolatileStorage::CReadWriter::CReadWriter(CReadWriter&& other) noexcept
 	: m_Handle { std::exchange(other.m_Handle, std::nullopt) }
