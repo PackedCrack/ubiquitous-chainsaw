@@ -3,7 +3,6 @@
 #include "../resource.hpp"
 // third_party
 #include "imgui/imgui_impl_sdl3.h"
-#include "../system/CTrayIcon.hpp"
 
 
 namespace

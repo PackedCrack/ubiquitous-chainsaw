@@ -19,9 +19,8 @@
 #include "bluetoothLE/Scanner.hpp"
 //#include "bluetoothLE/windows/CDevice.hpp"
 #include "bluetoothLE/Device.hpp"
-#include "system/windows/System.h"
-#include "system/windows/CTrayIcon.hpp"
-#include "defense/defense_mechanism.hpp"
+#include "system/System.hpp"
+#include "system/TrayIcon.hpp"
 
 
 namespace
@@ -127,7 +126,7 @@ auto make_load_invokable(std::string filename)
         }
         else
         {
-            return std::unexpected(std::format("Could not open file: \"{}\"", filename));
+            return std::unexpected(std::format("Could not open file: \'{}\'", filename));
         }
     };
 }
@@ -145,7 +144,7 @@ void test_ecc_sign()
     privKey2.write_to_disk(make_save_invokable("PRIVATE_KEY"));
     pubKey2.write_to_disk(make_save_invokable("PUBLIC_KEY"));
     
-    sys::files::restrict_file_permissions("C:\\Users\\qwerty\\Desktop\\PRIVATE_KEY");
+    sys::restrict_file_permissions("C:\\Users\\qwerty\\Desktop\\PRIVATE_KEY");
     
     std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_load_invokable("PUBLIC_KEY"));
     std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_load_invokable("PRIVATE_KEY"));
@@ -166,12 +165,21 @@ int main(int argc, char** argv)
 {
     ASSERT_FMT(0 < argc, "ARGC is {} ?!", argc);
     
-    test_ecc_sign();
+    
+    auto expected = sys::key_location();
+    if(expected)
+    {
+        LOG_INFO_FMT("Location: {}", expected->string());
+    }
     
     return 0;
     
+    test_ecc_sign();
+    
+    
+    
     auto result = security::CWolfCrypt::instance();
-    sys::System system{};
+    sys::CSystem system{};
     
     auto scanner = ble::make_scanner<ble::CScanner>();
     scanner.begin_scan();

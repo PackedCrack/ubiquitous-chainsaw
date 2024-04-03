@@ -1,6 +1,6 @@
 #pragma once
 #include "defines.hpp"
-#include "../system/CTrayIcon.hpp"
+#include "../system/TrayIcon.hpp"
 // third_party
 #include "../win32.hpp"
 #include "SDL3/SDL.h"
