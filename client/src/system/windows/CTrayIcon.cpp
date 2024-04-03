@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-03-31.
 //
 #include "CTrayIcon.hpp"
-#include "defines.hpp"
+#include "../../client_defines.hpp"
 #include "../../resource.hpp"
 #include "../../gfx/CWindow.hpp"
 

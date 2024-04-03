@@ -21,7 +21,7 @@
 #include "bluetoothLE/Device.hpp"
 #include "system/windows/System.h"
 #include "system/windows/CTrayIcon.hpp"
-
+#include "defense/defense_mechanism.hpp"
 
 
 namespace
@@ -145,8 +145,11 @@ void test_ecc_sign()
     privKey2.write_to_disk(make_save_invokable("PRIVATE_KEY"));
     pubKey2.write_to_disk(make_save_invokable("PUBLIC_KEY"));
     
+    sys::files::restrict_file_permissions("C:\\Users\\qwerty\\Desktop\\PRIVATE_KEY");
+    
     std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_load_invokable("PUBLIC_KEY"));
     std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_load_invokable("PRIVATE_KEY"));
+    
     
     const char* msg = "Very nice message";
     security::CHash<security::Sha2_256> hash{ msg };

@@ -1,5 +1,8 @@
 SET(MAIN_SRCS 
-    main.cpp
+        main.cpp
+        resource.hpp
+        win32.hpp
+        client_defines.hpp
 )
 
 add_subdirectory("system")

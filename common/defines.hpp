@@ -54,29 +54,6 @@ _Pragma(TOSTRING(COMPILER_NAME diagnostic pop))
 		LOG_ASSERT_FMT(msg, __VA_ARGS__); \
 		HW_INTERRUPT;	\
 	}
-
-#ifdef WIN32
-    //#include <errhandlingapi.h>
-    
-    #define WIN_CHECK(expr) \
-    if(expr){}              \
-    else{ LOG_ERROR_FMT("Win32 failed with error code: \"{}\"", GetLastError()); }
-    
-    #define WIN_ASSERT(expr) ASSERT_FMT(expr, "Win32 failed with error code: {}", GetLastError())
-
-    #define WIN_CHECK_HRESULT(expr) \
-    if(HRESULT result = expr; result == S_OK){}              \
-    else{ LOG_ERROR_FMT("Win32 failed with HRESULT code: \"{}\"", result); }
-#endif
-#else
-#define ASSERT(expr, msg)
-#define ASSERT_FMT(expr, msg, ...)
-
-#ifdef WIN32
-    #define WIN_CHECK(expr) expr
-    #define WIN_ASSERT(expr)
-    #define WIN_CHECK_HRESULT(expr)
-#endif
 #endif // !NDEBUG
 
 

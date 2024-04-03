@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-02-13.
 //
 #include "defense_mechanism.hpp"
-#include "defines.hpp"
+#include "../client_defines.hpp"
 // win32
 #include <Windows.h>
 #include <shlobj_core.h>
@@ -19,8 +19,8 @@ namespace sys::defense
 void auto_wakeup_timer(std::chrono::seconds&& delay)
 {
     //  https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createwaitabletimerw
-    HANDLE timer = CreateWaitableTimerW(nullptr, true, nullptr);
-    WIN_ASSERT(timer != nullptr);
+    HANDLE timer = nullptr;
+    WIN_CHECK(timer = CreateWaitableTimerW(nullptr, true, nullptr); timer != nullptr);
     
     
     LARGE_INTEGER time{};
@@ -47,7 +47,7 @@ void restrict_file_permissions(const std::filesystem::path& file)
     // https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format
     PSECURITY_DESCRIPTOR pDescriptor = nullptr;
     // https://learn.microsoft.com/en-us/windows/win32/api/sddl/nf-sddl-convertstringsecuritydescriptortosecuritydescriptorw
-    WIN_CHECK(ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:PAI(A;;FA;;;OW)", SDDL_REVISION_1, &pDescriptor, nullptr));
+    WIN_CHECK(ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:P(A;OICI;FA;;;BA)", SDDL_REVISION_1, &pDescriptor, nullptr));
     if(pDescriptor != nullptr)
     {
         // https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-setfilesecurityw

@@ -67,7 +67,7 @@ namespace logger
     void log_fat(std::string_view file, std::string_view function, int32_t line, string_t&& msg)
     {
         log_msg(COLOR_RED, "UNRECOVERABLE ERROR", FMT(FORMATTED_MSG.data(), file, function, line, std::forward<string_t>(msg)));
-        throw exception::fatal_error(std::string{"Fatal runtime error. See log. Aborting.."});
+        throw exception::fatal_error("Fatal runtime error. See log. Aborting..");
     };
     template<typename string_t>
     void log_ass(std::string_view file, std::string_view function, int32_t line, string_t&& msg)
