@@ -41,6 +41,7 @@ public:
     [[nodiscard]] bool try_emplace(key_t&& key, ctor_args_t&&... args)
     {
         std::unique_lock lock{ m_Mutex };
+        // cppcheck-suppress redundantAssignment
         auto[emplaced, iter] = m_Container.try_emplace(std::forward<key_t>(key), std::forward<ctor_args_t>(args)...);
         
         return emplaced;
@@ -76,8 +77,14 @@ public:
         
         std::vector<element_t> copies{};
         copies.reserve(m_Container.size());
-        for (const auto& pair : m_Container)
-            copies.push_back(pair.second);
+        std::transform(
+                std::begin(m_Container),
+                std::end(m_Container),
+                std::back_inserter(copies),
+                [](auto&& pair) { return pair.second; });
+        
+        //for (const auto& pair : m_Container)
+        //    copies.push_back(pair.second);
         
         return copies;
     }

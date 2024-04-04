@@ -19,7 +19,7 @@ std::expected<CWolfCrypt*, CWolfCrypt::Error> CWolfCrypt::instance()
     try
     {
         static CWolfCrypt instance{};
-        return &instance;
+        return std::expected<CWolfCrypt*, CWolfCrypt::Error>{ &instance };
     }
     catch(const std::runtime_error& err)
     {
@@ -38,6 +38,8 @@ CWolfCrypt::~CWolfCrypt()
 {
     int32_t result = wolfCrypt_Cleanup();
     if(result != SUCCESS)
-        throw std::runtime_error{ std::format("Failed to cleanup wolfcrypt.. Failed with: \"{}\"", result) };
+    {
+        LOG_ERROR_FMT("Failed to cleanup wolfcrypt.. Failed with: \"{}\"", result);
+    }
 }
 }   // namespace security

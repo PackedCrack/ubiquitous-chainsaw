@@ -6,8 +6,12 @@ endif()
 
 
 SET(BLUETOOTH_SRCS
-        common.hpp
-        CBLEScanner.hpp
+        ble_common.hpp
+        Device.hpp
+        Service.hpp
+        Characteristic.hpp
+        Descriptor.hpp
+        Scanner.hpp
 )
 
 target_sources(${MAIN_PROJECT} PRIVATE ${BLUETOOTH_SRCS})

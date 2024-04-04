@@ -61,7 +61,7 @@ std::expected<CRandom, CRandom::Error> CRandom::make_rng()
     catch(const std::runtime_error& err)
     {
         LOG_ERROR_FMT("Failed to create RNG: \"{}\"", err.what());
-        std::unexpected{ Error::construction };
+        return std::unexpected{ Error::construction };
     }
 }
 CRandom::CRandom()

@@ -11,6 +11,17 @@ namespace ble
 {
 template<typename int_t>
 concept unsigned_integral = std::integral<int_t> && std::is_unsigned_v<int_t>;
+template<typename async_t, typename... make_args_t>
+concept awaitable_make = requires
+{
+    typename async_t::awaitable_t;
+    requires std::is_invocable_r_v<typename async_t::awaitable_t, decltype(&async_t::make), make_args_t...>;
+};
+template<typename T>
+concept string_uuid = requires(const T type)
+{
+    { type.uuid_as_str() } -> std::convertible_to<std::string>;
+};
 
 template<typename int_t> requires unsigned_integral<int_t>
 [[nodiscard]] uint8_t lsb_of_uint(int_t value)

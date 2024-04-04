@@ -3,26 +3,25 @@
 //
 
 #include "CCharacteristic.hpp"
-#include "../common.hpp"
+#include "../ble_common.hpp"
 #include "../../common/common.hpp"
 
 #include <winrt/Windows.Storage.Streams.h>
 #include <iostream>
 
-
 #define TO_BOOL(expr) common::enum_to_bool(expr)
 
 namespace
 {
-[[nodiscard]] ble::win::CCharacteristic::Properties operator|(
-        ble::win::CCharacteristic::Properties lhs,
+[[nodiscard]] ble::CCharacteristic::Properties operator|(
+        ble::CCharacteristic::Properties lhs,
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
 {
-    return ble::win::CCharacteristic::Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
+    return ble::CCharacteristic::Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
 }
-[[nodiscard]] std::vector<std::string> properties_to_str(ble::win::CCharacteristic::Properties properties)
+[[nodiscard]] std::vector<std::string> properties_to_str(ble::CCharacteristic::Properties properties)
 {
-    using Properties = ble::win::CCharacteristic::Properties;
+    using Properties = ble::CCharacteristic::Properties;
     
     std::vector<std::string>  props{};
     if(static_cast<bool>(properties & Properties::authenticatedSignedWrites))
@@ -51,11 +50,11 @@ namespace
     
     return props;
 }
-[[nodiscard]] ble::win::CCharacteristic::Properties to_props_from_winrt(
+[[nodiscard]] ble::CCharacteristic::Properties to_props_from_winrt(
         winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties properties)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    using Properties = ble::win::CCharacteristic::Properties;
+    using Properties = ble::CCharacteristic::Properties;
     
     Properties props{ 0 };
     if(TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
@@ -85,52 +84,99 @@ namespace
 }
 
 }   // namespace
-namespace ble::win
+namespace ble
 {
-CCharacteristic CCharacteristic::make_characteristic(
-        const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic& characteristic)
+CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& characteristic)
 {
     CCharacteristic charac{ characteristic };
-    charac.init();
     
-    return charac;
-}
-CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
-        : m_Characteristic{ std::move(characteristic) }
-        , m_ProtLevel{}
-        , m_Properties{}
-        , m_State{ State::uninitialized }
-{}
-winrt::Windows::Foundation::IAsyncAction CCharacteristic::init()
-{
-    std::printf("\nCharacteristic UUID: %ws", to_hstring(m_Characteristic.Uuid()).data());
+    std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
     
     // Storing this mostly for debug purposes for now..
-    m_Properties = to_props_from_winrt(m_Characteristic.CharacteristicProperties());
-    std::vector<std::string> properties = properties_to_str(m_Properties);
+    charac.m_Properties = to_props_from_winrt(charac.m_pCharacteristic->CharacteristicProperties());
+    std::vector<std::string> properties = properties_to_str(charac.m_Properties);
     std::printf("\nCharacteristic properties: ");
     for(auto&& property : properties)
     {
         std::printf("%s, ", property.c_str());
     }
     // TODO:: might not need this
-    m_ProtLevel = prot_level_from_winrt(m_Characteristic.ProtectionLevel());
+    charac.m_ProtLevel = prot_level_from_winrt(charac.m_pCharacteristic->ProtectionLevel());
     // TODO:: Debug print
-    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(m_ProtLevel)).c_str());
+    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.m_ProtLevel)).c_str());
     
-    co_await query_descriptors();
+    co_await charac.query_descriptors();
+    
+    co_return charac;
 }
+CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
+        : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
+        , m_ProtLevel{}
+        , m_Properties{}
+{}
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
-    return winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid()));
+    return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
 }
-bool CCharacteristic::ready() const
+CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
 {
-    return m_State == State::ready;
+    using namespace winrt;
+    using namespace Windows::Foundation;
+    using namespace Windows::Devices::Bluetooth;
+    using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
+    using namespace Windows::Storage::Streams;
+    
+    GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
+    
+    GattCommunicationStatus status = result.Status();
+    if (status == GattCommunicationStatus::Success)
+    {
+        IBuffer buffer = result.Value();
+        
+        read_t data{};
+        data->resize(buffer.Length());
+        size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
+        std::memcpy(data->data(), buffer.data(), smallestSize);
+        
+        co_return data;
+    }
+    else
+    {
+        LOG_ERROR_FMT("Read failed with: \"{}\"", gatt_communication_status_to_str(status));
+        co_return std::unexpected(status);
+    }
 }
-CCharacteristic::State CCharacteristic::state() const
+CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data) const
 {
-    return m_State;
+    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+    GattCommunicationStatus status = co_await write_data(data, GattWriteOption::WriteWithoutResponse);
+    co_return status;
+}
+CCharacteristic::awaitable_write_t CCharacteristic::write_data_with_response(const std::vector<uint8_t>& data) const
+{
+    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+    GattCommunicationStatus status = co_await write_data(data, GattWriteOption::WriteWithResponse);
+    co_return status;
+}
+CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data, GattWriteOption option) const
+{
+    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
+    using Buffer = winrt::Windows::Storage::Streams::Buffer;
+    
+    
+    auto buffer = Buffer{ static_cast<uint32_t>(data.size()) };
+    if(buffer.Length() == data.size())
+    {
+        LOG_INFO("Size is correct!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    }
+    else
+    {
+        LOG_INFO("Size is wrong! BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
+    }
+    std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
+    
+    GattCommunicationStatus result = co_await m_pCharacteristic->WriteValueAsync(buffer, option);
+    co_return result;
 }
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
@@ -138,10 +184,9 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     using namespace winrt::Windows::Foundation::Collections;
     
     
-    m_State = State::queryingDescriptors;
     m_Descriptors.clear();
     
-    GattDescriptorsResult result = co_await m_Characteristic.GetDescriptorsAsync();
+    GattDescriptorsResult result = co_await m_pCharacteristic->GetDescriptorsAsync();
     if(result.Status() == GattCommunicationStatus::Success)
     {
         IVectorView<GattDescriptor> descriptors = result.Descriptors();
@@ -149,7 +194,8 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
         
         for(auto&& descriptor : descriptors)
         {
-            auto[iter, emplaced] = m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), CDescriptor{ descriptor });
+            auto[iter, emplaced] =
+                    m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), co_await make_descriptor<CDescriptor>(descriptor));
             if(!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
@@ -162,46 +208,5 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
                       gatt_communication_status_to_str(result.Status()),
                       uuid_as_str());
     }
-    
-    m_State = State::ready;
 }
-void CCharacteristic::read_value() const
-{
-    using namespace winrt;
-    using namespace Windows::Foundation;
-    using namespace Windows::Devices::Bluetooth;
-    using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
-    using namespace Windows::Storage::Streams;
-    
-    IAsyncOperation<GattReadResult> operation = m_Characteristic.ReadValueAsync(BluetoothCacheMode::Uncached);
-    while(operation.Status() != AsyncStatus::Completed)
-    {
-        if(operation.Status() == AsyncStatus::Error)
-            std::cout << "AsyncStatus Error!" << std::endl;
-        if(operation.Status() == AsyncStatus::Started)
-            std::cout << "AsyncStatus Started!" << std::endl;
-        if(operation.Status() == AsyncStatus::Canceled)
-            std::cout << "AsyncStatus Canceled!" << std::endl;
-    }
-    
-    GattReadResult result = operation.GetResults();
-    if (result.Status() == GattCommunicationStatus::Success)
-    {
-        IBuffer buffer = result.Value();
-        std::span<uint8_t> dataView(buffer.data(), buffer.Length());
-        std::vector<uint8_t> data{ std::begin(dataView), std::end(dataView) };
-        std::string str{ std::begin(dataView), std::end(dataView) };
-        
-        LOG_INFO_FMT("Data as str: \"{}\"", str);
-        std::cout << "\nPrinting raw bytes: ";
-        for(uint8_t byte : data)
-            std::cout << byte;
-        std::cout << std::endl;
-        
-    }
-    else
-    {
-        std::cout << "Read failed: " << static_cast<int32_t>(result.Status()) << std::endl;
-    }
-}
-}   // namespace ble::win
+}   // namespace ble

@@ -20,18 +20,15 @@ namespace
     else
         return ble::AddressType::none;
 }
-
-
 }   // namespace
 
 namespace ble
-{
-namespace win
 {
 CScanner::CScanner()
     : m_Watcher{}
     , m_ReceivedRevoker{ m_Watcher.Received(winrt::auto_revoke, received_event_handler()) }
     , m_FoundDevices{}
+    , m_Count{ 0 }
 {}
 CScanner::~CScanner()
 {
@@ -41,19 +38,19 @@ CScanner::~CScanner()
     if(m_Watcher.Status() == BluetoothLEAdvertisementWatcherStatus::Started)
         m_Watcher.Stop();
 }
-
 CScanner::CScanner(CScanner&& other) noexcept
         : m_Watcher{}
         , m_FoundDevices{ std::move(other.m_FoundDevices) }
+        , m_Count{ m_FoundDevices.size() }
 {
     move_impl(other);
 }
-
 CScanner& CScanner::operator=(CScanner&& other) noexcept
 {
     if(this != &other)
     {
         m_FoundDevices = std::move(other.m_FoundDevices);
+        m_Count = m_FoundDevices.size();
         move_impl(other);
     }
     
@@ -79,22 +76,23 @@ std::vector<ble::DeviceInfo> CScanner::found_devices()
 {
     return m_FoundDevices.as_vector();
 }
+const std::atomic<size_t>& CScanner::num_devices() const
+{
+    return m_Count;
+}
 void CScanner::revoke_received_event_handler()
 {
     m_ReceivedRevoker.revoke();
 }
-
 void CScanner::register_received_event_handler()
 {
     m_ReceivedRevoker = m_Watcher.Received(winrt::auto_revoke, received_event_handler());
 }
-
 void CScanner::refresh_received_event_handler()
 {
     revoke_received_event_handler();
     register_received_event_handler();
 }
-
 std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisementReceivedEventArgs)> CScanner::received_event_handler()
 {
     return [this](auto&&, BluetoothLEAdvertisementReceivedEventArgs args)
@@ -111,7 +109,9 @@ std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisem
         std::string strAddress = ble::hex_addr_to_str(devInfo.address.value());
         if(!m_FoundDevices.contains(strAddress))
             m_FoundDevices.insert(std::move(strAddress), std::move(devInfo));
+        
+        m_Count.fetch_add(1u);
+        m_Count.notify_all();
     };
 }
-}   // namespace win
 }   // namespace ble

@@ -3,45 +3,34 @@
 //
 
 #pragma once
-#include "CCharacteristic.hpp"
+#include "../Characteristic.hpp"
 
 
-
-namespace ble::win
+namespace ble
 {
 class CService
 {
 public:
-    enum class State : uint32_t
-    {
-        uninitialized,
-        queryingCharacteristics,
-        ready
-    };
-    enum class Error
-    {
-        characteristicNotFound
-    };
+    using awaitable_t = concurrency::task<CService>;
+private:
+    using GattDeviceService = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 public:
-    [[nodiscard]] static CService make_service(
-            const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service);
+    [[nodiscard]] static awaitable_t make(const GattDeviceService& service);
+    CService() = default;
     ~CService() = default;
     CService(const CService& other) = default;
-    CService(CService&& other) = default;
+    CService(CService&& other) noexcept = default;
     CService& operator=(const CService& other) = default;
     CService& operator=(CService&& other) = default;
+private:
+    explicit CService(GattDeviceService service);
 public:
-    [[nodiscard]] std::expected<const CCharacteristic*, Error> characteristic(const UUID& uuid) const;
+    [[nodiscard]] std::optional<const CCharacteristic*> characteristic(const UUID& uuid) const;
     [[nodiscard]] std::string uuid_as_str() const;
-    [[nodiscard]] bool ready() const;
-    [[nodiscard]] State state() const;
+private:
     winrt::Windows::Foundation::IAsyncAction query_characteristics();
 private:
-    explicit CService(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService service);
-    winrt::Windows::Foundation::IAsyncAction init();
-public:
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService m_Service;
+    std::shared_ptr<GattDeviceService> m_pService;
     std::unordered_map<ble::UUID, CCharacteristic, ble::UUID::Hasher> m_Characteristics;
-    State m_State;
 };
-}   // namespace ble::win
+}   // namespace ble

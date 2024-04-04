@@ -8,10 +8,9 @@ namespace exception
     class fatal_error : public std::runtime_error
     {
     public:
-        template<typename string_t>
-        explicit fatal_error(string_t&& msg)
+        explicit fatal_error(const char* msg)
                 : runtime_error{ msg }
-                , m_Message{ std::forward<string_t>(msg) }
+                , m_Message{ msg }
         {}
         [[nodiscard]] inline const char* what() const noexcept override
         {

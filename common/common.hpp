@@ -11,22 +11,24 @@
 namespace common
 {
 template<typename buffer_t>
-concept Buffer = requires(buffer_t buffer)
+concept buffer = requires(buffer_t buffer)
 {
     { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
     { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::pointer>;
 };
 template<typename buffer_t>
-concept ConstBuffer = requires(buffer_t buffer)
+concept const_buffer = requires(buffer_t buffer)
 {
     { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
     { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::const_pointer>;
 };
 template<typename string_t>
-concept BasicString = requires(string_t str)
+concept basic_string = requires(string_t str)
 {
 	{ std::is_same_v<std::remove_cvref_t<string_t>, std::string> };
 };
+template<typename class_t, typename... ctor_args_t>
+concept constructible_with = std::is_constructible_v<class_t, ctor_args_t...>;
 }   // common
 
 
