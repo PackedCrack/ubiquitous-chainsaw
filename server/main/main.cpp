@@ -34,61 +34,16 @@ extern "C" void app_main(void)
 	sys::CSystem system{};
 	try 
 	{
-		std::expected<int, int> test{};
+		//std::expected<int, int> test{};
 		print_chip_info();
 
 		using namespace storage;
 
-		storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
+		CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
-		std::optional<CNonVolatileStorage::CReadWriter> realWriter = CNonVolatileStorage::CReadWriter::make_read_writer("STORAGE");
-		if (!realWriter.has_value())
 		{
-			LOG_ERROR("Real CReader creation error");
-		}
-		else
-		{
-			LOG_INFO("Real CReader just works!");
-			storage::CNonVolatileStorage::ReadBinaryResult readResult = realWriter.value().read_binary("BinaryData");
-			if (readResult.code != NvsErrorCode::success)
-			{
-				LOG_ERROR("Error reading data using REAL CReader");
-			}
-			else
-			{
-				std::printf("Num bytes: %u\n", readResult.data.value().size() );
-				for (uint8_t byte : readResult.data.value()) 
-				{
-        			std::printf("%02X ", byte);
-    			}
-				std::printf("\n");
-			}
-		}
-
-
-		std::optional<CNonVolatileStorage::CReadWriter> writer = nvs.make_read_writer("STORAGE");
-		if (!writer.has_value())
-		{
-			LOG_ERROR("Not real Creader creation error");
-		}
-		else	
-		{
-			LOG_INFO("Not real CReader just works!");
-			storage::CNonVolatileStorage::ReadBinaryResult readResult = writer.value().read_binary("BinaryData");
-
-			if (readResult.code != NvsErrorCode::success)
-			{
-				LOG_ERROR("Error reading data using Not Real CReader");
-			}
-			else
-			{
-				std::printf("Num bytes: %u\n", readResult.data.value().size() );
-				for (uint8_t byte : readResult.data.value()) 
-				{
-        			std::printf("%02X ", byte);
-    			}
-				std::printf("\n");
-			}
+			std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
+			std::printf("leaving scope\n");
 		}
 
 
