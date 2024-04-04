@@ -84,8 +84,24 @@ enum class NimbleErrorCode : int32_t
     disabledFeature = BLE_HS_EDISABLED, // FDisabled feature
     operationStalled = BLE_HS_ESTALLED //Operation stalled 
 };
-/*function should be constexpr but cant be until -std=c++2b, because of the static storage.*/
-[[nodiscard]] inline std::string_view nimble_error_to_string(NimbleErrorCode error)
+enum class EspErrorCode : int32_t
+{
+    success = ESP_OK, /*!< esp_err_t value indicating success (no error) */
+    fail = ESP_FAIL, /*!< Generic esp_err_t code indicating failure */
+    noMemory = ESP_ERR_NO_MEM, /*!< Out of memory */
+	invalidArg = ESP_ERR_INVALID_ARG, /*!< Invalid argument */
+	invalidState = ESP_ERR_INVALID_STATE, /*!< Invalid state */
+    invalidSize = ESP_ERR_INVALID_SIZE, /*!< Invalid size */
+    resourceNotFound = ESP_ERR_NOT_FOUND, /*!< Requested resource not found */
+    operationNotSupported = ESP_ERR_NOT_SUPPORTED, /*!< Operation or feature not supported */
+    operationTimeOut = ESP_ERR_TIMEOUT, /*!< Operation timed out */
+    invalidResponse = ESP_ERR_INVALID_RESPONSE, /*!< Received response was invalid */
+    invalidCheckSum = ESP_ERR_INVALID_CRC, /*!< CRC or checksum was invalid */
+    invalidVersion = ESP_ERR_INVALID_VERSION, /*!< Version was invalid */
+    invalidMAC = ESP_ERR_INVALID_MAC, /*!< MAC address was invalid */
+    notFinished = ESP_ERR_NOT_FINISHED /*!< There are items remained to retrieve */
+};
+constexpr std::string_view nimble_error_to_string(NimbleErrorCode error)
 {
     UNHANDLED_CASE_PROTECTION_ON
     switch (error)
