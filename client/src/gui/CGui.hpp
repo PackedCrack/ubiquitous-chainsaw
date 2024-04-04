@@ -13,11 +13,11 @@ public:
 	CGui(CGui&& other) = default;
 	CGui& operator=(const CGui& other) = default;
 	CGui& operator=(CGui&& other) = default;
-
+public:
     template<typename widget_t, typename... ctor_args_t>
-    void emplace_widget(ctor_args_t&&... args)
+    void emplace(ctor_args_t&&... args)
     {
-        m_Widgets.emplace(gui::make_widget<widget_t>(std::forward<ctor_args_t>(args)...));
+        m_Widgets.emplace_back(gui::make_widget<widget_t>(std::forward<ctor_args_t>(args)...));
     }
 	void push();
 private:

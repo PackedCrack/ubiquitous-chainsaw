@@ -82,8 +82,6 @@ private:
     std::unique_ptr<IBase> m_pWidget;
 };
 
-
-
 template<typename widget_t, typename... args>
 requires imgui_widget<widget_t>
 [[nodiscard]] CWidget make_widget(args&&... constrArgs)

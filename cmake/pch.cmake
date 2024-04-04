@@ -24,7 +24,8 @@ SET(STD_PCH <cstdint>
         <ranges>
         <random>
         <queue>
-        <cerrno>)
+        <cerrno>
+        <unordered_set>)
 
 # --- functions --- #
 function(use_pch PROJ)

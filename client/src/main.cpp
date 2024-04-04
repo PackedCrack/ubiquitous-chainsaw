@@ -5,7 +5,7 @@
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
 
-#include "defines.hpp"
+#include "client_defines.hpp"
 #include "gfx/CRenderer.hpp"
 #include "gui/CGui.hpp"
 
@@ -19,6 +19,7 @@
 #include "system/System.hpp"
 #include "system/TrayIcon.hpp"
 #include "common/CStopWatch.hpp"
+#include "gui/CDeviceList.hpp"
 
 
 namespace
@@ -205,15 +206,6 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
-[[nodiscard]] auto time_limited_scan(ble::CScanner& scanner, std::chrono::seconds seconds)
-{
-    return [&scanner, seconds]()
-    {
-        scanner.begin_scan();
-        std::this_thread::sleep_for(seconds);
-        scanner.end_scan();
-    };
-}
 }   // namespace
 
 
@@ -295,12 +287,12 @@ void test_ecc_sign()
 }
 
 
+
 int main(int argc, char** argv)
 {
     tf::Executor& executor = sys::executor();
     
     sys::CSystem system{};
-    
     executor.silent_async([argc, argv]()
     {
         auto wc = security::CWolfCrypt::instance();
@@ -309,12 +301,12 @@ int main(int argc, char** argv)
     });
     
     auto scanner = ble::make_scanner<ble::CScanner>();
-    executor.silent_async(time_limited_scan(scanner, std::chrono::seconds(1)));
     
     
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
-    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
+    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
+    gui.emplace<gui::CDeviceList>(scanner);
     
     
     bool exit = false;
