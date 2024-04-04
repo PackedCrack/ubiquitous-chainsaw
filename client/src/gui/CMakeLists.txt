@@ -1,7 +1,8 @@
-SET(GUI_SRCS 
-    CGui.cpp
-    CGui.hpp
-    CWidget.hpp
+SET(GUI_SRCS
+        CGui.cpp
+        CGui.hpp
+        CWidget.hpp
+        CDeviceList.cpp
 )
 
 
