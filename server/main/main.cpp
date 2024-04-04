@@ -3,6 +3,8 @@
 
 #include "sys/CNonVolatileStorage.hpp"
 
+#include "esp_system.h"
+
 #include <expected>
 #include "../../client/src/security/CWolfCrypt.hpp"
 
@@ -26,26 +28,30 @@ void print_chip_info()
 
 
 
+
 extern "C" void app_main(void)
 {
 	sys::CSystem system{};
 	try 
 	{
-		std::expected<int, int> test{};
+		//std::expected<int, int> test{};
 		print_chip_info();
-		storage::CNonVolatileStorage nvs{};
 
-		auto a = security::CWolfCrypt::instance();
+		using namespace storage;
 
+		CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+
+		{
+			std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
+			std::printf("leaving scope\n");
+		}
+
+
+		//auto a = security::CWolfCrypt::instance();
 
 		// https://mynewt.apache.org/latest/
 
-		//{
-        //ble::CNimble tmp {};
-		//}
-		ble::CNimble nimble {};
-		//ble::CNimble nimble {std::move(tmp)};
-		//ble::CNimble nimble = std::move(tmp);
+		//ble::CNimble nimble {};
 
 		while (true)
 		{
