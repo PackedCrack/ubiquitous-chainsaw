@@ -26,8 +26,25 @@ void print_chip_info()
 	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", system.min_free_heap());
 }
 
+// https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/performance/speed.html#measuring-performance
+void measure_important_function(void) {
+    const unsigned MEASUREMENTS = 5000;
+    uint64_t start = esp_timer_get_time();
 
+	using namespace storage;
+	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
 
+    for (int retries = 0; retries < MEASUREMENTS; retries++) 
+	{
+		//CNonVolatileStorage::ReadBinaryResult result = reader.value().read_binary("BinaryData");
+    }
+
+    uint64_t end = esp_timer_get_time();
+
+    printf("%u iterations took %llu milliseconds (%llu microseconds per invocation)\n",
+           MEASUREMENTS, (end - start)/1000, (end - start)/MEASUREMENTS);
+}
 
 extern "C" void app_main(void)
 {
@@ -39,11 +56,21 @@ extern "C" void app_main(void)
 
 		using namespace storage;
 
-		CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+		[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
+		std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
+		CNonVolatileStorage::ReadBinaryResult readResult = reader.value().read_binary("BinaryData");
+		if (readResult.code != NvsErrorCode::success)
 		{
-			std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
-			std::printf("leaving scope\n");
+			LOG_ERROR("FAILED READ");
+		}
+
+		std::vector<uint8_t> data{0xFF, 0xFF, 0xFF};
+		std::optional<CNonVolatileStorage::CWriter> writer = CNonVolatileStorage::CWriter::make_writer("STORAGE");
+		CNonVolatileStorage::WriteResult writeResult = writer.value().write_binary("BinaryData", data);
+		if (writeResult.code != NvsErrorCode::success)
+		{
+			LOG_ERROR("FAILED WRITE");
 		}
 
 

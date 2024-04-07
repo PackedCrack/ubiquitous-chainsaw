@@ -207,7 +207,7 @@ requires std::is_same_v<return_t, std::string> || std::is_same_v<return_t, std::
 	return r;
 }
 template<typename buffer_t>
-requires common::ConstBuffer<buffer_t>
+requires common::const_buffer<buffer_t>
 [[nodiscard]] NimbleErrorCode append_read_data(os_mbuf* om, buffer_t&& data)
 {
 	ASSERT(data.size() <= UINT16_MAX, "Buffer is too big!");
