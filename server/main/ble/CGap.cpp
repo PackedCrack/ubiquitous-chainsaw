@@ -237,21 +237,23 @@ CGap& CGap::operator=(CGap&& other) noexcept
 
 	return *this;
 }
-void CGap::rssi()
+std::optional<int8_t> CGap::rssi() const
 {
-    //if(currentConnectionHandle == INVALID_HANDLE_ID)
-    //    return;
-//
-    //int8_t rssiValue {};
-    //int rssi = ble_gap_conn_rssi(currentConnectionHandle, &rssiValue);
-    //if (rssi != 0)
-    //{
-    //    LOG_WARN_FMT("Unable to retrieve rssi value: {}", rssi);
-    //}
-    //else
-    //{
-    //    LOG_INFO_FMT("RSSI VALUE: {}", rssiValue);
-    //}
+	if ( !m_ActiveConnection.handle().has_value() )
+	{
+        return std::nullopt;
+	}
+
+    int8_t rssiValue {};
+    int result = ble_gap_conn_rssi(m_ActiveConnection.handle().value(), &rssiValue);
+    if (result != ESP_OK)
+    {
+        return std::nullopt;
+    }
+    else
+    {
+        return rssiValue;
+    }
 }
 void CGap::set_connection(CConnection&& newConncetion)
 {

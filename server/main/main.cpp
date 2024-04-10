@@ -7,6 +7,7 @@
 
 #include <expected>
 #include "../../client/src/security/CWolfCrypt.hpp"
+#include "server_common.hpp"
 
 
 void print_chip_info()
@@ -58,33 +59,45 @@ extern "C" void app_main(void)
 
 		[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
-		std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
-		CNonVolatileStorage::ReadBinaryResult readResult = reader.value().read_binary("BinaryData");
-		if (readResult.code != NvsErrorCode::success)
-		{
-			LOG_ERROR("FAILED READ");
-		}
-
-		std::vector<uint8_t> data{0xFF, 0xFF, 0xFF};
-		std::optional<CNonVolatileStorage::CWriter> writer = CNonVolatileStorage::CWriter::make_writer("STORAGE");
-		CNonVolatileStorage::WriteResult writeResult = writer.value().write_binary("BinaryData", data);
-		if (writeResult.code != NvsErrorCode::success)
-		{
-			LOG_ERROR("FAILED WRITE");
-		}
-
-
 		//auto a = security::CWolfCrypt::instance();
 
-		// https://mynewt.apache.org/latest/
+		ble::CNimble nimble {};
+		const ble::CGap* pGap = nimble.gap_handle();
 
-		//ble::CNimble nimble {};
+		std::optional<CNonVolatileStorage::CWriter> rssiWriter = CNonVolatileStorage::CWriter::make_writer(NVS_RSSI_NAMESPACE);
+		if (!rssiWriter.has_value())
+		{
+			LOG_FATAL("Failed to initilize NVS Writer");
+		}
+
+		std::optional<CNonVolatileStorage::CReader> rssiReader = CNonVolatileStorage::CReader::make_reader(NVS_RSSI_NAMESPACE);
+		if (!rssiWriter.has_value())
+		{
+			LOG_FATAL("Failed to initilize NVS Writer");
+		}
+
+		CNonVolatileStorage::Readint8Result rssiReadResult = rssiReader.value().read_int8(NVS_RSSI_KEY);
+		if (rssiReadResult.code == NvsErrorCode::success)
+		{
+			LOG_INFO_FMT("RSSI last saved rssi value = {}", rssiReadResult.data.value());
+		}
+
 
 		while (true)
 		{
-			//chainsawServer.rssi();
 			// Perform any periodic tasks here
-			vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
+			std::optional<int8_t> rssiValue = pGap->rssi();
+			if (rssiValue.has_value())
+			{
+				LOG_INFO_FMT("Rssi value = {}", rssiValue.value());
+				CNonVolatileStorage::WriteResult rssiWriteResult = rssiWriter.value().write_int8(NVS_RSSI_KEY, rssiValue.value());
+				if (rssiWriteResult.code != NvsErrorCode::success)
+				{
+					LOG_ERROR("FAILED RSSI WRITE");
+				}
+
+			}
+			vTaskDelay(pdMS_TO_TICKS(1000)); // milisecs
 		}
     } 
 	catch (const exception::fatal_error& error) 

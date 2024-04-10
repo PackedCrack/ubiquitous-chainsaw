@@ -47,6 +47,30 @@ void handle_read_write_constructor_error(esp_err_t error, std::string_view nameS
 
 }
 
+storage::CNonVolatileStorage::WriteResult handle_write_error(storage::NvsErrorCode result)
+{
+	using namespace storage;
+	using nvs = CNonVolatileStorage;
+
+	if (result == NvsErrorCode::fail)
+		return  nvs::WriteResult { .code = NvsErrorCode::fail, .msg = "Internal error; most likely due to corrupted NVS partition" };
+	else if (result == NvsErrorCode::invalidHandle)
+		return nvs::WriteResult { .code = NvsErrorCode::invalidHandle, .msg = "Handle has been closed or is NULL" };
+	else if (result == NvsErrorCode::readOnly)
+		return  nvs::WriteResult { .code = NvsErrorCode::readOnly, .msg = "Handle was opened as read only" };
+	else if (result == NvsErrorCode::invalidName)
+		return  nvs::WriteResult { .code = NvsErrorCode::invalidName, .msg = "Key name doesn't satisfy constraints" };
+	else if (result == NvsErrorCode::noSpaceForNewEntry)
+		return  nvs::WriteResult { .code = NvsErrorCode::noSpaceForNewEntry, .msg = "There is not enough space to save the value" };
+	else if (result == NvsErrorCode::failedWriteOperation)
+		return  nvs::WriteResult { .code = NvsErrorCode::failedWriteOperation, .msg = "write operation has failed. The value was written however." };
+	else if (result == NvsErrorCode::dataToLarge)
+		return  nvs::WriteResult { .code = NvsErrorCode::dataToLarge, .msg = "The given data is to large" };
+	else
+		return  nvs::WriteResult { .code = NvsErrorCode::unknown, .msg = "Unknown error occured" };
+}
+
+
 } // namespace
 namespace storage
 {
@@ -154,6 +178,7 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 		}
 		else 
 		{
+
 			if (result == NvsErrorCode::fail)
 			{
 				return CNonVolatileStorage::ReadBinaryResult { .code = NvsErrorCode::fail, .data = std::nullopt };
@@ -212,6 +237,46 @@ CNonVolatileStorage::ReadBinaryResult CNonVolatileStorage::CReader::read_binary(
 }
 
 
+CNonVolatileStorage::Readint8Result CNonVolatileStorage::CReader::read_int8(std::string_view key)
+{
+	ASSERT(key.size() < (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
+	
+	int8_t value = 0;
+	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_get_i8(m_Handle.value().handle(), key.data(), &value));
+	if (result == NvsErrorCode::success)
+	{
+		return Readint8Result { .code = NvsErrorCode::success, 
+								  .data = std::make_optional<int8_t>( value )};
+	}
+	else 
+	{
+		if (result == NvsErrorCode::fail)
+		{
+			return CNonVolatileStorage::Readint8Result { .code = NvsErrorCode::fail, .data = std::nullopt };
+		}
+		else if (result == NvsErrorCode::namespaceNotFound)
+		{
+			return CNonVolatileStorage::Readint8Result { .code = NvsErrorCode::namespaceNotFound, .data = std::nullopt };
+		}
+		else if (result == NvsErrorCode::invalidHandle)
+		{
+			return CNonVolatileStorage::Readint8Result { .code = NvsErrorCode::invalidHandle, .data = std::nullopt };
+		}
+		else if (result == NvsErrorCode::invalidName)
+		{
+			return CNonVolatileStorage::Readint8Result { .code = NvsErrorCode::invalidName, .data = std::nullopt };
+		}
+		else if (result == NvsErrorCode::invalidDataLenght)
+		{
+			return CNonVolatileStorage::Readint8Result { .code = NvsErrorCode::invalidDataLenght, .data = std::nullopt };
+		}
+		else
+		{
+			LOG_FATAL("CReader::read_binary(): Unknown error occured!");
+			return CNonVolatileStorage::Readint8Result { .code = NvsErrorCode::unknown, .data = std::nullopt };
+		}
+	}
+}
 
 CNonVolatileStorage::CWriter::CWriter(std::string_view nameSpace)
 	: m_Handle { CHandle::make_handle(OpenMode::readAndWrite, nameSpace) }
@@ -236,27 +301,32 @@ CNonVolatileStorage::CWriter& CNonVolatileStorage::CWriter::operator=(CWriter&& 
 CNonVolatileStorage::WriteResult CNonVolatileStorage::CWriter::write_binary(std::string_view key, const std::vector<uint8_t>& data)
 {
 	ASSERT(key.size() < (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
-	// return std::optional<Error>
 	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_set_blob(m_Handle.value().handle(), key.data(), data.data(), data.size()));
 	if (result == NvsErrorCode::success)
+	{
 		return commit();
-	else if (result == NvsErrorCode::fail)
-		return WriteResult { .code = NvsErrorCode::fail, .msg = "Internal error; most likely due to corrupted NVS partition" };
-	else if (result == NvsErrorCode::invalidHandle)
-		return WriteResult { .code = NvsErrorCode::invalidHandle, .msg = "Handle has been closed or is NULL" };
-	else if (result == NvsErrorCode::readOnly)
-		return WriteResult { .code = NvsErrorCode::readOnly, .msg = "Handle was opened as read only" };
-	else if (result == NvsErrorCode::invalidName)
-		return WriteResult { .code = NvsErrorCode::invalidName, .msg = "Key name doesn't satisfy constraints" };
-	else if (result == NvsErrorCode::noSpaceForNewEntry)
-		return WriteResult { .code = NvsErrorCode::noSpaceForNewEntry, .msg = "There is not enough space to save the value" };
-	else if (result == NvsErrorCode::failedWriteOperation)
-		return WriteResult { .code = NvsErrorCode::failedWriteOperation, .msg = "write operation has failed. The value was written however." };
-	else if (result == NvsErrorCode::dataToLarge)
-		return WriteResult { .code = NvsErrorCode::dataToLarge, .msg = "The given data is to large" };
+	}
 	else
-		return WriteResult { .code = NvsErrorCode::unknown, .msg = "Unknown error occured" };
+	{
+		return handle_write_error(result);
+	}
 }
+
+CNonVolatileStorage::WriteResult CNonVolatileStorage::CWriter::write_int8(std::string_view key, int8_t data)
+{
+	ASSERT(key.size() < (NVS_KEY_NAME_MAX_SIZE - 1), "The given Key was to large");
+	NvsErrorCode result = static_cast<NvsErrorCode>(nvs_set_i8(m_Handle.value().handle(), key.data(), data));
+	if (result == NvsErrorCode::success)
+	{
+		return commit();
+	}
+	else
+	{
+		return handle_write_error(result);
+	}
+}
+
+
 std::optional<storage::CNonVolatileStorage::CWriter> CNonVolatileStorage::CWriter::make_writer(std::string_view nameSpace)
 {
 	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();

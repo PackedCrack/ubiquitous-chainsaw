@@ -59,6 +59,14 @@ public:
 		NvsErrorCode code;
 		std::optional<std::vector<uint8_t>> data;
 	};
+
+	struct Readint8Result // make template ??
+	{
+		NvsErrorCode code;
+		std::optional<int8_t> data;
+	};
+
+
 	class CHandle 
 	{
 	private:
@@ -88,6 +96,7 @@ public:
 	public:
 		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReader> make_reader(std::string_view nameSpace);
 		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
+		[[nodiscard]] Readint8Result read_int8(std::string_view key);
 	private:
 		std::optional<CHandle> m_Handle;
 	}; // class CReader
@@ -104,6 +113,7 @@ public:
 	public:
 		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CWriter> make_writer(std::string_view nameSpace);
 		[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
+		[[nodiscard]] WriteResult write_int8(std::string_view key, int8_t data);
 	private:
 		[[nodiscard]] WriteResult commit();
 	private:

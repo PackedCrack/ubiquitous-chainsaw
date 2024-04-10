@@ -90,6 +90,31 @@ void CNimble::sync_callback()
 	std::unique_lock lock{ *pMutex };
 	pCV->notify_one();
 }
+
+
+const CGap* CNimble::gap_handle() const
+{
+	return m_pGap.get();
+}
+
+//void CNimble::notify()
+//{
+
+	// Get current connection handle
+	// Get rssi value for that connection
+	// Write value to NVS
+
+	// Get ValueHandle for the notify characteristic
+	// update subscribers --->  int ble_gatts_notify(uint16_t conn_handle, uint16_t chr_val_handle)
+	// Client reads the indicated characteristic
+	// Read RSSI value from NVS
+	// write that value to os_membuf
+
+
+	//m_pProfileCache->
+//}
+
+
 CNimble::CNimble()
 	: m_pGap{ nullptr }
 	, m_pProfileCache{ nullptr }
