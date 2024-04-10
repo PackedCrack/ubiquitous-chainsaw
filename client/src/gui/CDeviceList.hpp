@@ -15,6 +15,9 @@ namespace gui
 class CDeviceList
 {
     using time_t = std::chrono::seconds;
+    using mutex_t = std::mutex;
+public:
+    static constexpr std::string_view KEY = "devicelist";
 public:
     explicit CDeviceList(ble::CScanner& scanner);
     ~CDeviceList() = default;
@@ -30,14 +33,10 @@ private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
     void new_scan();
     void device_list();
-public:
-    static constexpr std::string_view KEY = "devicelist";
 private:
     Pointer<ble::CScanner> m_pScanner = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;
-    std::unique_ptr<std::mutex> m_pMutex;
+    std::unique_ptr<mutex_t> m_pMutex;
     common::CStopWatch<time_t> m_Timer;
-private:
-    using mutex_t = std::remove_cvref_t<decltype(*m_pMutex)>;
 };
 }   // namespace gui
