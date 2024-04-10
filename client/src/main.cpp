@@ -306,7 +306,7 @@ int main(int argc, char** argv)
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
-    gui.emplace<gui::CDeviceList>(scanner);
+    gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner);
     
     
     bool exit = false;

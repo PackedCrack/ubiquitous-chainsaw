@@ -30,6 +30,8 @@ private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
     void new_scan();
     void device_list();
+public:
+    static constexpr std::string_view KEY = "devicelist";
 private:
     Pointer<ble::CScanner> m_pScanner = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;

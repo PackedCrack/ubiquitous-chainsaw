@@ -87,11 +87,12 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
 }
 void CDeviceList::new_scan()
 {
+    //ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
     std::chrono::seconds scanTime{ 10 };
     
     if(m_pScanner->scanning())
     {
-        float progress = m_Timer.lap<float>() / scanTime.count();
+        float progress = m_Timer.lap<float>() / static_cast<float>(scanTime.count());
         ImGui::ProgressBar(progress, ImVec2(-FLT_MIN, 0.0f));
     }
     else

@@ -3,6 +3,7 @@ SET(GUI_SRCS
         CGui.hpp
         CWidget.hpp
         CDeviceList.cpp
+        CRSSIPlot.cpp
 )
 
 

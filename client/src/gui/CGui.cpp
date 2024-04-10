@@ -149,7 +149,10 @@ void CGui::push()
     static bool gShowDemoWindow = true;
     ImGui::ShowDemoWindow(&gShowDemoWindow);
 
-    for (auto& widget : m_Widgets)
-        push_widget(widget);
+    for (auto&& kvPair : m_Widgets)
+    {
+        Widget& widget = kvPair.second;
+        std::visit([](auto&& widget){ widget.push(); }, widget);
+    }
 }
 }	// namespace gui
