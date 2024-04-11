@@ -75,8 +75,8 @@ extern "C" void app_main(void)
 		{
 			LOG_FATAL("Failed to initilize NVS Writer");
 		}
-
-		CNonVolatileStorage::Readint8Result rssiReadResult = rssiReader.value().read_int8(NVS_RSSI_KEY);
+		
+		auto rssiReadResult = rssiReader.value().read_int8(NVS_RSSI_KEY);
 		if (rssiReadResult.code == NvsErrorCode::success)
 		{
 			LOG_INFO_FMT("RSSI last saved rssi value = {}", rssiReadResult.data.value());

@@ -52,21 +52,14 @@ public:
 	struct WriteResult
 	{
 		NvsErrorCode code;
-		std::string msg; // make optional
+		std::optional<std::string> msg;
 	};
-	struct ReadBinaryResult // make template ??
+	template<typename T>
+	struct ReadResult 
 	{
 		NvsErrorCode code;
-		std::optional<std::vector<uint8_t>> data;
+		std::optional<T> data;
 	};
-
-	struct Readint8Result // make template ??
-	{
-		NvsErrorCode code;
-		std::optional<int8_t> data;
-	};
-
-
 	class CHandle 
 	{
 	private:
@@ -95,8 +88,8 @@ public:
 		CReader& operator=(CReader&& other) noexcept;
 	public:
 		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReader> make_reader(std::string_view nameSpace);
-		[[nodiscard]] ReadBinaryResult read_binary(std::string_view key);
-		[[nodiscard]] Readint8Result read_int8(std::string_view key);
+		[[nodiscard]] ReadResult<std::vector<uint8_t>> read_binary(std::string_view key);
+		[[nodiscard]] ReadResult<int8_t> read_int8(std::string_view key);
 	private:
 		std::optional<CHandle> m_Handle;
 	}; // class CReader
