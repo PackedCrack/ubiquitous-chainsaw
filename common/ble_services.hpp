@@ -89,6 +89,25 @@ static constexpr UUID BaseUUID
 };
 
 static constexpr uint16_t ID_SERVICE_WHOAMI = 0xADDE;
-static constexpr uint16_t ID_CHARS_SERVER_AUTH = 0x0BB0;
-static constexpr uint16_t ID_CHARS_CLIENT_AUTH = 0xBEBA;
+static constexpr uint16_t ID_CHARACTERISTIC_SERVER_AUTH = 0x0BB0;
+static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_AUTH = 0xBEBA;
+
+[[nodiscard]] consteval UUID uuid_service_whoami()
+{
+    UUID uuid = BaseUUID;
+    uuid.custom = ID_SERVICE_WHOAMI;
+    return uuid;
+}
+[[nodiscard]] consteval UUID uuid_characteristic_server_auth()
+{
+    UUID uuid = BaseUUID;
+    uuid.custom = ID_CHARACTERISTIC_SERVER_AUTH;
+    return uuid;
+}
+[[nodiscard]] consteval UUID uuid_characteristic_client_auth()
+{
+    UUID uuid = BaseUUID;
+    uuid.custom = ID_CHARACTERISTIC_CLIENT_AUTH;
+    return uuid;
+}
 }   // namespace ble

@@ -4,12 +4,43 @@
 #include "CDeviceList.hpp"
 #include "../system/System.hpp"
 #include "../common/CStopWatch.hpp"
+#include "../bluetoothLE/Device.hpp"
 // third-party
 #include "imgui/imgui.h"
 
 
 namespace
 {
+winrt::fire_and_forget do_connection_test(uint64_t address)
+{
+    ble::CDevice device = co_await ble::make_device<ble::CDevice>(address);
+    std::optional<const ble::CService*> service = device.service(ble::uuid_service_whoami());
+    if(service)
+    {
+        const ble::CService* pService = service.value();
+        std::optional<const ble::CCharacteristic*> characteristic =
+                pService->characteristic(ble::uuid_characteristic_server_auth());
+        
+        if(characteristic)
+        {
+            const ble::CCharacteristic* pCharacteristic = characteristic.value();
+            ble::CCharacteristic::read_t result = co_await pCharacteristic->read_value();
+            if(result)
+            {
+                std::vector<uint8_t> data = result.value();
+                
+                std::string str{};
+                str.resize(data.size() + 1);
+                std::memcpy(str.data(), data.data(), data.size());
+                LOG_INFO_FMT("VALUE: {}", str);
+            }
+            else
+            {
+                LOG_ERROR("failed to read data");
+            }
+        }
+    }
+}
 }   // namespace
 namespace gui
 {
@@ -27,6 +58,19 @@ CDeviceList::CDeviceList(const CDeviceList& other)
 {
     copy(other);
 }
+CDeviceList::CDeviceList(CDeviceList&& other) noexcept
+    : m_pScanner{}
+    , m_Devices{}
+    , m_pMutex{ nullptr }
+{
+    other.m_pMutex->lock();
+    
+    m_pScanner = std::exchange(other.m_pScanner, nullptr);
+    m_Devices = std::move(other.m_Devices);
+    m_pMutex = std::exchange(other.m_pMutex, nullptr);
+    
+    m_pMutex->unlock();
+}
 CDeviceList& CDeviceList::operator=(const CDeviceList& other)
 {
     if(this != &other)
@@ -34,6 +78,17 @@ CDeviceList& CDeviceList::operator=(const CDeviceList& other)
         copy(other);
     }
     
+    return *this;
+}
+CDeviceList& CDeviceList::operator=(CDeviceList&& other) noexcept
+{
+    other.m_pMutex->lock();
+    
+    m_pScanner = std::exchange(other.m_pScanner, nullptr);
+    m_Devices = std::move(other.m_Devices);
+    m_pMutex = std::exchange(other.m_pMutex, nullptr);
+    
+    m_pMutex->unlock();
     return *this;
 }
 void CDeviceList::copy(const CDeviceList& other)
@@ -46,16 +101,20 @@ void CDeviceList::copy(const CDeviceList& other)
 }
 void CDeviceList::push()
 {
-    static constexpr ImGuiWindowFlags WINDOW_FLAGS =
-            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar;
+    static constexpr ImGuiWindowFlags WINDOW_FLAGS = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
     
     if(ImGui::Begin("DeviceList"), nullptr, WINDOW_FLAGS)
     {
-        new_scan();
         device_list();
+        new_scan();
     }
     
     ImGui::End();
+}
+std::vector<ble::DeviceInfo> CDeviceList::device_infos() const
+{
+    std::lock_guard lock{ *m_pMutex };
+    return std::vector<ble::DeviceInfo>{ std::begin(m_Devices), std::end(m_Devices) };
 }
 auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
 {
@@ -117,20 +176,25 @@ void CDeviceList::device_list()
     {
         std::lock_guard<mutex_t> lock{ *m_pMutex };
         int32_t deviceNum{};
-        for(auto&& device : m_Devices)
+        for(auto&& deviceInfo : m_Devices)
         {
             if (deviceNum == 0)
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
             
-            std::string address = ble::DeviceInfo::address_as_str(device.address.value());
+            std::string address = ble::DeviceInfo::address_as_str(deviceInfo.address.value());
             if (ImGui::TreeNode(static_cast<void*>(&deviceNum), "%s", address.c_str()))
             {
+                ImGui::SameLine();
+                if(ImGui::Button("Connect"))
+                    do_connection_test(deviceInfo.address.value());
+                
+                
                 // Use SetNextItemOpen() so set the default state of a node to be open. We could
                 // also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
                 if (deviceNum == 0)
                     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 
-                ImGui::Text("%s address", ble::address_type_to_str(device.addressType).data());
+                ImGui::Text("%s address", ble::address_type_to_str(deviceInfo.addressType).data());
                 
                 ImGui::TreePop();
             }

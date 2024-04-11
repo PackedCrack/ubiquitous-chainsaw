@@ -22,13 +22,14 @@ public:
     explicit CDeviceList(ble::CScanner& scanner);
     ~CDeviceList() = default;
     CDeviceList(const CDeviceList& other);
-    CDeviceList(CDeviceList&& other) = default;
+    CDeviceList(CDeviceList&& other) noexcept;
     CDeviceList& operator=(const CDeviceList& other);
-    CDeviceList& operator=(CDeviceList&& other) = default;
+    CDeviceList& operator=(CDeviceList&& other) noexcept;
 private:
     void copy(const CDeviceList& other);
 public:
     void push();
+    [[nodiscard]] std::vector<ble::DeviceInfo> device_infos() const;
 private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
     void new_scan();

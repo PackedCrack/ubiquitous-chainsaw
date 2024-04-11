@@ -223,7 +223,7 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
     {
         const ble::CService& service = iter->second;
         ble::UUID characteristicUuid = ble::BaseUUID;
-        characteristicUuid.custom = ble::ID_CHARS_SERVER_AUTH;
+        characteristicUuid.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
         
         auto result = service.characteristic(characteristicUuid);
         if(result)
@@ -308,6 +308,7 @@ int main(int argc, char** argv)
     gui::CGui gui{};
     gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner);
     gui::Widget& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
+    
     
     
     bool exit = false;

@@ -94,7 +94,7 @@ namespace
 }
 [[nodiscard]] ble::CCharacteristic make_characteristic_client_auth()
 {
-	return ble::make_characteristic(ble::ID_CHARS_CLIENT_AUTH, make_callback_client_auth(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write);
+	return ble::make_characteristic(ble::ID_CHARACTERISTIC_CLIENT_AUTH, make_callback_client_auth(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write);
 }
 }	// namespace
 
@@ -237,6 +237,6 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
 }
 CCharacteristic CWhoAmI::make_characteristic_server_auth(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARS_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read);
+	return make_characteristic(ID_CHARACTERISTIC_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read);
 }
 }	// namespace ble

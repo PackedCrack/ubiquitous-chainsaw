@@ -39,7 +39,7 @@ extern "C" void app_main(void)
 
 		using namespace storage;
 
-		CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+		[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
 		{
 			std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
@@ -51,7 +51,7 @@ extern "C" void app_main(void)
 
 		// https://mynewt.apache.org/latest/
 
-		//ble::CNimble nimble {};
+		ble::CNimble nimble{};
 
 		while (true)
 		{
