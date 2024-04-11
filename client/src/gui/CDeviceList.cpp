@@ -11,6 +11,31 @@
 
 namespace
 {
+winrt::fire_and_forget characteristic_action(const ble::CCharacteristic* pCharacteristic, const std::vector<uint8_t>* writeData = nullptr)
+{
+    if(writeData == nullptr)
+    {
+        ble::CCharacteristic::read_t result = co_await pCharacteristic->read_value();
+        if(result)
+        {
+            std::vector<uint8_t> readData = result.value();
+            
+            std::string str{};
+            str.resize(readData.size() + 1);
+            std::memcpy(str.data(), readData.data(), readData.size());
+            LOG_INFO_FMT("VALUE: {}", str);
+        }
+        else
+        {
+            LOG_ERROR("failed to read data");
+        }
+    }
+    else
+    {
+        auto status = co_await pCharacteristic->write_data(*writeData);
+        LOG_INFO_FMT("Status after write: {}", static_cast<int32_t>(status));
+    }
+}
 winrt::fire_and_forget do_connection_test(uint64_t address)
 {
     ble::CDevice device = co_await ble::make_device<ble::CDevice>(address);
@@ -18,25 +43,22 @@ winrt::fire_and_forget do_connection_test(uint64_t address)
     if(service)
     {
         const ble::CService* pService = service.value();
-        std::optional<const ble::CCharacteristic*> characteristic =
-                pService->characteristic(ble::uuid_characteristic_server_auth());
-        
-        if(characteristic)
         {
-            const ble::CCharacteristic* pCharacteristic = characteristic.value();
-            ble::CCharacteristic::read_t result = co_await pCharacteristic->read_value();
-            if(result)
+            std::optional<const ble::CCharacteristic*> serverAuth =
+                    pService->characteristic(ble::uuid_characteristic_server_auth());
+            
+            if (serverAuth)
             {
-                std::vector<uint8_t> data = result.value();
-                
-                std::string str{};
-                str.resize(data.size() + 1);
-                std::memcpy(str.data(), data.data(), data.size());
-                LOG_INFO_FMT("VALUE: {}", str);
+                characteristic_action(*serverAuth);
             }
-            else
+            
+            std::optional<const ble::CCharacteristic*> clientAuth =
+                    pService->characteristic(ble::uuid_characteristic_client_auth());
+            
+            if (clientAuth)
             {
-                LOG_ERROR("failed to read data");
+                std::vector<uint8_t> data{ 'H', 'E', 'L', 'L', 'O', ' ', 'W', 'O', 'R', 'L', 'D' };
+                characteristic_action(*clientAuth, &data);
             }
         }
     }
