@@ -28,6 +28,8 @@
 #define Wswitch 4062
 #define UNHANDLED_CASE_PROTECTION_ON __pragma(warning(error: Wswitch))
 #define UNHANDLED_CASE_PROTECTION_OFF __pragma(warning(default: Wswitch))
+#define IGNORE_WARNING_PUSH(warningCode) __pragma(warning(push)) __pragma(warning(disable:warningCode))
+#define IGNORE_WARNING_POP __pragma(warning(pop))
 #else
 #define UNHANDLED_CASE_PROTECTION_ON _Pragma(TOSTRING(COMPILER_NAME diagnostic error "-Wswitch"))
 #define UNHANDLED_CASE_PROTECTION_OFF _Pragma(TOSTRING(COMPILER_NAME diagnostic warning "-Wswitch"))

@@ -29,6 +29,23 @@ concept basic_string = requires(string_t str)
 };
 template<typename class_t, typename... ctor_args_t>
 concept constructible_with = std::is_constructible_v<class_t, ctor_args_t...>;
+
+template<typename queried_t, typename variant_t, size_t index = 0>
+[[nodiscard]] consteval bool member_of_variant()
+{
+    if constexpr (index <= std::variant_size_v<variant_t>)
+    {
+        using variant_member_t = std::variant_alternative_t<index, variant_t>;
+        if constexpr (std::same_as<queried_t, variant_member_t>)
+            return true;
+        else
+            return false;
+    }
+    else
+    {
+        return false;
+    }
+}
 }   // common
 
 
