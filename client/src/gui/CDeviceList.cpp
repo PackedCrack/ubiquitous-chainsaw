@@ -17,11 +17,13 @@ CDeviceList::CDeviceList(ble::CScanner& scanner)
     : m_pScanner{ &scanner }
     , m_Devices{}
     , m_pMutex{ std::make_unique<std::mutex>() }
+    , m_Timer{}
 {}
 CDeviceList::CDeviceList(const CDeviceList& other)
     : m_pScanner{}
     , m_Devices{}
     , m_pMutex{ nullptr }
+    , m_Timer{}
 {
     copy(other);
 }
@@ -36,9 +38,11 @@ CDeviceList& CDeviceList::operator=(const CDeviceList& other)
 }
 void CDeviceList::copy(const CDeviceList& other)
 {
+    std::lock_guard<mutex_t> lock{ *other.m_pMutex };
     m_pScanner = other.m_pScanner;
     m_Devices = other.m_Devices;
     m_pMutex = std::make_unique<std::remove_cvref_t<decltype(*m_pMutex)>>();
+    m_Timer = other.m_Timer;
 }
 void CDeviceList::push()
 {
@@ -58,9 +62,9 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
     return [this, seconds]()
     {
         size_t prevFound = 0;
-        common::CStopWatch<std::chrono::seconds> stopwatch{};
+        m_Timer.reset();
         m_pScanner->begin_scan();
-        while(stopwatch.lap<float>() <= static_cast<float>(seconds.count()))
+        while(m_Timer.lap<float>() <= static_cast<float>(seconds.count()))
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(25));
             
@@ -84,16 +88,23 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
 }
 void CDeviceList::new_scan()
 {
+    std::chrono::seconds scanTime{ 10 };
+    
     if(m_pScanner->scanning())
-        return;
-    
-    
-    if(ImGui::Button("Start scan"))
     {
-        m_Devices.clear();
-        
-        tf::Executor& executor = sys::executor();
-        executor.silent_async(time_limited_scan(std::chrono::seconds(10)));
+        float progress = m_Timer.lap<float>() / static_cast<float>(scanTime.count());
+        ImGui::ProgressBar(progress, ImVec2{ -FLT_MIN, 0.0f });
+    }
+    else
+    {
+        std::lock_guard<mutex_t> lock{ *m_pMutex };
+        if(ImGui::Button("Start scan", ImVec2{ -FLT_MIN, 0.0f }))
+        {
+            m_Devices.clear();
+            
+            tf::Executor& executor = sys::executor();
+            executor.silent_async(time_limited_scan(scanTime));
+        }
     }
 }
 void CDeviceList::device_list()

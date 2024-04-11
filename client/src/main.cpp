@@ -306,12 +306,25 @@ int main(int argc, char** argv)
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
-    gui.emplace<gui::CDeviceList>(scanner);
+    gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner);
+    gui::Widget& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
     
     
     bool exit = false;
     while (!exit)
     {
+        static float val = 0.0f;
+        static float b = 0.0f;
+        static uint64_t frame = 0u;
+        if(frame++ % 60 == 0)
+        {
+            b = b + 0.35f;
+            val = std::sin(b);
+            auto& plot = std::get<gui::CRSSIPlot>(rssiPlot);
+            plot.add_rssi_value(val);
+        }
+        
+        
         renderer.begin_frame();
         
         window.process_events(&exit);

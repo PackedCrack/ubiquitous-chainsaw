@@ -7,12 +7,17 @@
 #include "../bluetoothLE/Scanner.hpp"
 #include "../bluetoothLE/Device.hpp"
 #include "../common/CMutex.hpp"
+#include "../common/CStopWatch.hpp"
 
 
 namespace gui
 {
 class CDeviceList
 {
+    using time_t = std::chrono::seconds;
+    using mutex_t = std::mutex;
+public:
+    static constexpr std::string_view KEY = "devicelist";
 public:
     explicit CDeviceList(ble::CScanner& scanner);
     ~CDeviceList() = default;
@@ -31,8 +36,7 @@ private:
 private:
     Pointer<ble::CScanner> m_pScanner = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;
-    std::unique_ptr<std::mutex> m_pMutex;
-private:
-    using mutex_t = std::remove_cvref_t<decltype(*m_pMutex)>;
+    std::unique_ptr<mutex_t> m_pMutex;
+    common::CStopWatch<time_t> m_Timer;
 };
 }   // namespace gui
