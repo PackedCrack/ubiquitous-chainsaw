@@ -26,7 +26,7 @@ class CGui
     using KeyType = std::string_view;
 public:
 	CGui();
-	~CGui() = default;
+	~CGui();
 	CGui(const CGui& other) = default;
 	CGui(CGui&& other) = default;
 	CGui& operator=(const CGui& other) = default;

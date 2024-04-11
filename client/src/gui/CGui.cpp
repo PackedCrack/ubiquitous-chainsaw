@@ -1,5 +1,7 @@
 #include "CGui.hpp"
 #include "font_louis_george.hpp"
+#include "layout.hpp"
+#include "../system/System.hpp"
 // third_party
 #include "imgui/imgui.h"
 
@@ -196,6 +198,35 @@ void set_style()
     style.ChildBorderSize = 0;
     
 }
+[[nodiscard]] std::optional<std::filesystem::path> layout_filepath()
+{
+    std::expected<std::filesystem::path, std::string> expected = sys::application_directory();
+    if(!expected)
+    {
+        LOG_ERROR_FMT("Error when trying to get application directory: \"{}\"", expected.error());
+        return std::nullopt;
+    }
+    
+    return std::optional<std::filesystem::path>{ *expected / "layout.ini" };
+}
+void load_layout()
+{
+    std::optional<std::filesystem::path> layoutFile = layout_filepath();
+    if(layoutFile)
+    {
+        if(!std::filesystem::exists(*layoutFile))
+        {
+            std::fstream fstream{ *layoutFile, std::ios::out | std::ios::binary | std::ios::trunc };
+            fstream.write(defaultLayout.data(), defaultLayout.size());
+        }
+        
+        ImGui::LoadIniSettingsFromDisk(layoutFile->string().c_str());
+    }
+    else
+    {
+        LOG_ERROR("Could not load imgui layout because the filepath could not be retrieved.");
+    }
+}
 }	// namespace
 
 
@@ -206,17 +237,25 @@ CGui::CGui()
 {
     set_style();
     
+    load_layout();
+    
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontFromMemoryTTF(FontLouisGeorge.data(), FontLouisGeorge.size(), 13);
 }
-
+CGui::~CGui()
+{
+    std::optional<std::filesystem::path> layoutFilepath = layout_filepath();
+    if(layoutFilepath)
+    {
+        ImGui::SaveIniSettingsToDisk(layoutFilepath->string().c_str());
+    }
+    else
+    {
+        LOG_ERROR("Could not save layout.ini because the filepath could not be retrieved.");
+    }
+}
 void CGui::push()
 {
-    // Save ImGui state to a file
-    ImGui::SaveIniSettingsToDisk("C:\\layout.ini");
-    // Load ImGui state from a file
-    //ImGui::LoadIniSettingsFromDisk("path/to/layout.ini");
-    
     static bool gShowDockspace = true;
     ShowExampleAppDockSpace(&gShowDockspace);
 
