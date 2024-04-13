@@ -11,7 +11,7 @@ class Pointer
 {
 public:
     Pointer() = default;
-    Pointer(T* p)
+    explicit Pointer(T* p)
             : m_Pointer{ p }
     {}
     Pointer(std::nullptr_t null)

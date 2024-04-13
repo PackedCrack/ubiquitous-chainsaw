@@ -58,7 +58,10 @@ namespace
     
     Properties props{ 0 };
     if(TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
+    {
+        // cppcheck-suppress badBitmaskCheck
         props = props | GattCharacteristicProperties::AuthenticatedSignedWrites;
+    }
     if(TO_BOOL(properties & GattCharacteristicProperties::Broadcast))
         props = props | GattCharacteristicProperties::Broadcast;
     if(TO_BOOL(properties & GattCharacteristicProperties::ExtendedProperties))

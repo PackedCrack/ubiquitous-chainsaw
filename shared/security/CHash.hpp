@@ -71,6 +71,7 @@ private:
     {
         string_t str{};
         str.resize(m_Hash.size());
+        // cppcheck-suppress ignoredReturnValue
         ASSERT(str.size() == m_Hash.size(), "Destination and Source buffer size mismatch");
         std::memcpy(str.data(), m_Hash.data(), m_Hash.size());
         
