@@ -2,6 +2,7 @@
 // Created by qwerty on 2024-03-01.
 //
 #pragma once
+#include "../../win32.hpp"
 
 
 namespace sys

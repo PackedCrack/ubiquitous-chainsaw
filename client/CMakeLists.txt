@@ -47,14 +47,12 @@ target_include_directories(${MAIN_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../share
 target_include_directories(${MAIN_PROJECT} PRIVATE "${SDL_SRC_PATH}/include")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${IMGUI_SRC_PATH}/include")
 target_include_directories(${MAIN_PROJECT} PRIVATE "${WOLFSSL_SRC_PATH}/wolfssl")
-target_include_directories(${MAIN_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../security/include")
 
 #link
 target_link_directories(${MAIN_PROJECT} PRIVATE ${LIB_OUTPUT_DIR})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_SDL})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_IMGUI})
 target_link_libraries(${MAIN_PROJECT} PRIVATE ${FETCH_DEP_WOLFSSL})
-target_link_libraries(${MAIN_PROJECT} PRIVATE ${SECURITY_PROJECT})
 
 # compiler settings etc
 apply_compiler_warnings(${MAIN_PROJECT})
@@ -73,6 +71,10 @@ set_target_properties(gtest_main PROPERTIES FOLDER ${FOLDER_TEST})
 # include dirs
 target_include_directories(${TEST_PROJECT} PRIVATE "${PROJECT_SOURCE_DIR}/external/include")
 target_include_directories(${TEST_PROJECT} PRIVATE "${PROJECT_SOURCE_DIR}/src")
+# Hack because some includes uses the "wolfssl directory explicitly and others dont"
+target_include_directories(${TEST_PROJECT} PRIVATE "${WOLFSSL_SRC_PATH}")
+target_include_directories(${TEST_PROJECT} PRIVATE "${WOLFSSL_SRC_PATH}/wolfssl")
 
-target_sources(${TEST_PROJECT} PRIVATE ${TESTS_${SECURITY_PROJECT}})
+target_link_libraries(${TEST_PROJECT} PRIVATE ${FETCH_DEP_WOLFSSL})
+
 

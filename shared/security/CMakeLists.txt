@@ -1,5 +1,4 @@
 SET(SECURITY_SRCS
-        wc_defines.cpp
         wc_defines.hpp
         CWolfCrypt.cpp
         CWolfCrypt.hpp

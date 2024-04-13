@@ -1,5 +1,6 @@
 // Wolfcrypt must be included BEFORE windows.h
-#include "taskflow/taskflow.hpp"
+#include "system/System.hpp"
+#include "system/TrayIcon.hpp"
 
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
@@ -7,23 +8,14 @@
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
 
-#include "system/System.hpp"
-#include "system/TrayIcon.hpp"
-
-
 #include "client_defines.hpp"
 #include "gfx/CRenderer.hpp"
 #include "gui/CGui.hpp"
 
-
 #include <winrt/Windows.Foundation.h>
 
-
 #include "bluetoothLE/Scanner.hpp"
-//#include "bluetoothLE/windows/CDevice.hpp"
 #include "bluetoothLE/Device.hpp"
-
-#include "common/CStopWatch.hpp"
 #include "gui/CDeviceList.hpp"
 
 

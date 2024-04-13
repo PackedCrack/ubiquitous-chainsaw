@@ -3,15 +3,18 @@
 //
 
 #pragma once
+#include "common/defines.hpp"
+// Taskflow must be included BEFORE windows.h
+IGNORE_WARNING_PUSH(4456)
+#include "taskflow/taskflow.hpp"
+IGNORE_WARNING_POP
+
 #ifdef WIN32
     #include "windows/CSystem.hpp"
 #else
     #error Only windows is implemented
 #endif
-// Taskflow must be included BEFORE windows.h
-IGNORE_WARNING_PUSH(4456)
-#include "taskflow/taskflow.hpp"
-IGNORE_WARNING_POP
+
 
 
 namespace sys

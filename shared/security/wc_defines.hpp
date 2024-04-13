@@ -6,14 +6,15 @@
 #include <cstdint>
 #include <string_view>
 #include "../common/defines.hpp"
+// third-party
+#include "wolfcrypt/error-crypt.h"
 
 
 using WCResult = int32_t;
 static constexpr WCResult WC_SUCCESS = 0;
 static constexpr WCResult WC_FAILURE = -1;
-[[nodiscard]] std::string_view wc_err_to_str(WCResult code);
 
-#define WC_ERR_TO_STR(err) wc_err_to_str(err)
+#define WC_ERR_TO_STR(err) wc_GetErrorString(err)
 
 #ifndef NDEBUG
 #define WC_CHECK(expr) if(WCResult code = expr; code == WC_SUCCESS) {} \

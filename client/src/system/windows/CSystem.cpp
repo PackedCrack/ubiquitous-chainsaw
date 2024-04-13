@@ -5,9 +5,7 @@
 #include "CSystem.hpp"
 #include "../../client_defines.hpp"
 #include "../../resource.hpp"
-// win32
-#include "../../win32.hpp"
-//#include <windows.h>
+#include <windows.h>
 #include <shlobj_core.h>
 #include <pathcch.h>
 #include <sddl.h>
