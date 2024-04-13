@@ -4,7 +4,7 @@
 
 #include "CCharacteristic.hpp"
 #include "../ble_common.hpp"
-#include "../../common/common.hpp"
+#include "common/common.hpp"
 
 #include <winrt/Windows.Storage.Streams.h>
 #include <iostream>

@@ -27,9 +27,8 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 project (${TEST_PROJECT})
 
 add_executable(${TEST_PROJECT}
-        test.cpp
-        Test_CThreadSafeHashMap.cpp
-        Test_CMutex.cpp
+        test_CThreadSafeHashMap.cpp
+        test_CMutex.cpp
 )
 
 target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../common")

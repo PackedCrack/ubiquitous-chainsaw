@@ -12,6 +12,7 @@ FetchContent_Declare(
   BUILD_COMMAND     ""
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 #FetchContent_MakeAvailable(${DEP_NAME})

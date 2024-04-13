@@ -4,7 +4,6 @@
 
 #pragma once
 // third_party
-#define NO_OLD_RNGNAME
 #include "wolfcrypt/random.h"
 #include "wolfssl/error-ssl.h"
 

@@ -6,7 +6,8 @@
 #include "../../client_defines.hpp"
 #include "../../resource.hpp"
 // win32
-#include <windows.h>
+#include "../../win32.hpp"
+//#include <windows.h>
 #include <shlobj_core.h>
 #include <pathcch.h>
 #include <sddl.h>

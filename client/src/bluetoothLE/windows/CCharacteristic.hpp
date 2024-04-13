@@ -3,8 +3,8 @@
 //
 
 #pragma
-#include "defines.hpp"
-#include "../../common/ble_services.hpp"
+#include "common/ble_services.hpp"
+#include "../../client_defines.hpp"
 #include "../Descriptor.hpp"
 
 #include <winrt/Windows.Foundation.h>

@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "../../common/Pointer.hpp"
+#include "common/Pointer.hpp"
 #include "../bluetoothLE/Scanner.hpp"
 #include "../bluetoothLE/Device.hpp"
 #include "../common/CMutex.hpp"

@@ -1,9 +1,15 @@
 // Wolfcrypt must be included BEFORE windows.h
+#include "taskflow/taskflow.hpp"
+
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
+
+#include "system/System.hpp"
+#include "system/TrayIcon.hpp"
+
 
 #include "client_defines.hpp"
 #include "gfx/CRenderer.hpp"
@@ -16,8 +22,7 @@
 #include "bluetoothLE/Scanner.hpp"
 //#include "bluetoothLE/windows/CDevice.hpp"
 #include "bluetoothLE/Device.hpp"
-#include "system/System.hpp"
-#include "system/TrayIcon.hpp"
+
 #include "common/CStopWatch.hpp"
 #include "gui/CDeviceList.hpp"
 
@@ -60,7 +65,7 @@ void validate_app_directory()
 }
 [[nodiscard]] auto make_save_invokable(std::string_view filename)
 {
-    return [filename = std::filesystem::path{ filename }](std::vector<byte>&& key)
+    return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
         if(expected)
@@ -81,7 +86,7 @@ void validate_app_directory()
 }
 [[nodiscard]] auto make_load_invokable(std::string_view filename)
 {
-    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<byte>, std::string>
+    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, std::string>
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
         if(expected)
@@ -92,7 +97,7 @@ void validate_app_directory()
             {
                 try
                 {
-                    std::expected<std::vector<byte>, std::string> data{};
+                    std::expected<std::vector<security::byte>, std::string> data{};
                     std::streamsize size = file.tellg();
                     data->resize(size);
                     file.seekg(0);

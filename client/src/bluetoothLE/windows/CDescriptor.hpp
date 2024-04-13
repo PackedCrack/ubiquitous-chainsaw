@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-03-01.
 //
 #pragma once
-#include "defines.hpp"
+#include "../../client_defines.hpp"
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>

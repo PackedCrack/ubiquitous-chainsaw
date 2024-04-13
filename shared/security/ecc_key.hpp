@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "defines_wc.hpp"
+#include "wc_defines.hpp"
 #include "CHash.hpp"
 #include "CRandom.hpp"
 // third_party

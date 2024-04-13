@@ -3,13 +3,12 @@ dependencies:
     component_hash: null
     source:
       type: idf
-    version: 5.1.2
+    version: 5.2.1
   wolfssl/wolfssl:
     component_hash: dbc7f2248e8bc8ead595e895986f2f5f6fbbaccfa33b78747124dea75b3b81a5
     source:
-      service_url: https://api.components.espressif.com/
       type: service
     version: 5.7.0
-manifest_hash: ad4f030c64225dc79b0119bc25fff034b3b8a887e8a886252b6e5c74b2cea49f
+manifest_hash: 78ed51349d8db327d7bb64f5e772f0ca61b327a27b787239147f82eab267b2ac
 target: esp32s3
 version: 1.0.0

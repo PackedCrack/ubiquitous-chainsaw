@@ -3,14 +3,14 @@
 //
 
 #pragma once
-#include "common.hpp"
-// third-party
-#define NOMINMAX
-#include "wolfcrypt/types.h"    // wolfcrypt brings in windows.h defines? -> this screws up taskflow
+#include "../common/common.hpp"
 
 
 namespace security
 {
+// recreating the typedef from wolfcrypt here is the easiest way to not leak WC headers
+typedef unsigned char byte;
+
 template<typename hash_t>
 concept Hash = requires(hash_t hash)
 {
@@ -20,26 +20,23 @@ concept Hash = requires(hash_t hash)
     { hash.as_u8string() } -> std::convertible_to<std::u8string>;
 };
 
-template<typename algorithm_t, typename buffer_t>
-concept HashAlgorithm = requires(algorithm_t alg, std::string_view msg, buffer_t&& hashBuf)
+template<typename algorithm_t>
+concept HashAlgorithm = requires(algorithm_t alg, std::string_view msg, std::vector<byte>& buffer)
 {
-    requires common::buffer<buffer_t>;
-    { std::is_same_v<typename algorithm_t::buffer_t, buffer_t> };
-    
     { algorithm_t::HASH_NAME } -> std::convertible_to<const std::string_view>;
-    { algorithm_t::HASH_SIZE } -> std::convertible_to<size_t>;
-    { alg.hash(msg, std::forward<buffer_t>(hashBuf)) } -> std::convertible_to<buffer_t>;
+    { algorithm_t::hash_size() } -> std::convertible_to<size_t>;
+    { alg.hash(msg, buffer) } -> std::convertible_to<std::remove_reference_t<decltype(buffer)>>;
 };
 
 template<typename algorithm_t>
-requires HashAlgorithm<algorithm_t, typename algorithm_t::buffer_t>
+requires HashAlgorithm<algorithm_t>
 class CHash
 {
 public:
     explicit CHash(std::string_view text)
             : m_Hash{}
     {
-        m_Hash.resize(hasher::HASH_SIZE);
+        m_Hash.resize(hasher::hash_size());
         create_hash(text);
     };
     ~CHash() = default;
