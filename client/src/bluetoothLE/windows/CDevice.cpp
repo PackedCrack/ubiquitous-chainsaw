@@ -78,15 +78,15 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
     GattDeviceServicesResult result = co_await m_pDevice->GetGattServicesAsync();
     if (result.Status() == GattCommunicationStatus::Success)
     {
-        IVectorView<GattDeviceService> services = result.Services();
-        m_Services.reserve(services.Size());
+        IVectorView<GattDeviceService> svcs = result.Services();
+        m_Services.reserve(svcs.Size());
         
-        for(auto&& service : services)
+        for(auto&& svc : svcs)
         {
-            auto[iter, emplaced] = m_Services.try_emplace(make_uuid(service.Uuid()), co_await make_service<CService>(service));
+            auto[iter, emplaced] = m_Services.try_emplace(make_uuid(svc.Uuid()), co_await make_service<CService>(svc));
             if(!emplaced)
             {
-                LOG_ERROR_FMT("Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(service.Uuid())));
+                LOG_ERROR_FMT("Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(svc.Uuid())));
             }
         }
     }
