@@ -9,3 +9,7 @@
 - Open server directory in/using VSC
 - Open ESP-IDF Terminal (located at the bottom toolbar)
 - Run the command: python ConfigureServer.py
+
+
+
+#################
