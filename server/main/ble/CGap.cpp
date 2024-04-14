@@ -359,7 +359,7 @@ std::function<void(ble_gap_event*)> CGap::make_event_callback()
 				std::optional<CConnection*> activeCon = this->active_connection();
 				if(activeCon)
 				{
-					CConnection* pActiveConnection = *activeCon;
+					const CConnection* pActiveConnection = *activeCon;
 					CConnection connection{ pEvent->disconnect.conn.conn_handle };
 
 					if(*pActiveConnection == connection)

@@ -43,7 +43,7 @@ public:
 	CProfileCache& operator=(const CProfileCache& other) = default;
 	CProfileCache& operator=(CProfileCache&& other) = default;
 private:
-	CProfileCache(std::map<KeyType, std::shared_ptr<Profile>>&& profiles);
+	explicit CProfileCache(std::map<KeyType, std::shared_ptr<Profile>>&& profiles);
 private:
 	std::map<KeyType, std::shared_ptr<Profile>> m_Profiles;
 	std::vector<ble_gatt_svc_def> m_Services;
