@@ -49,6 +49,5 @@ private:
     std::unordered_set<int64_t> m_DeviceCache;
     std::atomic<size_t> m_Count;
     std::unique_ptr<std::mutex> m_pMutex;
-    
 };
 }   // namespace ble

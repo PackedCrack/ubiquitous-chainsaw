@@ -122,6 +122,8 @@ namespace sys
 {
 SDL_bool SDLCALL CTrayIcon::message_hook_caller(void* pMessageCallback, MSG* pMsg)
 {
+    // see comment in make_message_callback() below
+    // cppcheck-suppress constVariableReference
     MessageCallback& cb = *static_cast<MessageCallback*>(pMessageCallback);
     return cb(nullptr, pMsg);
 }
