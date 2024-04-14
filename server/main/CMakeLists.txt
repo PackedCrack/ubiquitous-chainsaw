@@ -15,7 +15,12 @@ idf_component_register(
 	"ble/profiles/CGattService.cpp"
 	"ble/profiles/CWhoAmI.cpp"
 	
-	
+	"${CMAKE_SOURCE_DIR}/../shared/security/CWolfCrypt.cpp"
+	"${CMAKE_SOURCE_DIR}/../shared/security/sha.cpp"
+	"${CMAKE_SOURCE_DIR}/../shared/security/CRandom.cpp"
+	"${CMAKE_SOURCE_DIR}/../shared/security/ecc_key.cpp"
+
+
 	
 	INCLUDE_DIRS 
 	"${CMAKE_SOURCE_DIR}/../external/include"
