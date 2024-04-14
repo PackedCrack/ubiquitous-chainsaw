@@ -84,7 +84,7 @@ CNonVolatileStorage::CReader& CNonVolatileStorage::CReader::operator=(CReader&& 
 }
 std::optional<storage::CNonVolatileStorage::CReader> CNonVolatileStorage::CReader::make_reader(std::string_view nameSpace)
 {
-	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
 		return std::make_optional<CReader>( nameSpace );

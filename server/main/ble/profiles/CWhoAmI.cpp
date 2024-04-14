@@ -1,5 +1,5 @@
 #include "CWhoAmI.hpp"
-#include "../../../common/ble_services.hpp"
+#include "common/ble_services.hpp"
 #include "../../server_common.hpp"
 #include "CGattCharacteristic.hpp"
 // std

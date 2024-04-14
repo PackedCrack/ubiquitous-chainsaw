@@ -3,7 +3,8 @@
 /* NVS */
 #include "nvs_flash.h"
 /* Project*/
-#include "defines.hpp"
+#include "../server_defines.hpp"
+//#include "common/defines.hpp"
 /* STD*/
 #include <vector>
 #include <string>

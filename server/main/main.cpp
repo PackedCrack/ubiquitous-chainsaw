@@ -5,10 +5,6 @@
 
 #include "esp_system.h"
 
-#include <expected>
-#include "../../client/src/security/CWolfCrypt.hpp"
-
-
 void print_chip_info()
 {
 	sys::CSystem system{};
@@ -23,7 +19,7 @@ void print_chip_info()
 	std::printf("\nSupports Bluetooth LE: %s", chip.bluetooth_le() ? "True" : "False");
 	std::printf("\nSupports Bluetooth Classic: %s", chip.bluetooth_classic() ? "True" : "False");
 	std::printf("\nSupports IEEE 802.15.4: %s", chip.IEEE_802_15_4() ? "True" : "False");
-	std::printf("\nCurrent minimum free heap: %lu bytes\n\n", system.min_free_heap());
+	std::printf("\nCurrent minimum free heap: %u bytes\n\n", static_cast<unsigned int>(system.min_free_heap()));
 }
 
 
@@ -39,15 +35,12 @@ extern "C" void app_main(void)
 
 		using namespace storage;
 
-		[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+		[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
 		{
 			std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
 			std::printf("leaving scope\n");
 		}
-
-
-		//auto a = security::CWolfCrypt::instance();
 
 		// https://mynewt.apache.org/latest/
 

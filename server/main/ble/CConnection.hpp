@@ -8,8 +8,11 @@ namespace ble
 {
 struct ConnectionHandle
 {
+	
 	template<typename integer_t> 
 	requires std::integral<integer_t>
+	// We want implicit conversion here
+	// cppcheck-suppress noExplicitConstructor
 	constexpr ConnectionHandle(integer_t id)
 		: m_ID{ static_cast<uint16_t>(id) }
 	{
@@ -36,6 +39,7 @@ class CConnection
 public:
 	struct Error
 	{
+		// cppcheck-suppress unusedStructMember
 		NimbleErrorCode code;
 		std::string msg;
 	};
@@ -52,8 +56,8 @@ public:
 	[[nodiscard]] inline friend bool operator==(const CConnection& lhs, const CConnection& rhs) { return lhs.m_Handle == rhs.m_Handle; }
 	[[nodiscard]] inline friend bool operator!=(const CConnection& lhs, const CConnection& rhs) { return lhs.m_Handle == rhs.m_Handle; }
 public:
-	CConnection() = default;;
-	CConnection(ConnectionHandle handle);
+	CConnection() = default;
+	explicit CConnection(ConnectionHandle handle);
 	~CConnection();
 	CConnection(const CConnection& other) = delete;
 	CConnection(CConnection&& other) noexcept;

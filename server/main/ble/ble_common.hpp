@@ -1,5 +1,5 @@
 #pragma once
-#include "../../common/ble_services.hpp"
+#include "common/ble_services.hpp"
 #include "../server_common.hpp"
 // std
 #include <cstring>
@@ -13,21 +13,9 @@
 
 namespace ble
 {
-// GAP DEFINES
-constexpr uint16_t INVALID_HANDLE_ID = 65535u;
+
 constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
-constexpr int MAX_UUID_LEN = 128;
-
 constexpr int SUCCESS = 0;
-constexpr int FAIL = 1;
-constexpr int PROCEDURE_HAS_FINISHED = 14;
-constexpr int UNRECOVERABLE_ERROR = 98;
-constexpr int RECOVERABLE_ERROR = 99;
-
-// GATT DEFINES
-constexpr int DATA_END = 0;
-constexpr int NUM_SERVICES = 1;
-constexpr int SERVICE_SIZE = 2; // name?
 
 enum class AddressType : uint8_t
 {

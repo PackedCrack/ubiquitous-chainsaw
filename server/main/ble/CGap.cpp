@@ -151,7 +151,7 @@ namespace ble
 {
 int CGap::event_callback_caller(ble_gap_event* pEvent, void* eventCallback)
 {
-	std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
+	const std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
 	cb(pEvent);
 
 	return 0;
