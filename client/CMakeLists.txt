@@ -18,22 +18,35 @@ add_executable(${MAIN_PROJECT}
         "client.rc")
 add_dependencies(${MAIN_PROJECT} CPPCHECK_${MAIN_PROJECT})
 add_dependencies(${MAIN_PROJECT} CHILD_HEADER_FINDER)
+
 if(MSVC)
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/GS>")
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/guard:cf>")
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Qspectre>")
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DYNAMICBASE>")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NXCOMPAT")
-    # runtime checks - incompatable with -O2
+    # https://learn.microsoft.com/en-us/cpp/build/reference/analyze-code-analysis?view=msvc-170
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:anglebrackets>")
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_BINARY_DIR}/dependencies>")
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_SOURCE_DIR}/../external>")
+    # https://learn.microsoft.com/en-us/cpp/build/reference/sdl-enable-additional-security-checks?view=msvc-170
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/sdl>")
+    # https://learn.microsoft.com/en-us/cpp/build/reference/gs-buffer-security-check?view=msvc-170
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/GS>")
+    # https://learn.microsoft.com/en-us/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-170
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/guard:cf>")
+    # https://learn.microsoft.com/en-us/cpp/build/reference/qspectre?view=msvc-170
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/Qspectre>")
+    # https://learn.microsoft.com/en-us/cpp/build/reference/dynamicbase-use-address-space-layout-randomization?view=msvc-170
+    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/DYNAMICBASE>")
+
+    # runtime checks - incompatible with -O2
+    # https://learn.microsoft.com/en-us/cpp/build/reference/rtc-run-time-error-checks?view=msvc-170
     if(CMAKE_GENERATOR MATCHES "Visual Studio")
-        add_compile_options("$<$<CONFIG:Debug>:/RTCs>")
-        add_compile_options("$<$<CONFIG:Debug>:/RTCu>")
+        target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<CONFIG:Debug>:/RTCsu>")
     elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/RTCs>")
-        add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/RTCu>")
+        target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/RTCsu>")
     endif()
+
+    # https://learn.microsoft.com/en-us/cpp/build/reference/nxcompat-compatible-with-data-execution-prevention?view=msvc-170
+    target_link_options(${MAIN_PROJECT} PRIVATE "/NXCOMPAT")
 endif()
 
 include(FetchContent)
