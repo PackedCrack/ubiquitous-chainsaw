@@ -27,12 +27,12 @@ CDevice::awaitable_t CDevice::make(uint64_t address)
     CDevice device{};
     {
         /*
-     * The returned BluetoothLEDevice is set to null if
-     * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
-     * */
-        //BluetoothLEDevice dev = co_await BluetoothLEDevice::FromBluetoothAddressAsync(address);
+        * The returned BluetoothLEDevice is set to null if
+        * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
+        * */
         device.m_pDevice = std::make_shared<BluetoothLEDevice>(co_await BluetoothLEDevice::FromBluetoothAddressAsync(address));
-        if(device.m_pDevice )
+        // cppcheck-suppress knownConditionTrueFalse
+        if(device.m_pDevice)
         {
             co_await device.query_services();
         }

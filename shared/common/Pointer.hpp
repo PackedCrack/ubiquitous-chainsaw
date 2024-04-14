@@ -14,6 +14,8 @@ public:
     explicit Pointer(T* p)
             : m_Pointer{ p }
     {}
+    // This cannot be explicit if we want to be able to do: Pointer = nullptr;
+    // cppcheck-suppress noExplicitConstructor
     Pointer(std::nullptr_t null)
             : m_Pointer{ null }
     {}
