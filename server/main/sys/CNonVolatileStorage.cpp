@@ -87,7 +87,7 @@ std::optional<storage::CNonVolatileStorage::CReader> CNonVolatileStorage::CReade
 	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
-		return std::make_optional<CReader>( nameSpace );
+		return std::make_optional<CReader>(CReader{ nameSpace });
 	}
 	catch(const std::invalid_argument& e)
 	{
@@ -155,10 +155,10 @@ CNonVolatileStorage::WriteResult CNonVolatileStorage::CReadWriter::write_binary(
 }
 std::optional<storage::CNonVolatileStorage::CReadWriter> CNonVolatileStorage::CReadWriter::make_read_writer(std::string_view nameSpace)
 {
-	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
-		return std::make_optional<CReadWriter>( nameSpace );
+		return std::make_optional<CReadWriter>(CReadWriter{ nameSpace });
 	}
 	catch(const std::invalid_argument& e)
 	{

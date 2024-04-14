@@ -21,3 +21,13 @@ idf_component_register(
 	"${CMAKE_SOURCE_DIR}/../external/include"
 	"${CMAKE_SOURCE_DIR}/../shared"
 	)
+
+
+include(../../cmake/CompilerWarnings.cmake)
+apply_compiler_warnings(${COMPONENT_LIB})
+
+include(../../cmake/pch.cmake)
+use_pch(${COMPONENT_LIB})
+
+include(../cmake/cppcheck.cmake)
+add_dependencies(${COMPONENT_LIB} CPPCHECK_${COMPONENT_LIB})

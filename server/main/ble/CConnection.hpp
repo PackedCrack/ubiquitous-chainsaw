@@ -11,7 +11,7 @@ struct ConnectionHandle
 	
 	template<typename integer_t> 
 	requires std::integral<integer_t>
-	// We want implicit conversion here
+	// We want implicit conversion here - why
 	// cppcheck-suppress noExplicitConstructor
 	constexpr ConnectionHandle(integer_t id)
 		: m_ID{ static_cast<uint16_t>(id) }

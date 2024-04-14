@@ -38,7 +38,7 @@ extern "C" void app_main(void)
 		[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
 		{
-			std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
+			[[maybe_unused]] std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
 			std::printf("leaving scope\n");
 		}
 

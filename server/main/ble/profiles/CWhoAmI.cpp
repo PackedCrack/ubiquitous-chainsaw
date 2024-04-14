@@ -88,6 +88,7 @@ namespace
 			}   
     	}
     	} // switch
+		// cppcheck-suppress unknownMacro
 		UNHANDLED_CASE_PROTECTION_OFF
     	return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
 	};
