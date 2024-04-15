@@ -116,7 +116,7 @@ public:
         static constexpr int32_t VALID = 1;
     
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_verify_hash
-        int32_t result{};
+        int result{};
         WC_CHECK(wc_ecc_verify_hash(
                 source.data(),
                 common::assert_down_cast<word32>(source.size()),
