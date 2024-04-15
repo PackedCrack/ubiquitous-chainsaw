@@ -1,7 +1,13 @@
 #include "sys/CSystem.hpp"
 #include "ble/CNimble.hpp"
-
 #include "sys/CNonVolatileStorage.hpp"
+
+#include "security/CWolfCrypt.hpp"
+#include "security/CHash.hpp"
+#include "security/sha.hpp"
+#include "security/CWolfCrypt.hpp"
+#include "security/CRandom.hpp"
+#include "security/ecc_key.hpp"
 
 #include "esp_system.h"
 
@@ -22,35 +28,39 @@ void print_chip_info()
 	std::printf("\nCurrent minimum free heap: %u bytes\n\n", static_cast<unsigned int>(system.min_free_heap()));
 }
 
-
-
-
 extern "C" void app_main(void)
 {
 	sys::CSystem system{};
 	try 
 	{
+
+		
 		//std::expected<int, int> test{};
-		print_chip_info();
+		//print_chip_info();
 
 		using namespace storage;
 
-		[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
-
+		//[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+		
+		auto crypto = security::CWolfCrypt::instance();
+		if(crypto)
 		{
-			[[maybe_unused]] std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
-			std::printf("leaving scope\n");
+			std::printf("Works\n");
 		}
 
-		// https://mynewt.apache.org/latest/
 
-		ble::CNimble nimble{};
+		//ble::CNimble nimble{};
+
+
 
 		while (true)
 		{
 			//chainsawServer.rssi();
 			// Perform any periodic tasks here
+			
 			vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
+			//std::printf("taskdelay\n");
+
 		}
     } 
 	catch (const exception::fatal_error& error) 
