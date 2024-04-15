@@ -19,8 +19,9 @@ public:
             : m_List{}
             , m_Lock{}
     {
-        std::lock_guard<std::mutex> lock{ m_Lock };
-        m_List = other.m_List;
+        std::lock_guard<std::mutex> lock{ other.m_Lock };
+        // cppcheck-suppress useInitializationList
+        m_List = other.m_List;  // We cant use initialization list here because we must lock the mutex
     };
     CThreadSafeQueue(CThreadSafeQueue&& other) = default;
     CThreadSafeQueue& operator=(const CThreadSafeQueue& other)
@@ -28,7 +29,7 @@ public:
         if(this == &other)
             return *this;
         
-        std::lock_guard<std::mutex> lock{ m_Lock };
+        std::lock_guard<std::mutex> lock{ other.m_Lock };
         m_List = other.m_List;
     };
     CThreadSafeQueue& operator=(CThreadSafeQueue&& other) = default;

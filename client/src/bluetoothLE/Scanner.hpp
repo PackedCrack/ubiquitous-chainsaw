@@ -7,20 +7,22 @@
 #else
     #error Only windows is implemented atm
 #endif
-#include "../common/common.hpp"
+#include "common/common.hpp"
 
 
 namespace ble
 {
 template<typename scanner_t, typename... ctor_args_t>
 concept Scanner =
-requires(scanner_t scanner)
+requires(scanner_t scanner, const scanner_t constScanner, scanner_t::pos_t pos)
 {
+    typename scanner_t::pos_t;
     common::constructible_with<scanner_t, ctor_args_t...>;
     { scanner.begin_scan() };
-    { scanner.end_scan() };
-    { scanner.num_devices() } -> std::convertible_to<const std::atomic<size_t>&>;
-    { scanner.found_devices() } -> std::convertible_to<std::vector<DeviceInfo>>;
+    { constScanner.end_scan() };
+    { constScanner.retrieve_n_devices(pos, pos) } -> std::convertible_to<std::vector<ble::DeviceInfo>>;
+    { constScanner.num_devices() } -> std::convertible_to<const std::atomic<size_t>&>;
+    { constScanner.scanning() } -> std::convertible_to<bool>;
 };
 
 template<typename scanner_t, typename... ctor_args_t>

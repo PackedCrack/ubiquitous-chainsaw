@@ -1,5 +1,5 @@
 #include "CWhoAmI.hpp"
-#include "../../../common/ble_services.hpp"
+#include "common/ble_services.hpp"
 #include "../../server_common.hpp"
 #include "CGattCharacteristic.hpp"
 // std
@@ -88,13 +88,14 @@ namespace
 			}   
     	}
     	} // switch
+		// cppcheck-suppress unknownMacro
 		UNHANDLED_CASE_PROTECTION_OFF
     	return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
 	};
 }
 [[nodiscard]] ble::CCharacteristic make_characteristic_client_auth()
 {
-	return ble::make_characteristic(ble::ID_CHARS_CLIENT_AUTH, make_callback_client_auth(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write);
+	return ble::make_characteristic(ble::ID_CHARACTERISTIC_CLIENT_AUTH, make_callback_client_auth(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write);
 }
 }	// namespace
 
@@ -237,6 +238,6 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
 }
 CCharacteristic CWhoAmI::make_characteristic_server_auth(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARS_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read);
+	return make_characteristic(ID_CHARACTERISTIC_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read);
 }
 }	// namespace ble

@@ -1,7 +1,11 @@
-SET(GUI_SRCS 
-    CGui.cpp
-    CGui.hpp
-    CWidget.hpp
+SET(GUI_SRCS
+        CGui.cpp
+        CGui.hpp
+        layout.hpp
+        font_louis_george.hpp
+        CWidget.hpp
+        CDeviceList.cpp
+        CRSSIPlot.cpp
 )
 
 

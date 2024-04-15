@@ -1,5 +1,5 @@
 #pragma once
-#include "../common/common.hpp"
+#include "common/common.hpp"
 // std
 #include <string>
 #include <string_view>
@@ -56,5 +56,5 @@ inline void print_task_info(const char* str)
 	TaskStatus_t status{};
 	vTaskGetInfo(xHandle, &status, true, eInvalid);
 	LOG_INFO_FMT("Task \"{}\" info:\nTask Number: {}\nStack base: {:p}\nStack min stack space remaining: {}\n", 
-					str == nullptr ? "Caller" : str, status.xTaskNumber, (void*)status.pxStackBase, status.usStackHighWaterMark);
+					str == nullptr ? "Caller" : str, status.xTaskNumber, static_cast<void*>(status.pxStackBase), status.usStackHighWaterMark);
 };

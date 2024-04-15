@@ -159,10 +159,10 @@ CNimble::~CNimble()
     //int result = m_gap.drop_connection(BLE_HS_ENOENT);   
 
 	if(m_pGap)
-		m_pGap.release();
+		[[maybe_unused]] const ble::CGap* pGap = m_pGap.release();
 
 	if(m_pProfileCache)
-		m_pProfileCache.release();
+		[[maybe_unused]] const ble::CProfileCache* pProfileCache = m_pProfileCache.release();
 
     //std::optional<CGap::Error> result = m_gap.end_advertise();
     //if (result != std::nullopt)

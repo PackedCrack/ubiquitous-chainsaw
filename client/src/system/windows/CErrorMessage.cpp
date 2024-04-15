@@ -30,6 +30,7 @@ CErrorMessage::~CErrorMessage()
     if(m_pMsg != nullptr)
     {
         // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree
+        // cppcheck-suppress unknownMacro
         WIN_CHECK(HLOCAL handle = LocalFree(m_pMsg); handle == nullptr);
     }
 }

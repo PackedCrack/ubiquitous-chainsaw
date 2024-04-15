@@ -3,8 +3,8 @@
 //
 
 #pragma once
-#include "defines.hpp"
-#include "../common/ble_services.hpp"
+#include "../client_defines.hpp"
+#include "common/ble_services.hpp"
 
 
 namespace ble
@@ -55,9 +55,9 @@ template<typename uuid_t>
     ble::UUID whoami{ ble::BaseUUID };
     whoami.custom = ble::ID_SERVICE_WHOAMI;
     ble::UUID serverAuth{ ble::BaseUUID };
-    serverAuth.custom = ble::ID_CHARS_SERVER_AUTH;
+    serverAuth.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
     ble::UUID clientAuth{ ble::BaseUUID };
-    clientAuth.custom = ble::ID_CHARS_CLIENT_AUTH;
+    clientAuth.custom = ble::ID_CHARACTERISTIC_CLIENT_AUTH;
     
     ASSERT((uuid == whoami) || (uuid == serverAuth) || (uuid == clientAuth), "Unknown uuid!");
 #endif

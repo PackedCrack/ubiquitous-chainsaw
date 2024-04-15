@@ -23,7 +23,10 @@ namespace
 	std::vector<ble_gatt_chr_def> nimbleArr{};
 	nimbleArr.reserve(characteristics.size());
 	for(auto&& characteristic : characteristics)
+	{
+		// cppcheck-suppress useStlAlgorithm
 		nimbleArr.emplace_back(static_cast<ble_gatt_chr_def>(characteristic));
+	}
 	nimbleArr.emplace_back(end_of_array());
 
 	return nimbleArr;

@@ -4,7 +4,7 @@
 
 #include "CCharacteristic.hpp"
 #include "../ble_common.hpp"
-#include "../../common/common.hpp"
+#include "common/common.hpp"
 
 #include <winrt/Windows.Storage.Streams.h>
 #include <iostream>
@@ -58,7 +58,10 @@ namespace
     
     Properties props{ 0 };
     if(TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
+    {
+        // cppcheck-suppress badBitmaskCheck
         props = props | GattCharacteristicProperties::AuthenticatedSignedWrites;
+    }
     if(TO_BOOL(properties & GattCharacteristicProperties::Broadcast))
         props = props | GattCharacteristicProperties::Broadcast;
     if(TO_BOOL(properties & GattCharacteristicProperties::ExtendedProperties))
@@ -164,15 +167,8 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector
     using Buffer = winrt::Windows::Storage::Streams::Buffer;
     
     
-    auto buffer = Buffer{ static_cast<uint32_t>(data.size()) };
-    if(buffer.Length() == data.size())
-    {
-        LOG_INFO("Size is correct!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-    }
-    else
-    {
-        LOG_INFO("Size is wrong! BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
-    }
+    Buffer buffer{ static_cast<uint32_t>(data.size()) };
+    buffer.Length(buffer.Capacity());
     std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
     
     GattCommunicationStatus result = co_await m_pCharacteristic->WriteValueAsync(buffer, option);

@@ -144,10 +144,10 @@ CNonVolatileStorage::CReader& CNonVolatileStorage::CReader::operator=(CReader&& 
 }
 std::optional<storage::CNonVolatileStorage::CReader> CNonVolatileStorage::CReader::make_reader(std::string_view nameSpace)
 {
-	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
-		return std::make_optional<CReader>( nameSpace );
+		return std::make_optional<CReader>(CReader{ nameSpace });
 	}
 	catch(const std::invalid_argument& e)
 	{
@@ -319,7 +319,7 @@ CNonVolatileStorage::WriteResult CNonVolatileStorage::CWriter::write_int8(std::s
 }
 std::optional<storage::CNonVolatileStorage::CWriter> CNonVolatileStorage::CWriter::make_writer(std::string_view nameSpace)
 {
-	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
 		return std::make_optional<CWriter>( nameSpace );

@@ -1,24 +1,22 @@
 // Wolfcrypt must be included BEFORE windows.h
+#include "system/System.hpp"
+#include "system/TrayIcon.hpp"
+
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
 
-#include "defines.hpp"
+#include "client_defines.hpp"
 #include "gfx/CRenderer.hpp"
 #include "gui/CGui.hpp"
 
-
 #include <winrt/Windows.Foundation.h>
 
-
 #include "bluetoothLE/Scanner.hpp"
-//#include "bluetoothLE/windows/CDevice.hpp"
 #include "bluetoothLE/Device.hpp"
-#include "system/System.hpp"
-#include "system/TrayIcon.hpp"
-#include "common/CStopWatch.hpp"
+#include "gui/CDeviceList.hpp"
 
 
 namespace
@@ -59,7 +57,7 @@ void validate_app_directory()
 }
 [[nodiscard]] auto make_save_invokable(std::string_view filename)
 {
-    return [filename = std::filesystem::path{ filename }](std::vector<byte>&& key)
+    return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
         if(expected)
@@ -80,7 +78,7 @@ void validate_app_directory()
 }
 [[nodiscard]] auto make_load_invokable(std::string_view filename)
 {
-    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<byte>, std::string>
+    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, std::string>
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
         if(expected)
@@ -91,7 +89,7 @@ void validate_app_directory()
             {
                 try
                 {
-                    std::expected<std::vector<byte>, std::string> data{};
+                    std::expected<std::vector<security::byte>, std::string> data{};
                     std::streamsize size = file.tellg();
                     data->resize(size);
                     file.seekg(0);
@@ -205,15 +203,6 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
-[[nodiscard]] auto time_limited_scan(ble::CScanner& scanner, std::chrono::seconds seconds)
-{
-    return [&scanner, seconds]()
-    {
-        scanner.begin_scan();
-        std::this_thread::sleep_for(seconds);
-        scanner.end_scan();
-    };
-}
 }   // namespace
 
 
@@ -231,7 +220,7 @@ winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
     {
         const ble::CService& service = iter->second;
         ble::UUID characteristicUuid = ble::BaseUUID;
-        characteristicUuid.custom = ble::ID_CHARS_SERVER_AUTH;
+        characteristicUuid.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
         
         auto result = service.characteristic(characteristicUuid);
         if(result)
@@ -295,12 +284,12 @@ void test_ecc_sign()
 }
 
 
+
 int main(int argc, char** argv)
 {
     tf::Executor& executor = sys::executor();
     
     sys::CSystem system{};
-    
     executor.silent_async([argc, argv]()
     {
         auto wc = security::CWolfCrypt::instance();
@@ -309,17 +298,31 @@ int main(int argc, char** argv)
     });
     
     auto scanner = ble::make_scanner<ble::CScanner>();
-    executor.silent_async(time_limited_scan(scanner, std::chrono::seconds(1)));
     
     
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
-    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
+    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
+    gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner);
+    gui::Widget& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
+    
     
     
     bool exit = false;
     while (!exit)
     {
+        static float val = 0.0f;
+        static float b = 0.0f;
+        static uint64_t frame = 0u;
+        if(frame++ % 60 == 0)
+        {
+            b = b + 0.35f;
+            val = std::sin(b);
+            auto& plot = std::get<gui::CRSSIPlot>(rssiPlot);
+            plot.add_rssi_value(val);
+        }
+        
+        
         renderer.begin_frame();
         
         window.process_events(&exit);

@@ -57,7 +57,7 @@ protected:
 };
 
 
-TEST_F(CThreadSafeHashMapTest, AsyncFindAndWrite)
+TEST_F(CThreadSafeHashMapTest, Async_Find_And_Write)
 {
     static constexpr size_t NUM_ELEMENTS = 500u;
     std::vector<int32_t> searchableElements = comp_helper_vector(NUM_ELEMENTS / 2u);
@@ -81,7 +81,7 @@ TEST_F(CThreadSafeHashMapTest, AsyncFindAndWrite)
         EXPECT_TRUE(failsafeCounter++ < NUM_ELEMENTS * 100'000u);
     }
 }
-TEST_F(CThreadSafeHashMapTest, AsyncWrite)
+TEST_F(CThreadSafeHashMapTest, Async_Write)
 {
     static constexpr size_t NUM_ELEMENTS = 100u;
     std::shared_mutex mutex{};
@@ -131,7 +131,7 @@ TEST_F(CThreadSafeHashMapTest, AsyncWrite)
         EXPECT_TRUE(i == allElements[i]);
     }
 }
-TEST_F(CThreadSafeHashMapTest, AsyncErase)
+TEST_F(CThreadSafeHashMapTest, Async_Erase)
 {
     static constexpr size_t NUM_ELEMENTS = 1000u;
     static constexpr size_t NUM_WRITER_THREADS = 3u;

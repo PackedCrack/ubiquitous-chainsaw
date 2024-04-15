@@ -108,14 +108,14 @@ public:
 	// esp_err_t esp_derive_local_mac(uint8_t *local_mac, const uint8_t *universal_mac)
 private:
 	[[nodiscard]] constexpr MacError to_mac_error(esp_err_t err) const;
-	template<typename array_t>
-	consteval void assert_addr_size(array_t&& addr) const
-	{
-		#if CONFIG_IEEE802154_ENABLED
-		static_assert(addr.size() == 8u);
-		#else
-		static_assert(addr.size() == 6u);
-		#endif
-	}
+	//template<typename array_t>
+	//consteval void assert_addr_size(array_t&& addr) const
+	//{
+	//	#if CONFIG_IEEE802154_ENABLED
+	//	static_assert(addr.size() == 8u);
+	//	#else
+	//	static_assert(addr.size() == 6u);
+	//	#endif
+	//}
 };
 }	// namespace sys
