@@ -65,7 +65,7 @@ public:
 	CConnection& operator=(CConnection&& other) noexcept;
 public:
 	[[nodiscard]] std::optional<Error> drop(DropCode reason);
-	[[nodiscard]] std::optional<ConnectionHandle> handle();
+	[[nodiscard]] std::optional<ConnectionHandle> handle() const;
 private:
 	std::optional<ConnectionHandle> m_Handle = std::nullopt;
 };

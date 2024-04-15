@@ -2,11 +2,19 @@
 #include "common/common.hpp"
 // std
 #include <string>
+#include <string_view>
 #include <optional>
 // esp
 #include "esp_err.h"
 // freertos
 #include "freertos/task.h"
+
+constexpr std::string_view NVS_ENC_NAMESPACE = "ENC_STORAGE";
+constexpr std::string_view NVS_ENC_PRIV_KEY = "ENC_PRIV";
+constexpr std::string_view NVS_ENC_PUB_KEY = "ENC_PUB";
+constexpr std::string_view NVS_ENC_CLIENT_KEY = "ENC_CLIENT";
+constexpr std::string_view NVS_RSSI_NAMESPACE = "RSSI_STORAGE";
+constexpr std::string_view NVS_RSSI_KEY = "RSSI";
 
 
 inline std::string esp_err_to_str(esp_err_t code)
