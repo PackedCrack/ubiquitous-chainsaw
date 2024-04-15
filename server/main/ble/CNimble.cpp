@@ -147,6 +147,14 @@ CNimble::CNimble()
 	pCV->wait(lock);
 
 	m_pGap = std::make_unique<CGap>();
+
+	//std::thread t1{[atomic<bool, gap>]() 
+	//{
+	//	if exit
+	//		return
+//
+	//	gap.write_rssi
+	//}}	
 }
 CNimble::~CNimble()
 {

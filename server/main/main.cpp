@@ -103,14 +103,35 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
     };
 }
 
+
+void verify_ecc_keys()
+{
+	[[maybe_unused]] std::optional<security::CEccPublicKey> pubKey = security::make_ecc_key<security::CEccPublicKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY));
+    [[maybe_unused]] std::optional<security::CEccPrivateKey> privKey = security::make_ecc_key<security::CEccPrivateKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY));
+	 
+	security::CRandom rng = security::CRandom::make_rng().value();
+	const char* msg = "Very nice message";
+	security::CHash<security::Sha2_256> hash{ msg };
+	std::vector<security::byte> signature = privKey.value().sign_hash(rng, hash);
+	bool verified = pubKey.value().verify_hash(signature, hash);
+    if (verified)
+	{
+        std::printf("\nSignature Verified Successfully.\n");
+    }
+	else
+	{
+        std::printf("\nFailed to verify Signature.\n");
+    }
+}
+
+
 extern "C" void app_main(void)
 {
 	sys::CSystem system{};
 	try 
 	{
+		//print_chip_info();
 		[[maybe_unused]] const storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
-
-		//auto test = make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY);
 
 		//write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY, SERVER_PRIV);
 		//auto readResult = read_key_from_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY);
@@ -124,84 +145,48 @@ extern "C" void app_main(void)
 		//	std::printf("\n\n");
 		//}
 
-		//write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY, SERVER_PUB);
-		//read_key_from_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY);
-		//write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_CLIENT_KEY, CLIENT_PUB);
-		//read_key_from_nvs(NVS_ENC_NAMESPACE, NVS_ENC_CLIENT_KEY);
+		auto crypto = security::CWolfCrypt::instance();
+		if(!crypto)
+		{
+			LOG_FATAL("Failed to initilize CWolfCrypt");
+		}
 
-		[[maybe_unused]] std::optional<security::CEccPublicKey> pubKey = security::make_ecc_key<security::CEccPublicKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY));
-    	[[maybe_unused]] std::optional<security::CEccPrivateKey> privKey = security::make_ecc_key<security::CEccPrivateKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY));
-		 
-		security::CRandom rng = security::CRandom::make_rng().value();
-		const char* msg = "Very nice message";
-		security::CHash<security::Sha2_256> hash{ msg };
-		std::vector<security::byte> signature = privKey.value().sign_hash(rng, hash);
-		bool verified = pubKey.value().verify_hash(signature, hash);
-    	if (verified)
-		{
-    	    std::printf("\nSignature Verified Successfully.\n");
-    	}
-		else
-		{
-    	    std::printf("\nFailed to verify Signature.\n");
-    	}
+		verify_ecc_keys();
 		
-	
-
-		//print_chip_info();
-
 		using namespace storage;
-
-		//[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+		ble::CNimble nimble {};
+		const ble::CGap* pGap = nimble.gap_handle();
+		std::optional<CNonVolatileStorage::CWriter> rssiWriter = CNonVolatileStorage::CWriter::make_writer(NVS_RSSI_NAMESPACE);
+		if (!rssiWriter.has_value())
+		{
+			LOG_FATAL("Failed to initilize NVS Writer");
+		}
+		std::optional<CNonVolatileStorage::CReader> rssiReader = CNonVolatileStorage::CReader::make_reader(NVS_RSSI_NAMESPACE);
+		if (!rssiWriter.has_value())
+		{
+			LOG_FATAL("Failed to initilize NVS Writer");
+		}
 		
-		//auto crypto = security::CWolfCrypt::instance();
-		//if(crypto)
-		//{
-		//	std::printf("Works\n");
-		//}
-
-
-		//ble::CNimble nimble{};
-		//std::expected<int, int> test{};
-		//print_chip_info();
-		//using namespace storage;
-		//[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
-
-		////auto a = security::CWolfCrypt::instance();
-
-		//ble::CNimble nimble {};
-		//const ble::CGap* pGap = nimble.gap_handle();
-		//std::optional<CNonVolatileStorage::CWriter> rssiWriter = CNonVolatileStorage::CWriter::make_writer(NVS_RSSI_NAMESPACE);
-		//if (!rssiWriter.has_value())
-		//{
-		//	LOG_FATAL("Failed to initilize NVS Writer");
-		//}
-		//std::optional<CNonVolatileStorage::CReader> rssiReader = CNonVolatileStorage::CReader::make_reader(NVS_RSSI_NAMESPACE);
-		//if (!rssiWriter.has_value())
-		//{
-		//	LOG_FATAL("Failed to initilize NVS Writer");
-		//}
-		//
-		//auto rssiReadResult = rssiReader.value().read_int8(NVS_RSSI_KEY);
-		//if (rssiReadResult.code == NvsErrorCode::success)
-		//{
-		//	LOG_INFO_FMT("RSSI last saved rssi value = {}", rssiReadResult.data.value());
-		//}
+		auto rssiReadResult = rssiReader.value().read_int8(NVS_RSSI_KEY);
+		if (rssiReadResult.code == NvsErrorCode::success)
+		{
+			LOG_INFO_FMT("RSSI last saved rssi value = {}", rssiReadResult.data.value());
+		}
 
 
 		while (true)
 		{
 			// Perform any periodic tasks here
-			//std::optional<int8_t> rssiValue = pGap->rssi();
-			//if (rssiValue.has_value())
-			//{
-			//	LOG_INFO_FMT("Rssi value = {}", rssiValue.value());
-			//	CNonVolatileStorage::WriteResult rssiWriteResult = rssiWriter.value().write_int8(NVS_RSSI_KEY, rssiValue.value());
-			//	if (rssiWriteResult.code != NvsErrorCode::success)
-			//	{
-			//		LOG_ERROR("FAILED RSSI WRITE");
-			//	}
-			//}
+			std::optional<int8_t> rssiValue = pGap->rssi();
+			if (rssiValue.has_value())
+			{
+				LOG_INFO_FMT("Rssi value = {}", rssiValue.value());
+				CNonVolatileStorage::WriteResult rssiWriteResult = rssiWriter.value().write_int8(NVS_RSSI_KEY, rssiValue.value());
+				if (rssiWriteResult.code != NvsErrorCode::success)
+				{
+					LOG_ERROR("FAILED RSSI WRITE");
+				}
+			}
 			vTaskDelay(pdMS_TO_TICKS(1000)); // milisecs
 		}
     } 
