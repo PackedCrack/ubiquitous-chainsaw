@@ -14,19 +14,19 @@ idf_component_register(
 	"ble/profiles/CGattCharacteristic.hpp"
 	"ble/profiles/CGattService.cpp"
 	"ble/profiles/CWhoAmI.cpp"
-	
+
 	"${CMAKE_SOURCE_DIR}/../shared/security/CWolfCrypt.cpp"
 	"${CMAKE_SOURCE_DIR}/../shared/security/sha.cpp"
 	"${CMAKE_SOURCE_DIR}/../shared/security/CRandom.cpp"
 	"${CMAKE_SOURCE_DIR}/../shared/security/ecc_key.cpp"
-
+	
 
 	
 	INCLUDE_DIRS 
 	"${CMAKE_SOURCE_DIR}/../external/include"
 	"${CMAKE_SOURCE_DIR}/../shared"
+	"include" # https://www.wolfssl.com/how-do-i-manage-the-build-configuration-of-wolfssl/
 	)
-
 
 include(../../cmake/CompilerWarnings.cmake)
 apply_compiler_warnings(${COMPONENT_LIB})
