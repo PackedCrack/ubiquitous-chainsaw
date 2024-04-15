@@ -142,7 +142,8 @@ public:
     CEccPrivateKey& operator=(const CEccPrivateKey& other) = delete;
     CEccPrivateKey& operator=(CEccPrivateKey&& other) noexcept;
 public:
-    template<typename hash_t> requires Hash<std::remove_cvref_t<hash_t>>
+    template<typename hash_t> 
+    requires Hash<std::remove_cvref_t<hash_t>>
     [[nodiscard]] std::vector<byte> sign_hash(CRandom& rng, hash_t&& hash)
     {
         ASSERT(hash.size() > 0u, "Tried to sign an empty hash!");

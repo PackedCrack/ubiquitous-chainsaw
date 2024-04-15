@@ -17,7 +17,6 @@ concept Hash = requires(hash_t hash)
     { hash.size() } -> std::convertible_to<typename decltype(hash)::size_type>;
     { hash.data() } -> std::convertible_to<typename decltype(hash)::const_pointer>;
     { hash.as_string() } -> std::convertible_to<std::string>;
-    { hash.as_u8string() } -> std::convertible_to<std::u8string>;
 };
 
 template<typename algorithm_t>
@@ -47,11 +46,18 @@ public:
 public:
     [[nodiscard]] std::string as_string() const
     {
-        return make_str_copy<std::string>();
-    }
-    [[nodiscard]] std::u8string as_u8string() const
-    {
-        return make_str_copy<std::u8string>();
+        static constexpr std::array<char, 16u> hex = { '0', '1', '2', '3', '4', '5', '6', '7',
+                           '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+        std::string str{};
+        str.reserve(m_Hash.size() * 2u);
+        for (auto&& byte : m_Hash)
+        {
+            str.push_back(hex[(byte & 0xF0) >> 4]);
+            str.push_back(hex[byte & 0x0F]);
+        }
+
+        return str;
     }
     [[nodiscard]] const byte* data() const
     {
@@ -79,7 +85,7 @@ private:
     }
 private:
     std::vector<byte> m_Hash;
-    
+public:
     using const_pointer = decltype(m_Hash)::const_pointer;
     using size_type = decltype(m_Hash)::size_type;
     using hasher = algorithm_t;

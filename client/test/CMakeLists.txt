@@ -34,6 +34,8 @@ add_executable(${TEST_PROJECT}
         # security test
         test_CRandom.cpp
         ${SECURITY_DIR}/CRandom.cpp
+        test_CHash.cpp
+        ${SECURITY_DIR}/sha.cpp
 )
 
 target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../shared/common")

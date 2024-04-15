@@ -62,8 +62,11 @@ add_subdirectory("../shared/security" "${CMAKE_BINARY_DIR}/security")
 add_subdirectory("src")
 # properties
 set_target_properties(${MAIN_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
-set_target_properties(${SECURITY_PROJECT} PROPERTIES OUTPUT_NAME_DEBUG "${MAIN_PROJECT}d")
-set_target_properties(${SECURITY_PROJECT} PROPERTIES OUTPUT_NAME_RELEASE "${MAIN_PROJECT}")
+set_target_properties(${MAIN_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}")
+set_target_properties(${MAIN_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}")
+set_target_properties(${MAIN_PROJECT} PROPERTIES OUTPUT_NAME_DEBUG "${MAIN_PROJECT}d")
+set_target_properties(${MAIN_PROJECT} PROPERTIES OUTPUT_NAME_RELEASE "${MAIN_PROJECT}")
+
 set_target_properties(${MAIN_PROJECT} PROPERTIES CXX_STANDARD 23)
 set_target_properties(${MAIN_PROJECT} PROPERTIES C_STANDARD 11)
 set_target_properties(${MAIN_PROJECT} PROPERTIES CXX_STANDARD_REQUIRED ON)
@@ -91,12 +94,33 @@ get_target_property(PROJECT_SOURCES ${MAIN_PROJECT} SOURCES)
 source_group(TREE "${PROJECT_SOURCE_DIR}/.." FILES ${PROJECT_SOURCES})
 
 
+file(GLOB_RECURSE ALL_SOURCE_FILES 
+	"${CMAKE_SOURCE_DIR}/src/*.cpp"
+	"${CMAKE_SOURCE_DIR}/src/*.hpp"
+	"${CMAKE_SOURCE_DIR}/../shared/*.cpp"
+    "${CMAKE_SOURCE_DIR}/../shared/*.hpp")
+
+add_custom_target(
+    clang-format
+    COMMAND clang-format -i -style=file ${ALL_SOURCE_FILES}
+    COMMENT "Running clang-format on all source files."
+)
+
+# clang-format still needs to be set up with correct settings
+#add_dependencies(${MAIN_PROJECT} clang-format)
+
+
 # testing
 enable_testing()
 add_subdirectory("test")
 set_target_properties(${TEST_PROJECT} PROPERTIES FOLDER ${FOLDER_TEST})
 set_target_properties(gtest PROPERTIES FOLDER ${FOLDER_TEST})
 set_target_properties(gtest_main PROPERTIES FOLDER ${FOLDER_TEST})
+set_target_properties(${TEST_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
+set_target_properties(${TEST_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}")
+set_target_properties(${TEST_PROJECT} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}")
+set_target_properties(${TEST_PROJECT} PROPERTIES OUTPUT_NAME_DEBUG "${TEST_PROJECT}d")
+set_target_properties(${TEST_PROJECT} PROPERTIES OUTPUT_NAME_RELEASE "${TEST_PROJECT}")
 # include dirs
 target_include_directories(${TEST_PROJECT} PRIVATE "${PROJECT_SOURCE_DIR}/external/include")
 target_include_directories(${TEST_PROJECT} PRIVATE "${PROJECT_SOURCE_DIR}/src")
@@ -107,3 +131,4 @@ target_include_directories(${TEST_PROJECT} PRIVATE "${WOLFSSL_SRC_PATH}/wolfssl"
 target_link_libraries(${TEST_PROJECT} PRIVATE ${FETCH_DEP_WOLFSSL})
 
 
+use_pch(${TEST_PROJECT})
