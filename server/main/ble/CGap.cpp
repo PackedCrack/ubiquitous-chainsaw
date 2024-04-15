@@ -151,7 +151,7 @@ namespace ble
 {
 int CGap::event_callback_caller(ble_gap_event* pEvent, void* eventCallback)
 {
-	std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
+	const std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
 	cb(pEvent);
 
 	return 0;
@@ -359,7 +359,7 @@ std::function<void(ble_gap_event*)> CGap::make_event_callback()
 				std::optional<CConnection*> activeCon = this->active_connection();
 				if(activeCon)
 				{
-					CConnection* pActiveConnection = *activeCon;
+					const CConnection* pActiveConnection = *activeCon;
 					CConnection connection{ pEvent->disconnect.conn.conn_handle };
 
 					if(*pActiveConnection == connection)

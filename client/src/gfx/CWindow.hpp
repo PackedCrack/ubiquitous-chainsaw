@@ -1,5 +1,5 @@
 #pragma once
-#include "defines.hpp"
+#include "../client_defines.hpp"
 #include "../system/TrayIcon.hpp"
 // third_party
 #include "../win32.hpp"

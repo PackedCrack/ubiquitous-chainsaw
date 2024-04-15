@@ -7,7 +7,7 @@
 #else
     #error Only windows is implemented atm
 #endif
-#include "../common/common.hpp"
+#include "common/common.hpp"
 
 
 namespace ble

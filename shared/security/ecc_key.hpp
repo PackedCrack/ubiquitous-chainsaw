@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "defines_wc.hpp"
+#include "wc_defines.hpp"
 #include "CHash.hpp"
 #include "CRandom.hpp"
 // third_party
@@ -28,13 +28,13 @@ protected:
     explicit IEccKey(const std::vector<uint8_t>& derData)
         : m_Key{}
     {
-        ASSERT_FMT(!derData.empty(), "Tried to create EccKey without data!");
+        // cppcheck-suppress ignoredReturnValue
+        ASSERT(!derData.empty(), "Tried to create EccKey without data!");
         
         // https://www.wolfssl.com/documentation/manuals/wolfssl/ecc_8h.html#function-wc_ecc_init
         WC_CHECK(wc_ecc_init(&m_Key));
         
         decode(derData);
-        //static_cast<derived_t*>(this)->decode(derData);
     }
     ~IEccKey()
     {
@@ -112,11 +112,11 @@ public:
     requires common::buffer<std::remove_cvref_t<buffer_t>> && Hash<std::remove_cvref_t<hash_t>>
     bool verify_hash(buffer_t&& source, hash_t&& hash)
     {
-        ASSERT_FMT(source.size() > 0u, "Tried to create verify signature on empty buffer!");
+        ASSERT(source.size() > 0u, "Tried to create verify signature on empty buffer!");
         static constexpr int32_t VALID = 1;
     
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_verify_hash
-        int32_t result{};
+        int result{};
         WC_CHECK(wc_ecc_verify_hash(
                 source.data(),
                 common::assert_down_cast<word32>(source.size()),
@@ -141,10 +141,11 @@ public:
     CEccPrivateKey& operator=(const CEccPrivateKey& other) = delete;
     CEccPrivateKey& operator=(CEccPrivateKey&& other) noexcept;
 public:
-    template<typename hash_t> requires Hash<std::remove_cvref_t<hash_t>>
+    template<typename hash_t> 
+    requires Hash<std::remove_cvref_t<hash_t>>
     [[nodiscard]] std::vector<byte> sign_hash(CRandom& rng, hash_t&& hash)
     {
-        ASSERT_FMT(hash.size() > 0u, "Tried to sign an empty hash!");
+        ASSERT(hash.size() > 0u, "Tried to sign an empty hash!");
         
         std::vector<byte> signature{};
         signature.resize(128u);

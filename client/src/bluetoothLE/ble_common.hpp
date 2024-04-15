@@ -3,8 +3,8 @@
 //
 
 #pragma once
-#include "defines.hpp"
-#include "../common/ble_services.hpp"
+#include "../client_defines.hpp"
+#include "common/ble_services.hpp"
 
 
 namespace ble

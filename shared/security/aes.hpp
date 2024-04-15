@@ -9,7 +9,8 @@
 // third-party
 #include "wolfcrypt/aes.h"
 
-
+// ignore cppcheck for this file
+// cppcheck-suppress preprocessorErrorDirective
 #error "Don't include this file - the implementation is incomplete"
 
 

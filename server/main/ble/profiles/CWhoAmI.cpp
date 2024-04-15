@@ -1,5 +1,5 @@
 #include "CWhoAmI.hpp"
-#include "../../../common/ble_services.hpp"
+#include "common/ble_services.hpp"
 #include "../../server_common.hpp"
 #include "CGattCharacteristic.hpp"
 // std
@@ -88,6 +88,7 @@ namespace
 			}   
     	}
     	} // switch
+		// cppcheck-suppress unknownMacro
 		UNHANDLED_CASE_PROTECTION_OFF
     	return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
 	};

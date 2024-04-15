@@ -45,10 +45,10 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
         IVectorView<GattCharacteristic> characteristics = result.Characteristics();
         m_Characteristics.reserve(characteristics.Size());
         
-        for(auto&& characteristic : characteristics)
+        for(auto&& chr : characteristics)
         {
             auto[iter, emplaced] = m_Characteristics.try_emplace(
-                    make_uuid(characteristic.Uuid()), co_await make_characteristic<CCharacteristic>(characteristic));
+                    make_uuid(chr.Uuid()), co_await make_characteristic<CCharacteristic>(chr));
             if(!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace characteristic with UUID: \"{}\"", uuid_as_str());

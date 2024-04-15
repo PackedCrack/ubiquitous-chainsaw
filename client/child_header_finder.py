@@ -10,12 +10,16 @@ import re
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
+#ALL_HEADERS = {"stdarg.h", "windef.h", "winnt.h", "basetsd.h", "guiddef.h", "ctype.h", "string.h",
+#                 "winbase.h", "winerror.h", "wingdi.h", "winuser.h", "winnls.h", "wincon.h",
+#                 "winver.h", "winreg.h", "winnetwk.h", "winsvc.h", "imm.h", "cderr.h", "commdlg.h",
+#                 "dde.h", "ddeml.h", "dlgs.h", "lzexpand.h", "mmsystem.h", "nb30.h", "rpc.h",
+#                 "shellapi.h", "wincrypt.h", "winperf.h", "winresrc.h", "winsock.h", "winspool.h",
+#                 "winbgim.h", "ole2.h", "objbase.h", "oleauto.h", "olectlid.h"}
+
 CHILD_HEADERS = {"stdarg.h", "windef.h", "winnt.h", "basetsd.h", "guiddef.h", "ctype.h", "string.h",
                  "winbase.h", "winerror.h", "wingdi.h", "winuser.h", "winnls.h", "wincon.h",
-                 "winver.h", "winreg.h", "winnetwk.h", "winsvc.h", "imm.h", "cderr.h", "commdlg.h",
-                 "dde.h", "ddeml.h", "dlgs.h", "lzexpand.h", "mmsystem.h", "nb30.h", "rpc.h",
-                 "shellapi.h", "wincrypt.h", "winperf.h", "winresrc.h", "winsock.h", "winspool.h",
-                 "winbgim.h", "ole2.h", "objbase.h", "oleauto.h", "olectlid.h"}
+                 "winver.h", "winreg.h", "winnetwk.h", "winsvc.h", "imm.h"}
 
 def extract_header_name(line: str) -> str:
     match = re.search(r'[<"]', line)

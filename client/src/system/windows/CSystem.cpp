@@ -5,7 +5,6 @@
 #include "CSystem.hpp"
 #include "../../client_defines.hpp"
 #include "../../resource.hpp"
-// win32
 #include <windows.h>
 #include <shlobj_core.h>
 #include <pathcch.h>
@@ -40,6 +39,7 @@ void auto_wakeup_timer(std::chrono::seconds&& delay)
 {
     //  https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createwaitabletimerw
     HANDLE timer = nullptr;
+    // cppcheck-suppress unknownMacro
     WIN_CHECK(timer = CreateWaitableTimerW(nullptr, true, nullptr); timer != nullptr);
     
     

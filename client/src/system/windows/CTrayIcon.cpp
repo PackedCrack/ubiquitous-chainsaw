@@ -122,6 +122,8 @@ namespace sys
 {
 SDL_bool SDLCALL CTrayIcon::message_hook_caller(void* pMessageCallback, MSG* pMsg)
 {
+    // see comment in make_message_callback() below
+    // cppcheck-suppress constVariableReference
     MessageCallback& cb = *static_cast<MessageCallback*>(pMessageCallback);
     return cb(nullptr, pMsg);
 }
@@ -249,6 +251,10 @@ HWND CTrayIcon::win32_window_handle() const
 sys::CTrayIcon::MessageCallback CTrayIcon::make_message_callback()
 {
     // TODO: SDL does not forward this Notify Icon Tray message correctly.
+    
+    // This cant be const MSG* because the function declaration for the callback to SDL is:
+    // typedef SDL_bool (SDLCALL *SDL_WindowsMessageHook)(void *userdata, MSG *msg);
+    // cppcheck-suppress constParameterPointer
     return [pWindow = m_pWindow]([[maybe_unused]] void* pMessageCallback, MSG* pMsg)
     {
         switch (pMsg->message)

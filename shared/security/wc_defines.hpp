@@ -5,7 +5,7 @@
 #pragma once
 #include <cstdint>
 #include <string_view>
-#include "defines.hpp"
+#include "../common/defines.hpp"
 // third-party
 #include "wolfcrypt/error-crypt.h"
 
@@ -14,8 +14,7 @@ using WCResult = int32_t;
 static constexpr WCResult WC_SUCCESS = 0;
 static constexpr WCResult WC_FAILURE = -1;
 
-
-#define WC_ERR_TO_STR(err) std::string_view{ wc_GetErrorString(err) }
+#define WC_ERR_TO_STR(err) wc_GetErrorString(err)
 
 #ifndef NDEBUG
 #define WC_CHECK(expr) if(WCResult code = expr; code == WC_SUCCESS) {} \

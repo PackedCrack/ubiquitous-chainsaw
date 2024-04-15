@@ -36,17 +36,17 @@ protected:
     CMutex<std::shared_mutex> m_SharedMutex;
     std::vector<std::thread> m_Writers;
 };
-TEST_F(SharedMutexTest, LockShared_UnlockShared)
+TEST_F(SharedMutexTest, Lock_Shared_UnlockShared)
 {
     ASSERT_NO_THROW(m_SharedMutex.lock_shared());
     ASSERT_NO_THROW(m_SharedMutex.unlock_shared());
 }
-TEST_F(SharedMutexTest, TryLockShared)
+TEST_F(SharedMutexTest, Try_Lock_Shared)
 {
     ASSERT_TRUE(m_SharedMutex.try_lock_shared());
     m_SharedMutex.unlock_shared();
 }
-TEST_F(SharedMutexTest, SharedLockAquireTest)
+TEST_F(SharedMutexTest, Shared_Lock_Aquire)
 {
     std::shared_mutex smut{};
     ASSERT_TRUE(smut.try_lock_shared());
@@ -91,7 +91,7 @@ TEST_F(SharedMutexTest, SharedLockAquireTest)
     ASSERT_TRUE(m_SharedMutex.try_lock());
     m_SharedMutex.unlock();
 }
-TEST_F(SharedMutexTest, SharedLockInUseTest)
+TEST_F(SharedMutexTest, Shared_Lock_In_Use)
 {
     std::atomic<bool> writersDone{ false };
     std::atomic<int32_t> writersWorking{ 0 };
@@ -146,12 +146,12 @@ TEST_F(MutexTest, Lock_Unlock)
     ASSERT_NO_THROW(m_Mutex.lock());
     ASSERT_NO_THROW(m_Mutex.unlock());
 }
-TEST_F(MutexTest, TryLock)
+TEST_F(MutexTest, Try_Lock)
 {
     ASSERT_TRUE(m_Mutex.try_lock());
     m_Mutex.unlock();
 }
-TEST_F(MutexTest, LockGuardTest)
+TEST_F(MutexTest, Lock_Guard)
 {
     {
         std::lock_guard lock{ m_Mutex };
@@ -160,7 +160,7 @@ TEST_F(MutexTest, LockGuardTest)
     ASSERT_TRUE(m_Mutex.try_lock());
     m_Mutex.unlock();
 }
-TEST_F(MutexTest, UniqueLockGuardTest)
+TEST_F(MutexTest, Unique_Lock_Guard)
 {
     {
         std::unique_lock lock{ m_Mutex };

@@ -12,15 +12,33 @@ FetchContent_Declare(
   BUILD_COMMAND     ""
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   CMAKE_ARGS        -DSDL_SHARED_DEFAULT=OFF -DSDL_STATIC_DEFAULT ON
 )
+
+SET(SDL_SHARED_DEFAULT OFF CACHE BOOL "Only build as a static lib")
+SET(SDL_STATIC_DEFAULT ON CACHE BOOL "Only build as a static lib")
 
 FetchContent_GetProperties(${FETCH_DEP_SDL})
 FetchContent_MakeAvailable(${FETCH_DEP_SDL})
 
 
 set_target_properties(${FETCH_DEP_SDL} PROPERTIES CXX_STANDARD 23)
-set_target_properties(${FETCH_DEP_SDL} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${LIB_OUTPUT_DIR}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DIRECTORY}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}")
+
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${RUNTIME_OUTPUT_DIRECTORY}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG "${RUNTIME_OUTPUT_DIRECTORY}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE "${RUNTIME_OUTPUT_DIRECTORY}")
+
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIB_OUTPUT_DIR}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${LIB_OUTPUT_DIR}")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${LIB_OUTPUT_DIR}")
+
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES OUTPUT_NAME_DEBUG "${FETCH_DEP_SDL}d")
+set_target_properties(${FETCH_DEP_SDL} PROPERTIES OUTPUT_NAME_RELEASE "${FETCH_DEP_SDL}")
+
 
 file(GLOB_RECURSE SDL_SOURCES
       ${SDL_SRC_PATH}/include/*.cpp
@@ -44,33 +62,3 @@ ${SDL_SRC_PATH}/include/SDL_config_winrt.h
 ${SDL_SRC_PATH}/include/SDL_config_xbox.h
 )
 file(COPY ${SDL_SOURCES} DESTINATION ${SDL_BUILD_PATH}/include/)
-
-set(SDL_SHARED_DEFAULT OFF)
-set(SDL_STATIC_DEFAULT ON)
-
-
-# copy .so
-add_custom_command(TARGET ${MAIN_PROJECT} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:${FETCH_DEP_SDL}>
-        $<TARGET_FILE_DIR:${MAIN_PROJECT}>)
-
-
-# copy .a
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    SET(SDL_LIB_NAME "SDL3.lib")
-else()
-    SET(SDL_LIB_NAME "wolfssl.a")
-endif()
-
-# Copy the .a files to the LIB_OUTPUT_DIR directory - doing this manually because updating runtime output dir doesnt seem to work..
-add_custom_command(OUTPUT "${LIB_OUTPUT_DIR}/${SDL_LIB_NAME}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${SDL_BUILD_PATH}/${SDL_LIB_NAME}"
-        "${LIB_OUTPUT_DIR}/${SDL_LIB_NAME}"
-        DEPENDS "${SDL_BUILD_PATH}/${SDL_LIB_NAME}")
-
-
-add_custom_target(COPY_SDL_STATIC_LIB ALL DEPENDS "${LIB_OUTPUT_DIR}/${SDL_LIB_NAME}")
-
-add_dependencies(${MAIN_PROJECT} COPY_SDL_STATIC_LIB)

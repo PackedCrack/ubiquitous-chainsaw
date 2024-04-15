@@ -26,21 +26,29 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 
 project (${TEST_PROJECT})
 
+SET(SECURITY_DIR "${CMAKE_SOURCE_DIR}/../shared/security/")
+
 add_executable(${TEST_PROJECT}
-        test.cpp
-        Test_CThreadSafeHashMap.cpp
-        Test_CMutex.cpp
+        test_CThreadSafeHashMap.cpp
+        test_CMutex.cpp
+        # security test
+        test_CRandom.cpp
+        ${SECURITY_DIR}/CRandom.cpp
+        test_CHash.cpp
+        ${SECURITY_DIR}/sha.cpp
+        test_EccKey.cpp
+        ${SECURITY_DIR}/ecc_key.cpp
 )
 
-target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../common")
-
+target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../shared/common")
+target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../shared/security")
 
 
 set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD 23)
 set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_include_directories(${TEST_PROJECT} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googletest/include)
-target_link_libraries(${TEST_PROJECT} gtest_main)
+target_link_libraries(${TEST_PROJECT} PRIVATE gtest_main)
 use_pch(${TEST_PROJECT})
 
 enable_testing()

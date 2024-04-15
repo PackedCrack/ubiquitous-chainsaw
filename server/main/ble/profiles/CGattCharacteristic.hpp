@@ -103,7 +103,7 @@ public:
 	[[nodiscard]] static int callback_caller(
 		uint16_t connnectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext, function eventCallback)
 	{
-		invocable_t& cb = *(static_cast<invocable_t*>(eventCallback));
+		const invocable_t& cb = *(static_cast<invocable_t*>(eventCallback));
 		return cb(connnectionHandle, attributeHandle, pContext);
 	}
 	[[nodiscard]] ble_gatt_chr_def to_nimble_t()
@@ -165,7 +165,7 @@ requires GattCharacteristic<characteristic_t>
 class Model final : public Concept
 {
 public:
-	Model(characteristic_t&& characteristic)
+	explicit Model(characteristic_t&& characteristic)
 		: m_Characteristic{ std::forward<characteristic_t>(characteristic) }
 	{};
 	~Model() override = default;

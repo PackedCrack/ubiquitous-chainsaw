@@ -2,47 +2,39 @@
 // Created by qwerty on 2024-02-17.
 //
 #include "CRandom.hpp"
-#include "common.hpp"
-#include "defines_wc.hpp"
+#include "../common/common.hpp"
+#include "wc_defines.hpp"
 
 
 namespace
 {
-constexpr int32_t SUCCESS = 0;
-
-[[nodiscard]] std::string_view init_err_msg(int32_t code)
+[[nodiscard]] constexpr std::string_view init_err_msg(int32_t code)
 {
     switch(code)
     {
         case MEMORY_E:
         {
-            static constexpr std::string_view errMsg = "XMALLOC failed";
-            return errMsg;
+            return "XMALLOC failed";
         }
         case WINCRYPT_E:
         {
-            static constexpr std::string_view errMsg = "wc_GenerateSeed: failed to acquire context";
-            return errMsg;
+            return "wc_GenerateSeed: failed to acquire context";
         }
         case CRYPTGEN_E:
         {
-            static constexpr std::string_view errMsg = "wc_GenerateSeed: failed to get random";
-            return errMsg;
+            return "wc_GenerateSeed: failed to get random";
         }
         case BAD_FUNC_ARG:
         {
-            static constexpr std::string_view errMsg = "wc_RNG_GenerateBlock input is null or sz exceeds MAX_REQUEST_LEN";
-            return errMsg;
+            return "wc_RNG_GenerateBlock input is null or sz exceeds MAX_REQUEST_LEN";
         }
         case DRBG_CONT_FIPS_E:
         {
-            static constexpr std::string_view errMsg = "wc_RNG_GenerateBlock: Hash_gen returned DRBG_CONT_FAILURE";
-            return errMsg;
+            return "wc_RNG_GenerateBlock: Hash_gen returned DRBG_CONT_FAILURE";
         }
         case RNG_FAILURE_E:
         {
-            static constexpr std::string_view errMsg = "wc_RNG_GenerateBlock: Default error. rng’s status originally not ok, or set to DRBG_FAILED";
-            return errMsg;
+            return "wc_RNG_GenerateBlock: Default error. rng’s status originally not ok, or set to DRBG_FAILED";
         }
     }
     
@@ -56,7 +48,7 @@ std::expected<CRandom, CRandom::Error> CRandom::make_rng()
 {
     try
     {
-        return CRandom{};
+        return std::expected<CRandom, CRandom::Error>{ std::in_place_t{}, CRandom{} };
     }
     catch(const std::runtime_error& err)
     {
@@ -67,10 +59,9 @@ std::expected<CRandom, CRandom::Error> CRandom::make_rng()
 CRandom::CRandom()
     : m_Rng{}
 {
-    
     // https://www.wolfssl.com/documentation/manuals/wolfssl/group__Random.html#function-wc_initrng
-    int32_t result = wc_InitRng(&m_Rng);
-    if(result != SUCCESS)
+    WCResult result = wc_InitRng(&m_Rng);
+    if(result != WC_SUCCESS)
         throw std::runtime_error{ init_err_msg(result).data() };
 }
 CRandom::~CRandom()
@@ -104,12 +95,11 @@ CRandom& CRandom::operator=(CRandom&& other) noexcept
 }
 std::expected<std::vector<uint8_t>, CRandom::Error> CRandom::generate_block(size_t size)
 {
-    static constexpr WCResult SUCCESS = 0;
-    std::vector<uint8_t> dataBlock{};
-    dataBlock.resize(size);
+    std::expected<std::vector<uint8_t>, CRandom::Error> dataBlock{};
+    dataBlock->resize(size);
     
-    WCResult code = wc_RNG_GenerateBlock(&m_Rng, dataBlock.data(), common::assert_down_cast<word32>(dataBlock.size()));
-    if(code == SUCCESS)
+    WCResult code = wc_RNG_GenerateBlock(&m_Rng, dataBlock->data(), common::assert_down_cast<word32>(dataBlock->size()));
+    if(code == WC_SUCCESS)
         return dataBlock;
     else
         return std::unexpected{ Error::blockGeneration };

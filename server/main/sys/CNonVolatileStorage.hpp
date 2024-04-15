@@ -3,7 +3,8 @@
 /* NVS */
 #include "nvs_flash.h"
 /* Project*/
-#include "defines.hpp"
+#include "../server_defines.hpp"
+//#include "common/defines.hpp"
 /* STD*/
 #include <vector>
 #include <string>
@@ -141,32 +142,31 @@ public:
 	}; // class CBaseReader
 	class CReader : public CBaseReader<CReader>
 	{
-	private:
-	    CReader(std::string_view nameSpace);
 	public:
+		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReader> make_reader(std::string_view nameSpace);
 		~CReader();
 		CReader(const CReader& other) = delete;
 		CReader(CReader&& other) noexcept;
 		CReader& operator=(const CReader& other) = delete;
 		CReader& operator=(CReader&& other) noexcept;
-	public:
-		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReader> make_reader(std::string_view nameSpace);
-	public:
+	private:
+	    explicit CReader(std::string_view nameSpace);
+	private:
 		std::optional<nvs_handle_t> m_Handle;
 	}; // class CReader
 	class CReadWriter : public CBaseReader<CReader>
 	{
-	private:
-	    CReadWriter(std::string_view nameSpace);
 	public:
+		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReadWriter> make_read_writer(std::string_view nameSpace);
 		~CReadWriter();
 		CReadWriter(const CReadWriter& other) = delete;
 		CReadWriter(CReadWriter&& other) noexcept;
 		CReadWriter& operator=(const CReadWriter& other) = delete;
 		CReadWriter& operator=(CReadWriter&& other) noexcept;
+	private:
+	    explicit CReadWriter(std::string_view nameSpace);
 	public:
 		[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
-		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CReadWriter> make_read_writer(std::string_view nameSpace);
 	private:
 		[[nodiscard]] WriteResult commit();
 	private:
