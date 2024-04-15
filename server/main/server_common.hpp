@@ -13,7 +13,6 @@ constexpr std::string_view NVS_ENC_NAMESPACE = "ENC_STORAGE";
 constexpr std::string_view NVS_ENC_PRIV_KEY = "ENC_PRIV";
 constexpr std::string_view NVS_ENC_PUB_KEY = "ENC_PUB";
 constexpr std::string_view NVS_ENC_CLIENT_KEY = "ENC_CLIENT";
-
 constexpr std::string_view NVS_RSSI_NAMESPACE = "RSSI_STORAGE";
 constexpr std::string_view NVS_RSSI_KEY = "RSSI";
 
