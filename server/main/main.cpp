@@ -33,7 +33,6 @@ extern "C" void app_main(void)
 	sys::CSystem system{};
 	try 
 	{
-
 		
 		//std::expected<int, int> test{};
 		//print_chip_info();

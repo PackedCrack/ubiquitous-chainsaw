@@ -35,7 +35,6 @@ protected:
         WC_CHECK(wc_ecc_init(&m_Key));
         
         decode(derData);
-        //static_cast<derived_t*>(this)->decode(derData);
     }
     ~IEccKey()
     {
