@@ -106,7 +106,7 @@ CNonVolatileStorage::CHandle& CNonVolatileStorage::CHandle::operator=(CHandle&& 
 }
 std::optional<CNonVolatileStorage::CHandle> CNonVolatileStorage::CHandle::make_handle(OpenMode mode, std::string_view nameSpace)
 {
-	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
 		return CHandle {mode, nameSpace};
@@ -322,7 +322,7 @@ std::optional<storage::CNonVolatileStorage::CWriter> CNonVolatileStorage::CWrite
 	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 	try
 	{
-		return std::make_optional<CWriter>( nameSpace );
+		return std::make_optional<CWriter>(nameSpace);
 	}
 	catch(const std::invalid_argument& e)
 	{

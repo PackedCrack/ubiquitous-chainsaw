@@ -48,8 +48,8 @@ void measure_important_function(void) {
     uint64_t start = esp_timer_get_time();
 
 	using namespace storage;
-	[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
-	std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
+	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+	[[maybe_unused]] std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
 
     for (int retries = 0; retries < MEASUREMENTS; retries++) 
 	{
@@ -61,6 +61,8 @@ void measure_important_function(void) {
     printf("%u iterations took %llu milliseconds (%llu microseconds per invocation)\n",
            MEASUREMENTS, (end - start)/1000, (end - start)/MEASUREMENTS);
 }
+
+
 [[nodiscard]] auto make_load_key_invokable(std::string_view nameSpace, std::string_view key)
 {
     return [nameSpace, key]() -> std::expected<std::vector<security::byte>, std::string>
@@ -104,8 +106,7 @@ extern "C" void app_main(void)
     	    std::printf("\nFailed to verify Signature.\n");
     	}
 		
-		
-
+	
 
 		//print_chip_info();
 
@@ -126,7 +127,7 @@ extern "C" void app_main(void)
 
 		using namespace storage;
 
-		[[maybe_unused]] CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+		[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 
 		//auto a = security::CWolfCrypt::instance();
 

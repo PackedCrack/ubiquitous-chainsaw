@@ -80,7 +80,7 @@ public:
 	class CReader
 	{
 	private:
-	    CReader(std::string_view nameSpace);
+	    explicit CReader(std::string_view nameSpace);
 	public:
 		~CReader() = default;
 		CReader(const CReader& other) = delete;
@@ -96,14 +96,17 @@ public:
 	}; // class CReader
 	class CWriter
 	{
-	private:
-	    CWriter(std::string_view nameSpace);
+
 	public:
 		~CWriter() = default;
 		CWriter(const CWriter& other) = delete;
 		CWriter(CWriter&& other) noexcept;
 		CWriter& operator=(const CWriter& other) = delete;
 		CWriter& operator=(CWriter&& other) noexcept;
+	private:
+		// can no be private and explicit for std::make_optional<CWriter>(nameSpace)
+		// cppcheck-suppress noExplicitConstructor
+		CWriter(std::string_view nameSpace);
 	public:
 		[[nodiscard]] static std::optional<storage::CNonVolatileStorage::CWriter> make_writer(std::string_view nameSpace);
 		[[nodiscard]] WriteResult write_binary(std::string_view key, const std::vector<uint8_t>& data);
