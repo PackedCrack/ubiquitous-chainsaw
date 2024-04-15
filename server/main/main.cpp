@@ -1,15 +1,28 @@
+#define WOLFSSL_ESPIDF
+#define WOLFSSL_ESPWROOM32
+//#define WOLFSSL_USER_SETTINGS
+#include <wolfssl/wolfcrypt/settings.h>
+//#include <wolfssl/version.h>
+//#include <wolfssl/wolfcrypt/port/Espressif/esp32-crypt.h>
+
+//#include <wolfssl/wolfcrypt/types.h>
+
+
 #include "sys/CSystem.hpp"
 #include "ble/CNimble.hpp"
 #include "sys/CNonVolatileStorage.hpp"
 
-#include "security/CWolfCrypt.hpp"
+//#define HAVE_ECC
 #include "security/CHash.hpp"
-#include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
+#include "security/sha.hpp"
 
 #include "esp_system.h"
+
+
+
 
 void print_chip_info()
 {
@@ -28,30 +41,66 @@ void print_chip_info()
 	std::printf("\nCurrent minimum free heap: %u bytes\n\n", static_cast<unsigned int>(system.min_free_heap()));
 }
 
+[[nodiscard]] auto make_load_key_invokable(std::string_view nameSpace, std::string_view key)
+{
+    return [nameSpace, key]() -> std::expected<std::vector<security::byte>, std::string>
+    {
+        std::expected<std::vector<security::byte>, std::string> data{};
+		LOG_INFO_FMT("1: {}", nameSpace);
+		LOG_INFO_FMT("2: {}", key);
+        //static_assert(alignof(const char) == alignof(decltype(*(data->data()))));
+
+        return data;
+    
+    };
+}
+
 extern "C" void app_main(void)
 {
 	sys::CSystem system{};
 	try 
 	{
+		auto test = make_load_key_invokable("asv", "abc");
+
+		//std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_load_invokable("PUBLIC_KEY"));
+    	//std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_load_invokable("PRIVATE_KEY"));
+		 
+
+		security::CRandom rng = security::CRandom::make_rng().value();
+		security::CEccKeyPair keyPair {rng};
+		auto pub = std::make_unique<security::CEccPublicKey>(keyPair.public_key());
+		auto priv = std::make_unique<security::CEccPrivateKey>(keyPair.private_key());
+
+		const char* msg = "Very nice message";
+		security::CHash<security::Sha2_256> hash{ msg };
+		std::vector<security::byte> signature = priv->sign_hash(rng, hash);
+		bool verified = pub->verify_hash(signature, hash);
+    	if (verified)
+		{
+    	    std::printf("\nSignature Verified Successfully.\n");
+    	}
+		else
+		{
+    	    std::printf("\nFailed to verify Signature.\n");
+    	}
 		
-		//std::expected<int, int> test{};
+		
+
+
 		//print_chip_info();
 
 		using namespace storage;
 
 		//[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
 		
-		auto crypto = security::CWolfCrypt::instance();
-		if(crypto)
-		{
-			std::printf("Works\n");
-		}
+		//auto crypto = security::CWolfCrypt::instance();
+		//if(crypto)
+		//{
+		//	std::printf("Works\n");
+		//}
 
 
 		//ble::CNimble nimble{};
-
-
-
 		while (true)
 		{
 			//chainsawServer.rssi();
@@ -59,13 +108,12 @@ extern "C" void app_main(void)
 			
 			vTaskDelay(pdMS_TO_TICKS(3000)); // milisecs
 			//std::printf("taskdelay\n");
-
 		}
     } 
 	catch (const exception::fatal_error& error) 
 	{
 		LOG_ERROR_FMT("Caught exception: {}", error.what());
-
+//
 		// TODO:: we should do more than restart here
 		system.restart();
     }
