@@ -73,7 +73,6 @@ public:
     CGap& operator=(CGap&& other) noexcept;
 public:
 	static int event_callback_caller(ble_gap_event* pEvent, function eventCallback);
-    [[nodiscard]] std::optional<int8_t>  rssi() const;
 	void set_connection(CConnection&& newConncetion);
 	[[nodiscard]] std::optional<CConnection*> active_connection();
     [[nodiscard]] std::optional<CConnection::Error> drop_connection(CConnection::DropCode reason);

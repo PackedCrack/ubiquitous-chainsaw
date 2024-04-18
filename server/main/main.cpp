@@ -155,38 +155,9 @@ extern "C" void app_main(void)
 		
 		using namespace storage;
 		ble::CNimble nimble {};
-		const ble::CGap* pGap = nimble.gap_handle();
-		std::optional<CNonVolatileStorage::CWriter> rssiWriter = CNonVolatileStorage::CWriter::make_writer(NVS_RSSI_NAMESPACE);
-		if (!rssiWriter.has_value())
-		{
-			LOG_FATAL("Failed to initilize NVS Writer");
-		}
-		std::optional<CNonVolatileStorage::CReader> rssiReader = CNonVolatileStorage::CReader::make_reader(NVS_RSSI_NAMESPACE);
-		if (!rssiWriter.has_value())
-		{
-			LOG_FATAL("Failed to initilize NVS Writer");
-		}
 		
-		auto rssiReadResult = rssiReader.value().read_int8(NVS_RSSI_KEY);
-		if (rssiReadResult.code == NvsErrorCode::success)
-		{
-			LOG_INFO_FMT("RSSI last saved rssi value = {}", rssiReadResult.data.value());
-		}
-
-
 		while (true)
 		{
-			// Perform any periodic tasks here
-			std::optional<int8_t> rssiValue = pGap->rssi();
-			if (rssiValue.has_value())
-			{
-				LOG_INFO_FMT("Rssi value = {}", rssiValue.value());
-				CNonVolatileStorage::WriteResult rssiWriteResult = rssiWriter.value().write_int8(NVS_RSSI_KEY, rssiValue.value());
-				if (rssiWriteResult.code != NvsErrorCode::success)
-				{
-					LOG_ERROR("FAILED RSSI WRITE");
-				}
-			}
 			vTaskDelay(pdMS_TO_TICKS(1000)); // milisecs
 		}
     } 

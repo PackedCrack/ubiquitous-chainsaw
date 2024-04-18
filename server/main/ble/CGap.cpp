@@ -237,24 +237,6 @@ CGap& CGap::operator=(CGap&& other) noexcept
 
 	return *this;
 }
-std::optional<int8_t> CGap::rssi() const
-{
-	if ( !m_ActiveConnection.handle().has_value() )
-	{
-        return std::nullopt;
-	}
-
-    int8_t rssiValue {};
-    int result = ble_gap_conn_rssi(m_ActiveConnection.handle().value(), &rssiValue);
-    if (result != ESP_OK)
-    {
-        return std::nullopt;
-    }
-    else
-    {
-        return rssiValue;
-    }
-}
 void CGap::set_connection(CConnection&& newConncetion)
 {
     m_ActiveConnection = std::move(newConncetion);
