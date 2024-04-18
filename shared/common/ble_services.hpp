@@ -91,7 +91,35 @@ static constexpr UUID BaseUUID
 static constexpr uint16_t ID_SERVICE_WHOAMI = 0xADDE;
 static constexpr uint16_t ID_CHARACTERISTIC_SERVER_AUTH = 0x0BB0;
 static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_AUTH = 0xBEBA;
-
+enum class HashType : uint8_t
+{
+    Sha2_224 = 0u,
+    Sha2_256 = 1u,
+    Sha3_224 = 2u,
+    Sha3_256 = 3u,
+    Sha3_384 = 4u,
+    Sha3_512 = 5u,
+    count
+};
+/**
+ * @brief Represents the header for server authentication.
+ *
+ * This structure is designed to hold information about the authentication data
+ * within a server packet or similar context. It includes details about both
+ * hash and signature blocks contained within the packet.
+ */
+struct ServerAuthHeader
+{
+    uint8_t hashType = 0;         ///< Enum value for the type of hash used.
+    uint8_t hashOffset = 1u;      ///< Offset where the hash data begins.
+    uint8_t hashSize = 2u;        ///< Size of the hash data in bytes.
+    uint8_t signatureOffset = 3u; ///< Offset where the signature data begins.
+    uint8_t signatureSize = 4u;   ///< Size of the signature data in bytes.
+};
+[[nodiscard]] consteval ServerAuthHeader whoami_server_auth_header()
+{
+    return ServerAuthHeader{};
+}
 [[nodiscard]] consteval UUID uuid_service_whoami()
 {
     UUID uuid = BaseUUID;
@@ -110,4 +138,5 @@ static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_AUTH = 0xBEBA;
     uuid.custom = ID_CHARACTERISTIC_CLIENT_AUTH;
     return uuid;
 }
+
 }   // namespace ble
