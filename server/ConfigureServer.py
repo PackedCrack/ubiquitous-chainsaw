@@ -39,6 +39,8 @@ def main():
     DEPENDENCIES = ["\"wolfssl/wolfssl^5.7.0\""]
     SDK_DEFAULTS = "sdkconfig.defaults"
 
+    file_delete('sdkconfig')
+    
     print(Color.GREEN + "LOG INFO: " + Color.END + "Configuring Ubiquitous-Chainsaw Server..")
     if file_exists(SDK_DEFAULTS):
         print(Color.GREEN + "LOG INFO: " + Color.END + "Custom SDK settings has been found")

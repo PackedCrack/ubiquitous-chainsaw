@@ -71,5 +71,5 @@ std::optional<CConnection::Error> CConnection::drop(DropCode reason)
 			NimbleErrorCode::noConnection, FMT("Unknown error recieved.. Return code from nimble: \"{}\"", result));
 	}
 }
-std::optional<ConnectionHandle> CConnection::handle() { return m_Handle; }
+std::optional<ConnectionHandle> CConnection::handle() const { return m_Handle; }
 }	// namespace ble
