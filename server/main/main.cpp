@@ -7,23 +7,35 @@
 
 //#include <wolfssl/wolfcrypt/types.h>
 
-
 #include "sys/CSystem.hpp"
 #include "ble/CNimble.hpp"
 #include "sys/CNonVolatileStorage.hpp"
 
 //#define HAVE_ECC
 #include "security/CHash.hpp"
+#include "security/sha.hpp"
 #include "security/CWolfCrypt.hpp"
 #include "security/CRandom.hpp"
 #include "security/ecc_key.hpp"
-#include "security/sha.hpp"
 
 #include "esp_system.h"
 
 
 #include "server_common.hpp"
 
+
+namespace
+{
+void init_singletons()
+{
+    auto const crypto = security::CWolfCrypt::instance();
+	if (!crypto)
+	{
+		LOG_INFO("Tried to initilize WolfCrypt, but it has already been initlized!");
+	}
+	[[maybe_unused]] const storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
+}
+} // namespace
 
 void print_chip_info()
 {
@@ -93,7 +105,6 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
 {
     return [nameSpace, key]() -> std::expected<std::vector<security::byte>, std::string>
     {
-        
 		auto readResult = read_key_from_nvs(nameSpace, key);
 		if (readResult.code != storage::NvsErrorCode::success)
 		{
@@ -131,8 +142,8 @@ extern "C" void app_main(void)
 	try 
 	{
 		//print_chip_info();
-		[[maybe_unused]] const storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
-
+		init_singletons();
+		
 		//write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY, SERVER_PRIV);
 		//auto readResult = read_key_from_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY);
 		//if (readResult.code == storage::NvsErrorCode::success)
@@ -144,18 +155,11 @@ extern "C" void app_main(void)
 		//	}
 		//	std::printf("\n\n");
 		//}
-
-		auto crypto = security::CWolfCrypt::instance();
-		if(!crypto)
-		{
-			LOG_FATAL("Failed to initilize CWolfCrypt");
-		}
-
-		verify_ecc_keys();
+		//verify_ecc_keys();
 		
 		using namespace storage;
 		ble::CNimble nimble {};
-		
+
 		while (true)
 		{
 			vTaskDelay(pdMS_TO_TICKS(1000)); // milisecs

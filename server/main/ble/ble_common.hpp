@@ -1,6 +1,7 @@
 #pragma once
 #include "common/ble_services.hpp"
 #include "../server_common.hpp"
+
 // std
 #include <cstring>
 #include <string_view>
@@ -204,4 +205,5 @@ requires common::const_buffer<buffer_t>
 
 	return NimbleErrorCode{ os_mbuf_append(om, data.data(), static_cast<uint16_t>(data.size())) };
 }
+
 }	  // namespace ble

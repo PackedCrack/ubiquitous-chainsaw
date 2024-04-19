@@ -115,6 +115,7 @@ CNimble::CNimble()
     configure_nimble_host();
 	m_pProfileCache = CProfileCacheBuilder()
 							.add_whoami()
+							.add_whereami()
 							.build();
 
 

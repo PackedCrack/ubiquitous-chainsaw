@@ -8,6 +8,7 @@ class CProfileCacheBuilder
 {
 public:
 	[[nodiscard]] CProfileCacheBuilder& add_whoami();
+	[[nodiscard]] CProfileCacheBuilder& add_whereami();
 	[[nodiscard]] std::unique_ptr<CProfileCache> build();
 private:
 	template<typename profile_t, typename... ctor_args_t>

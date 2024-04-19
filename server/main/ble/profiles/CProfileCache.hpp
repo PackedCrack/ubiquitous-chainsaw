@@ -34,6 +34,7 @@ public:
 		invalidResource
 	};
 	static constexpr KeyType KEY_WHOAMI = "whoami";
+	static constexpr KeyType KEY_WHEREAMI = "whereami";
 	static constexpr KeyType KEY_RANGE = "range";
 public:
 	[[nodiscard]] static Result<CProfileCache, CProfileCache::Error> make_profile_cache(std::map<KeyType, std::shared_ptr<Profile>>&& profiles);

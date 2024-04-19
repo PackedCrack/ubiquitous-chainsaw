@@ -5,12 +5,12 @@
 #include "../../shared/common/ble_services.hpp"
 #include "../../shared/common/common.hpp"	
 
-#include "security/CWolfCrypt.hpp"
-#include "security/CRandom.hpp"
-#include "security/ecc_key.hpp"
-#include "security/CHash.hpp"
-#include "security/sha.hpp"
-#include "../sys/CNonVolatileStorage.hpp"
+//#include "security/CWolfCrypt.hpp"
+//#include "security/CRandom.hpp"
+//#include "security/ecc_key.hpp"
+//#include "security/CHash.hpp"
+//#include "security/sha.hpp"
+//#include "../sys/CNonVolatileStorage.hpp"
 
 
 // std
@@ -24,151 +24,6 @@
 
 namespace
 {
-[[nodiscard]] auto make_callback_client_auth()
-{
-	//https://mynewt.apache.org/latest/network/ble_hs/ble_gatts.html?highlight=gatt
-
-	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
-	return [](uint16_t connHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
-	{
-		auto operation = ble::CharacteristicAccess{ pContext->op };
-		UNHANDLED_CASE_PROTECTION_ON
-		switch (operation) 
-		{
-    	case ble::CharacteristicAccess::read: 
-    	{
-    	    LOG_INFO("BLE_GATT_ACCESS_OP_READ_CHR");
-    	    if (connHandle == BLE_HS_CONN_HANDLE_NONE) // where to put this single #define ?
-    	     {
-    	        LOG_ERROR("NO CONNECTION EXISTS FOR READ CHARACTERISTIC!");
-    	        return static_cast<int32_t>(ble::NimbleErrorCode::noConnection);
-    	     }
-
-    	    LOG_INFO_FMT("Characteristic read. conn_handle={} attr_handle={}\n", connHandle, attributeHandle);
-
-			
-			std::vector<uint8_t> writeOperationData {69};
-    	    int32_t result = os_mbuf_append(pContext->om,
-    	                            writeOperationData.data(),
-    	                            writeOperationData.size());
-
-			
-			if (result == static_cast<int32_t>(ble::NimbleErrorCode::success))
-			{
-				return static_cast<int32_t>(ble::NimbleErrorCode::success);
-			}
-			else
-			{
-				return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
-			}   
-    	}
-    	case ble::CharacteristicAccess::write:
-    	{
-    	    LOG_INFO("BLE_GATT_ACCESS_OP_WRITE_CHR");
-    	    if (pContext->om == nullptr || pContext->om->om_len < 1)
-    	    {
-    	        LOG_WARN("NO DATA WAS WRITTEN!");
-    	        return static_cast<int32_t>(ble::NimbleErrorCode::invalidArguments);
-    	    }
-    	    //uint8_t* pDataBuffer = pContext->om->om_databuf;
-//
-    	    //// TODO check if this is always the case! 
-    	    //const uint16_t DATA_OFFSET = 19;
-    	    //const uint8_t NUM_DATA = *pDataBuffer;
-    	    //const uint8_t DATA_END = DATA_OFFSET + NUM_DATA;
-//
-			//// Print Size of data written to which characteristic
-			//const int MAX_UUID_LEN = 128;
-    	    //char uuidBuf [MAX_UUID_LEN];
-    	    //std::string_view charUuid = ble_uuid_to_str((const ble_uuid_t* )&pContext->chr->uuid, uuidBuf);
-    	    //LOG_INFO_FMT("{} bytes was written to characteristic={}", NUM_DATA, charUuid);
-//
-			//// Print the written value to terminal
-    	    //for (int i = 0; i < DATA_END; ++i)
-    	    //{
-    	    //    std::printf("Data read[%d]: 0x%02x\n", i, pDataBuffer[i]);
-    	    //}
-
-			// Retrieve the rssi value
-			int8_t rssiValue {};
-    		int rssiResult = ble_gap_conn_rssi(connHandle, &rssiValue);
-    		if (rssiResult != ESP_OK)
-    		{
-    		    LOG_ERROR("Failed to retrieve RSSI value");
-    		}
-
-			//os_mbuf* pDatabuffer1 {};
-			//int result = os_mbuf_append(pDatabuffer1,
-    	    //                        	&rssiValue,
-    	    //                        	sizeof(int8_t));
-
-			std::printf("Rssi value: %d \n", rssiValue);
-
-			//int result = os_mbuf_append(pContext->om,
-    	    //                        &rssiValue,
-    	    //                        sizeof(int8_t));
-
-			//uint8_t* pDataBuffer = pContext->om->om_databuf;	
-			//const uint16_t DATA_OFFSET = 19;
-    	    //const uint8_t NUM_DATA = *pDataBuffer;
-    	    //const uint8_t DATA_END = DATA_OFFSET + NUM_DATA;
-//
-    	    //for (int i = 0; i < DATA_END; ++i)
-    	    //{
-    	    //    std::printf("Data read[%d]: 0x%02x\n", i, pDataBuffer[i]);
-    	    //}				
-
-			//std::printf("Result %u\n", result);
-
-			//result = ble_gatts_notify_custom(connHandle, 3u, pContext->om);
-		
-
-			//std::printf("Result %u\n", result);
-
-			//result =  ble_gatts_notify(connHandle, 0u);
-			// Service attrHandle = 1
-			// read only char boob attrhandle = 3
-			// read/write char babe attrhandle = 5
-
-			// 1 and 3 works. 5 gets no connectionHandle (5 is the same attrHandle as this char)
-			// Which means, we have to retreive the attrHandle of the char we want to use
-			
-			// 1. retrieve the attribute handle to the correct char
-			// 2. get rssi value
-			// send notification to that characteristic
-
-			// returns 9 = ble_hs_eapp Application callback behaved unexpectedly. ble_hs_eapp
-			// https://mynewt.apache.org/master/network/ble_hs/ble_hs_return_codes.html?highlight=ble_hs_eapp
-
-			//std::vector<uint8_t> writeOperationData {69};
-			//int result = os_mbuf_append(pContext->om, writeOperationData.data(), static_cast<uint16_t>(writeOperationData.size()));
-			//std::printf("Result %u \n", result);
-
-			//int result = ble_gatts_notify_custom(connHandle, 3u, pContext->om);
-			int result = ble_gatts_notify(connHandle, 3u);
-
-			std::printf("Result %u \n", result);
-
-
-			if (result == 0)
-			{
-				return static_cast<int32_t>(ble::NimbleErrorCode::success);
-			}
-			else
-			{
-				return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
-			}   
-    	}
-    	} // switch
-		// cppcheck-suppress unknownMacro
-		UNHANDLED_CASE_PROTECTION_OFF
-    	return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
-	};
-}
-[[nodiscard]] ble::CCharacteristic make_characteristic_client_auth()
-{
-	return ble::make_characteristic(ble::ID_CHARACTERISTIC_CLIENT_AUTH, make_callback_client_auth(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::write, ble::CharsPropertyFlag::notify);
-}
 }	// namespace
 
 namespace ble
@@ -242,7 +97,6 @@ void CWhoAmI::retrieve_server_mac()
 	
 	if(!m_ServerMac.empty())
 	{
-
 		// TODO: EXTRACT THIS CODE TO sys/server_common.hpp
 		std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(NVS_ENC_NAMESPACE);
 		if (!reader.has_value())
@@ -287,8 +141,6 @@ std::vector<CCharacteristic> CWhoAmI::make_characteristics(const std::shared_ptr
 {
 	std::vector<CCharacteristic> chars{};
 	chars.emplace_back(make_characteristic_server_auth(pProfile));
-	chars.emplace_back(make_characteristic_client_auth());
-
 	return chars;
 }
 auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile)
@@ -307,16 +159,6 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
 				{
 					case CharacteristicAccess::read:
 					{
-						//uint8_t* pDataBuffer = pContext->om->om_databuf;	
-						//const uint16_t DATA_OFFSET = 19;
-    	    			//const uint8_t NUM_DATA = *pDataBuffer;
-    	    			//const uint8_t DATA_END = DATA_OFFSET + NUM_DATA;
-    	    			//for (int i = 0; i < DATA_END; ++i)
-    	    			//{
-    	    			//    std::printf("Data read[%d]: 0x%02x\n", i, pDataBuffer[i]);
-    	    			//}
-						///////////////////////////
-
 						if(pSelf->m_ServerMac.empty())
 							pSelf->retrieve_server_mac();
 

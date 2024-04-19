@@ -91,6 +91,11 @@ static constexpr UUID BaseUUID
 static constexpr uint16_t ID_SERVICE_WHOAMI = 0xADDE;
 static constexpr uint16_t ID_CHARACTERISTIC_SERVER_AUTH = 0x0BB0;
 static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_AUTH = 0xBEBA;
+
+static constexpr uint16_t ID_SERVICE_WWHEREAMI = 0x1111;
+static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_QUERY = 0x2222;
+static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_NOTIFY = 0x3333;
+
 enum class HashType : uint8_t
 {
     Sha2_224 = 0u,

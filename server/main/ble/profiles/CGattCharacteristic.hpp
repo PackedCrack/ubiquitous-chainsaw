@@ -114,6 +114,7 @@ private:
 	template<typename... flag_t>
 	[[nodiscard]] std::unique_ptr<CharacteristicData> make_data(uint16_t uuid, flag_t&&... flags)
 	{
+		
 		return std::make_unique<CharacteristicData>(CharacteristicData{
 			.flags = (flags | ...),
 			.valueHandle = 0u,

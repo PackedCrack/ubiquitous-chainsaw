@@ -14,6 +14,7 @@ idf_component_register(
 	"ble/profiles/CGattCharacteristic.hpp"
 	"ble/profiles/CGattService.cpp"
 	"ble/profiles/CWhoAmI.cpp"
+	"ble/profiles/CWhereAmI.cpp"
 
 	"${CMAKE_SOURCE_DIR}/../shared/security/CWolfCrypt.cpp"
 	"${CMAKE_SOURCE_DIR}/../shared/security/sha.cpp"
