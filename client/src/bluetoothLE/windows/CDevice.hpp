@@ -17,7 +17,13 @@ namespace ble
 class CDevice
 {
 public:
-    using awaitable_t = concurrency::task<CDevice>;
+    enum class Error
+    {
+        invalidAddress
+    };
+public:
+    using make_t = std::expected<CDevice, Error>;
+    using awaitable_t = concurrency::task<make_t>;
     using service_container_t = std::unordered_map<UUID, CService, UUID::Hasher>;
 private:
     using BluetoothLEDevice = winrt::Windows::Devices::Bluetooth::BluetoothLEDevice;

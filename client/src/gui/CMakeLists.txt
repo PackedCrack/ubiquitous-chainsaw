@@ -5,7 +5,9 @@ SET(GUI_SRCS
         font_louis_george.hpp
         CWidget.hpp
         CDeviceList.cpp
+		CDeviceList.hpp
         CRSSIPlot.cpp
+		CRSSIPlot.hpp
 )
 
 

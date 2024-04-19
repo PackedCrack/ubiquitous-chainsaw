@@ -6,6 +6,7 @@
 #include "../common/common.hpp"
 #include <cstring>
 
+
 namespace security
 {
 // recreating the typedef from wolfcrypt here is the easiest way to not leak WC headers
@@ -20,11 +21,11 @@ concept Hash = requires(hash_t hash)
 };
 
 template<typename algorithm_t>
-concept HashAlgorithm = requires(algorithm_t alg, std::string_view msg, std::vector<byte>& buffer)
+concept HashAlgorithm = requires(algorithm_t alg, std::array<uint8_t, 26>&& data, std::vector<byte>&& buffer)
 {
     { algorithm_t::HASH_NAME } -> std::convertible_to<const std::string_view>;
-    { algorithm_t::hash_size() } -> std::convertible_to<size_t>;
-    { alg.hash(msg, buffer) } -> std::convertible_to<std::remove_reference_t<decltype(buffer)>>;
+    { algorithm_t::HASH_SIZE } -> std::convertible_to<size_t>;
+    //{ alg.hash(data, buffer) } -> std::convertible_to<decltype(buffer)>;
 };
 
 template<typename algorithm_t>
@@ -32,17 +33,55 @@ requires HashAlgorithm<algorithm_t>
 class CHash
 {
 public:
-    explicit CHash(std::string_view text)
-            : m_Hash{}
+    template<typename buffer_t>
+    requires common::const_buffer<buffer_t>
+    explicit CHash(buffer_t&& data)
+        : m_Hash{}
     {
-        m_Hash.resize(hasher::hash_size());
-        create_hash(text);
+        m_Hash.resize(hash_type::HASH_SIZE);
+        create_hash(std::forward<buffer_t>(data));
     };
+    //explicit CHash(std::string_view text)
+    //        : m_Hash{}
+    //{
+    //    m_Hash.resize(hasher::hash_size());
+    //    create_hash(text);
+    //};
     ~CHash() = default;
     CHash(const CHash& other) = default;
     CHash(CHash&& other) = default;
     CHash& operator=(const CHash& other) = default;
     CHash& operator=(CHash&& other) = default;
+    [[nodiscard]] friend bool operator==(const CHash& lhs, const CHash& rhs)
+    {
+        if (lhs.m_Hash.size() == rhs.m_Hash.size())
+        {
+            for (size_t i = 0u; i < lhs.size(); ++i)
+            {
+                if (lhs.m_Hash[i] != rhs.m_Hash[i])
+                    return false;
+            }
+
+            return true;
+        }
+        
+        return false;
+    }
+    [[nodiscard]] friend bool operator!=(const CHash& lhs, const CHash& rhs)
+    {
+        if (lhs.m_Hash.size() == rhs.m_Hash.size())
+        {
+            for (size_t i = 0u; i < lhs.size(); ++i)
+            {
+                if (lhs.m_Hash[i] != rhs.m_Hash[i])
+                    return true;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
 public:
     [[nodiscard]] std::string as_string() const
     {
@@ -68,9 +107,11 @@ public:
         return m_Hash.size();
     }
 private:
-    void create_hash(std::string_view text)
+    template<typename buffer_t>
+    requires common::const_buffer<buffer_t>
+    void create_hash(buffer_t&& data)
     {
-        m_Hash = hasher::hash(text, m_Hash);
+        m_Hash = hash_type::hash(std::forward<buffer_t>(data), m_Hash);
     }
     template<typename string_t>
     [[nodiscard]] string_t make_str_copy() const
@@ -88,6 +129,6 @@ private:
 public:
     using const_pointer = decltype(m_Hash)::const_pointer;
     using size_type = decltype(m_Hash)::size_type;
-    using hasher = algorithm_t;
+    using hash_type = algorithm_t;
 };
 }   // namespace security
