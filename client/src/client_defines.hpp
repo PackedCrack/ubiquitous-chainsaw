@@ -3,7 +3,8 @@
 //
 
 #pragma once
-#include "common/defines.hpp"
+#include "../../shared/common/defines.hpp"
+
 
 #ifdef WIN32
     #include "system/windows/CErrorMessage.hpp"

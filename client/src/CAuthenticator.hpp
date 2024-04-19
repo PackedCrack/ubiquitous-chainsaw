@@ -1,9 +1,9 @@
 #pragma once
 #include "system/System.hpp"
 #include "common/Pointer.hpp"
+#include "common/CThreadSafeQueue.hpp"
 #include "security/ecc_key.hpp"
 #include "bluetoothLE/ble_common.hpp"
-
 
 
 class CAuthenticator
@@ -25,7 +25,7 @@ private:
     [[nodiscard]] sys::awaitable_t<bool> verify_server_address(ble::DeviceInfo info) const;
 private:
     Pointer<security::CEccPublicKey> m_pServerKey = nullptr;
-    std::deque<ble::DeviceInfo> m_Devices;
+    CThreadSafeQueue<ble::DeviceInfo> m_Devices;
     std::optional<ble::DeviceInfo> m_ServerInfo;
     std::unique_ptr<std::shared_mutex> m_pSharedMutex;
 };

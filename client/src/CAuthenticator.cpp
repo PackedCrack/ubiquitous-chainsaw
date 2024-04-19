@@ -122,12 +122,7 @@ void CAuthenticator::copy(const CAuthenticator& other)
 }
 void CAuthenticator::enqueue_devices(const std::vector<ble::DeviceInfo>& infos)
 {
-    {
-        std::lock_guard lock{ *m_pSharedMutex };
-        for (auto&& info : infos)
-            m_Devices.push_back(info);
-    }
-
+    m_Devices.push(infos);
     process_queue();
 }
 [[nodiscard]] bool CAuthenticator::server_identified() const
@@ -145,11 +140,7 @@ sys::fire_and_forget_t CAuthenticator::process_queue()
     while(!m_Devices.empty())
     {
         ble::DeviceInfo info{};
-        {
-            std::lock_guard lock{ *m_pSharedMutex };
-            info = m_Devices.front();
-            m_Devices.pop_front();
-        }
+        m_Devices.pop(info);
         
         if (bool verified = co_await verify_server_address(info); verified)
         {
