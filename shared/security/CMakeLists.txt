@@ -7,7 +7,6 @@ SET(SECURITY_SRCS
         ecc_key.cpp
         ecc_key.hpp
         CHash.hpp
-        sha.cpp
         sha.hpp)
 
 target_sources(${MAIN_PROJECT} PRIVATE ${SECURITY_SRCS})
