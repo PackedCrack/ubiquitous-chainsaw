@@ -115,27 +115,25 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
 }
 
 
-void verify_ecc_keys()
-{
-	[[maybe_unused]] std::optional<security::CEccPublicKey> pubKey = security::make_ecc_key<security::CEccPublicKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY));
-    [[maybe_unused]] std::optional<security::CEccPrivateKey> privKey = security::make_ecc_key<security::CEccPrivateKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY));
-	 
-	security::CRandom rng = security::CRandom::make_rng().value();
-	std::string_view msg = "Very nice message";
-	security::CHash<security::Sha2_256> hash{ msg };
-	std::vector<security::byte> signature = privKey.value().sign_hash(rng, hash);
-	bool verified = pubKey.value().verify_hash(signature, hash);
-    if (verified)
-	{
-        std::printf("\nSignature Verified Successfully.\n");
-    }
-	else
-	{
-        std::printf("\nFailed to verify Signature.\n");
-    }
-}
-
-
+//void verify_ecc_keys()
+//{
+//	[[maybe_unused]] std::optional<security::CEccPublicKey> pubKey = security::make_ecc_key<security::CEccPublicKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY));
+//    [[maybe_unused]] std::optional<security::CEccPrivateKey> privKey = security::make_ecc_key<security::CEccPrivateKey>(make_load_key_invokable(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY));
+//	 
+//	security::CRandom rng = security::CRandom::make_rng().value();
+//	std::string_view msg = "Very nice message";
+//	security::CHash<security::Sha2_256> hash{ msg };
+//	std::vector<security::byte> signature = privKey.value().sign_hash(rng, hash);
+//	bool verified = pubKey.value().verify_hash(signature, hash);
+//    if (verified)
+//	{
+//        std::printf("\nSignature Verified Successfully.\n");
+//    }
+//	else
+//	{
+//        std::printf("\nFailed to verify Signature.\n");
+//    }
+//}
 
 //std::vector<uint8_t> SERVER_PRIV{
 //    0x30, 0x31, 0x02, 0x01, 0x01, 0x04, 0x20, 0x22, 0x38, 0x5c, 0x68, 0xe1, 0x12, 0x60, 0x1a, 0x03,

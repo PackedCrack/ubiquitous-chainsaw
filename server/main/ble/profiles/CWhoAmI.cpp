@@ -5,14 +5,6 @@
 #include "../../shared/common/ble_services.hpp"
 #include "../../shared/common/common.hpp"	
 
-//#include "security/CWolfCrypt.hpp"
-//#include "security/CRandom.hpp"
-//#include "security/ecc_key.hpp"
-//#include "security/CHash.hpp"
-//#include "security/sha.hpp"
-//#include "../sys/CNonVolatileStorage.hpp"
-
-
 // std
 #include <cstdint>
 #include <stdexcept>
@@ -29,36 +21,34 @@ namespace
 namespace ble
 {
 CWhoAmI::CWhoAmI()
-    : m_SignedMacData{}
+    : m_pPrivateKey{ load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE) }
+    , m_SignedMacData{}
     , m_Characteristics{}
     , m_Service{}
 {}
 CWhoAmI::CWhoAmI(const CWhoAmI& other)
-    : m_SignedMacData{ other.m_SignedMacData }
+    : m_pPrivateKey{ nullptr }
+    , m_SignedMacData{}
     , m_Characteristics{}
     , m_Service{}
-{}
+{
+    copy(other);
+}
 CWhoAmI& CWhoAmI::operator=(const CWhoAmI& other)
 {
     if(this != &other)
     {
-        m_SignedMacData = other.m_SignedMacData;
-        m_Characteristics = std::vector<CCharacteristic>{};
-        m_Service = CGattService{};
+        copy(other);
     }
 
     return *this;
 }
-CWhoAmI& CWhoAmI::operator=(CWhoAmI&& other) noexcept
+void CWhoAmI::copy(const CWhoAmI& other)
 {
-    if(this != &other)
-    {
-        m_SignedMacData = std::move(other.m_SignedMacData);
-        m_Characteristics = std::move(other.m_Characteristics);
-        m_Service = std::move(other.m_Service);
-    }
-
-    return *this;
+    m_pPrivateKey = load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
+    m_SignedMacData = other.m_SignedMacData;
+    m_Characteristics = std::vector<CCharacteristic>{};
+    m_Service = CGattService{};
 }
 void CWhoAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 {
@@ -68,28 +58,17 @@ void CWhoAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 void CWhoAmI::sign_server_mac_address()
 {
     // TODO: replace with expected
-    Result<std::string, ble::NimbleErrorCode> result = ble::current_mac_address<std::string>(ble::AddressType::randomMac);
-    if (result.error != ble::NimbleErrorCode::success)
+    Result<std::string, ble::NimbleErrorCode> addressResult = ble::current_mac_address<std::string>(ble::AddressType::randomMac);
+    if (addressResult.error != ble::NimbleErrorCode::success)
     {
         LOG_FATAL("UNABLE TO RETRIEVE A MAC ADDRESS!");
     }
 
-    // TODO: EXTRACT THIS CODE TO sys/server_common.hpp
-    std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(NVS_ENC_NAMESPACE);
-    if (!reader.has_value())
-    {
-        LOG_FATAL("Failed to initilize NVS CReader");
-    }
-    storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> readResult = reader.value().read_binary(NVS_ENC_PRIV_KEY);
-    if (readResult.code != storage::NvsErrorCode::success)
-    {
-        LOG_FATAL("Failed to retrieve the private key");
-    }
-    
-    security::CEccPrivateKey privateKey { std::move(readResult.data.value()) };
+    std::unique_ptr<security::CEccPrivateKey> pPrivateKey = load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
     security::CRandom rng = security::CRandom::make_rng().value();
-    security::CHash<security::Sha2_256> hash{ std::move(*result.value) };
-    std::vector<security::byte> signature = privateKey.sign_hash(rng, hash);
+    security::CHash<security::Sha2_256> hash{ std::move(*addressResult.value) };
+    std::vector<security::byte> signature = pPrivateKey->sign_hash(rng, hash);
+
     size_t packetSize = sizeof(ServerAuthHeader) + hash.size() + signature.size();
     std::vector<security::byte> packetData{ common::assert_down_cast<uint8_t>(static_cast<uint8_t>(HashType::Sha2_256)),
                                             common::assert_down_cast<uint8_t>(sizeof(ServerAuthHeader)),
@@ -97,8 +76,7 @@ void CWhoAmI::sign_server_mac_address()
                                             common::assert_down_cast<uint8_t>(sizeof(ServerAuthHeader) + hash.size()),
                                             common::assert_down_cast<uint8_t>(signature.size()) };
     packetData.resize(packetSize);
-    // Trust me, it just works :) - hash.size() * sizeof(security::byte) = lol
-    std::memcpy(packetData.data() + sizeof(ServerAuthHeader), hash.data(), hash.size() * sizeof(security::byte));
+    std::memcpy(packetData.data() + sizeof(ServerAuthHeader), hash.data(), hash.size());
     std::memcpy((packetData.data() + hash.size() + sizeof(ServerAuthHeader)), signature.data(), signature.size() * sizeof(security::byte));
     
     m_SignedMacData = std::move(packetData);
