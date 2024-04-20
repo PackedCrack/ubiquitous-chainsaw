@@ -22,11 +22,11 @@ namespace
     	{
     	    std::printf("aah, notify me AGAIN!\n");
 
-            std::printf("ConnectionHandle: %u\n", connectionHandle);
+            std::printf("ConnectionHandle: %u\n", connectionHandle); // is 65535 here
 
 
             int8_t rssiValue {};
-            int rssiResult = ble_gap_conn_rssi(connectionHandle, &rssiValue);
+            int rssiResult = ble_gap_conn_rssi(1u, &rssiValue);
             if (rssiResult != ESP_OK)
             {
                 LOG_ERROR("Failed to retrieve RSSI value");
@@ -146,7 +146,7 @@ auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProf
 	
                         std::printf("oohh, write me AGAIN!\n");
                         std::printf("ConnectionHandle: %u\n", connectionHandle);
-                        
+
                         int result = ble_gatts_notify_custom(connectionHandle, 3u, NULL);
                         std::printf("ble_gatts_notify() Result: %u\n", result);
                         return static_cast<int32_t>(ble::NimbleErrorCode::success);

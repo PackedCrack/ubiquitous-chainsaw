@@ -197,6 +197,6 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
 }
 CCharacteristic CWhoAmI::make_characteristic_server_auth(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARACTERISTIC_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read, CharsPropertyFlag::notify);
+	return make_characteristic(ID_CHARACTERISTIC_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read);
 }
 }	// namespace ble
