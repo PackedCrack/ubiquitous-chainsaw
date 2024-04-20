@@ -159,9 +159,7 @@ void CDeviceList::authentication_status()
     }
     else
     {
-        if (m_pAuthenticator->server_identified())
-            ImGui::TextColored(ImVec4(0.36f, 0.72f, 0.0f, 1.0f), "Authenticated");
-        else
+        if(!m_pAuthenticator->server_identified())
             ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.15f, 1.0f), "No server authenticated");
     }
 }
