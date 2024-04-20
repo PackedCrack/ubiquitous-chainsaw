@@ -17,7 +17,7 @@ CProfileCacheBuilder& CProfileCacheBuilder::add_whereami()
 { 
 	if(!try_emplace_profile<CWhereAmI>(CProfileCache::KEY_WHEREAMI))
 	{
-		LOG_FATAL("CProfileCacheBuilder failed to add CWhoAmI profile to the cache.");
+		LOG_FATAL("CProfileCacheBuilder failed to add CWhereAmI profile to the cache.");
 	}
 
 	return *this;
