@@ -8,93 +8,56 @@ namespace ble
 {
 struct UUID
 {
-    uint32_t data1 = 0u;
-    uint16_t custom = 0u;
-    uint16_t data3 = 0u;
-    uint16_t data4 = 0u;
-    uint16_t data5 = 0u;
-    uint16_t data6 = 0u;
-    uint16_t data7 = 0u;
+    std::array<uint8_t, 16u> data{};
     
-    
+    static constexpr void apply_custom_id(UUID& uuid, uint16_t id)
+    {
+        uuid.data[2] = (id & 0xFF00) >> 8;
+        uuid.data[3] = id & 0x00FF;
+    }
     [[nodiscard]] friend bool operator==(const UUID& lhs, const UUID& rhs)
     {
-        if(lhs.data1 != rhs.data1)
-            return false;
-        if(lhs.custom != rhs.custom)
-            return false;
-        if(lhs.data3 != rhs.data3)
-            return false;
-        if(lhs.data4 != rhs.data4)
-            return false;
-        if(lhs.data5 != rhs.data5)
-            return false;
-        if(lhs.data6 != rhs.data6)
-            return false;
-        if(lhs.data7 != rhs.data7)
-            return false;
-        
-        return true;
+        return lhs.data == rhs.data;
     }
     [[nodiscard]] friend bool operator!=(const UUID& lhs, const UUID& rhs)
     {
-        if(lhs.data1 == rhs.data1 &&
-        lhs.custom == rhs.custom &&
-        lhs.data3 == rhs.data3 &&
-        lhs.data4 == rhs.data4 &&
-        lhs.data5 == rhs.data5 &&
-        lhs.data6 == rhs.data6 &&
-        lhs.data7 == rhs.data7)
-        {
-            return true;
-        }
-        
-            return false;
+        return lhs.data != rhs.data;
     }
     struct Hasher
     {
         [[nodiscard]] std::size_t operator()(const UUID& uuid) const
         {
             static constexpr std::size_t prime = 31u;
+            std::hash<uint8_t> hasher{};
             
-            std::size_t hash = 1u;
-            hash = (hash * prime) + (uuid.data1 ^ lower_end_bits(uuid.data1));
-            hash = (hash * prime) + (uuid.custom ^ lower_end_bits(uuid.custom));
-            hash = (hash * prime) + (uuid.data3 ^ lower_end_bits(uuid.data3));
-            hash = (hash * prime) + (uuid.data4 ^ lower_end_bits(uuid.data4));
-            hash = (hash * prime) + (uuid.data5 ^ lower_end_bits(uuid.data5));
-            hash = (hash * prime) + (uuid.data6 ^ lower_end_bits(uuid.data6));
-            hash = (hash * prime) + (uuid.data7 ^ lower_end_bits(uuid.data7));
+            size_t hash{};
+            for(auto&& byte : uuid.data)
+                hash = (hash + hasher(byte)) * prime;
             
             return hash;
         }
-    private:
-        template<typename integer_t> requires std::integral<integer_t>
-        [[nodiscard]] std::size_t lower_end_bits(integer_t val) const
-        {
-            return val >> (sizeof(decltype(data1)) / 2);
-        }
     };
 };
-
 static constexpr UUID BaseUUID
 {
-        .data1 = 0u,
-        .custom = 0u,
-        .data3 = 0x1000,
-        .data4 = 0x8000,
-        .data5 = 0x0080,
-        .data6 = 0x5F9B,
-        .data7 = 0x34FB
+        .data = { 0x00, 0x00,
+                  0x00, 0x00,
+                  0x00, 0x00,
+                  0x10, 0x00,
+                  0x80, 0x00,
+                  0x00, 0x80,
+                  0x5F, 0x9b,
+                  0x34, 0xFB }
 };
-
-static constexpr uint16_t ID_SERVICE_WHOAMI = 0xBEBA;
-static constexpr uint16_t ID_CHARACTERISTIC_SERVER_AUTH = 0x0BB0;
-
-static constexpr uint16_t ID_SERVICE_WHEREAMI = 0xEDFE;
-static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_QUERY = 0xEFBE;
-static constexpr uint16_t ID_CHARACTERISTIC_CLIENT_NOTIFY = 0xFECA;
-
+[[nodiscard]] consteval UUID client_characteristic_configuration_descriptor()
+{
+    UUID uuid = BaseUUID;
+    UUID::apply_custom_id(uuid, 0x2902);
+    
+    return uuid;
+}
+static constexpr uint16_t ID_SERVICE_WHOAMI = 0xBABE;
+static constexpr uint16_t ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE = 0xB00B;
 enum class HashType : uint8_t
 {
     Sha2_224 = 0u,
@@ -127,20 +90,34 @@ struct ServerAuthHeader
 [[nodiscard]] consteval UUID uuid_service_whoami()
 {
     UUID uuid = BaseUUID;
-    uuid.custom = ID_SERVICE_WHOAMI;
+    UUID::apply_custom_id(uuid, ID_SERVICE_WHOAMI);
     return uuid;
 }
-[[nodiscard]] consteval UUID uuid_characteristic_server_auth()
+[[nodiscard]] consteval UUID uuid_characteristic_whoami_authenticate()
 {
     UUID uuid = BaseUUID;
-    uuid.custom = ID_CHARACTERISTIC_SERVER_AUTH;
+    UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE);
     return uuid;
 }
-[[nodiscard]] consteval UUID uuid_characteristic_client_auth()
+static constexpr uint16_t ID_SERVICE_WHEREAMI = 0xFEED;
+static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI = 0xBEEF;
+static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI = 0xCAFE;
+[[nodiscard]] consteval UUID uuid_service_whereami()
 {
     UUID uuid = BaseUUID;
-    uuid.custom = ID_CHARACTERISTIC_CLIENT_AUTH;
+    UUID::apply_custom_id(uuid, ID_SERVICE_WHEREAMI);
     return uuid;
 }
-
+[[nodiscard]] consteval UUID uuid_characteristic_whereami_demand_rssi()
+{
+    UUID uuid = BaseUUID;
+    UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI);
+    return uuid;
+}
+[[nodiscard]] consteval UUID uuid_characteristic_whereami_send_rssi()
+{
+    UUID uuid = BaseUUID;
+    UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI);
+    return uuid;
+}
 }   // namespace ble

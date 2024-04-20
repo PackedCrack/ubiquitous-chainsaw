@@ -50,7 +50,7 @@ namespace
 }   
 [[nodiscard]] ble::CCharacteristic make_characteristic_client_notify()
 {
-	return ble::make_characteristic(ble::ID_CHARACTERISTIC_CLIENT_NOTIFY, make_callback_client_notify(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::notify);
+	return ble::make_characteristic(ble::ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI, make_callback_client_notify(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::notify);
 }
 }	// namespace
 
@@ -87,7 +87,7 @@ CWhereAmI& CWhereAmI::operator=(CWhereAmI&& other) noexcept
 void CWhereAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 {
 	m_Characteristics = make_characteristics(pProfile);
-	m_Service = CGattService{ ID_SERVICE_WWHEREAMI, m_Characteristics };
+	m_Service = CGattService{ ID_SERVICE_WHEREAMI, m_Characteristics };
 }
 ble_gatt_svc_def CWhereAmI::as_nimble_service() const
 {
@@ -169,6 +169,6 @@ auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProf
 }
 CCharacteristic CWhereAmI::make_characteristic_client_query(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARACTERISTIC_CLIENT_QUERY, make_callback_client_query(pProfile), CharsPropertyFlag::write);
+	return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI, make_callback_client_query(pProfile), CharsPropertyFlag::write);
 }
 }	// namespace ble

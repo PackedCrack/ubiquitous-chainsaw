@@ -137,14 +137,15 @@ constexpr std::string_view nimble_error_to_string(NimbleErrorCode error)
 	ble_uuid128_t uuid{};
 	uuid.u.type = BLE_UUID_TYPE_128;
   
-	static_assert(std::is_trivially_copyable_v<decltype(uuid)>);
+    ble::UUID base = BaseUUID;
+    ble::UUID::apply_custom_id(base, uniqueValue);
+    std::reverse(std::begin(base.data), std::end(base.data));
+
+    static_assert(std::is_trivially_copy_constructible_v<decltype(uuid)>);
   	static_assert(std::is_trivially_copyable_v<decltype(BaseUUID)>);
 	static_assert(ARRAY_SIZE(uuid.value) == sizeof(decltype(BaseUUID)));
-	// cppcheck-suppress sizeofDivisionMemfunc
-	std::memcpy(&(uuid.value[0]), &BaseUUID, ARRAY_SIZE(uuid.value));
-
-  	uuid.value[2] = uniqueValue >> 8u;
-  	uuid.value[3] = uniqueValue & 0x00FF;
+    // cppcheck-suppress sizeofDivisionMemfunc
+    std::memcpy(&(uuid.value[0]), base.data.data(), ARRAY_SIZE(uuid.value));
 
 	return uuid;
 }

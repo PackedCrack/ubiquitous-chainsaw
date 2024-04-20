@@ -132,10 +132,10 @@ ble_gatt_svc_def CWhoAmI::as_nimble_service() const
 std::vector<CCharacteristic> CWhoAmI::make_characteristics(const std::shared_ptr<Profile>& pProfile)
 {
     std::vector<CCharacteristic> chars{};
-    chars.emplace_back(make_characteristic_server_auth(pProfile));
+    chars.emplace_back(make_characteristic_authenticate(pProfile));
     return chars;
 }
-auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile)
+auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfile)
 {
     return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
     {
@@ -184,8 +184,8 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
         return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
     };
 }
-CCharacteristic CWhoAmI::make_characteristic_server_auth(const std::shared_ptr<Profile>& pProfile)
+CCharacteristic CWhoAmI::make_characteristic_authenticate(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARACTERISTIC_SERVER_AUTH, make_callback_server_auth(pProfile), CharsPropertyFlag::read);
+	return make_characteristic(ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE, make_callback_authenticate(pProfile), CharsPropertyFlag::read);
 }
 }	// namespace ble

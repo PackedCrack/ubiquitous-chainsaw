@@ -52,7 +52,8 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
     if (!service)
         co_return std::nullopt;
     
-    std::optional<const ble::CCharacteristic*> characteristic = service.value()->characteristic(ble::uuid_characteristic_server_auth());
+    std::optional<const ble::CCharacteristic*> characteristic =
+            service.value()->characteristic(ble::uuid_characteristic_whoami_authenticate());
     if (!characteristic)
         co_return std::nullopt;
     
@@ -222,7 +223,7 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(ble::DeviceInfo inf
             LOG_WARN_FMT("Attempt {} of {} failed to read value from Characteristic: {:#X}. Reason: {}",
                          attempt,
                          MAX_ATTEMPTS,
-                         ble::ID_CHARACTERISTIC_SERVER_AUTH,
+                         ble::ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE,
                          ble::gatt_communication_status_to_str(result.error()));
             ++attempt;
         }
@@ -230,6 +231,6 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(ble::DeviceInfo inf
     } while (attempt < MAX_ATTEMPTS);
     
     LOG_ERROR_FMT("Failed to read value for server auth characteristic with UUID: \"{:#X}\"",
-                  ble::ID_CHARACTERISTIC_SERVER_AUTH);
+                  ble::ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE);
     co_return false;
 }

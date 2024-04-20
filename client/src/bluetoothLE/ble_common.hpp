@@ -22,7 +22,6 @@ concept string_uuid = requires(const T type)
 {
     { type.uuid_as_str() } -> std::convertible_to<std::string>;
 };
-
 template<typename int_t> requires unsigned_integral<int_t>
 [[nodiscard]] uint8_t lsb_of_uint(int_t value)
 {
@@ -31,35 +30,34 @@ template<typename int_t> requires unsigned_integral<int_t>
 template<typename uuid_t>
 [[nodiscard]] ble::UUID make_uuid(uuid_t&& guid)
 {
-    // https://stackoverflow.com/questions/9195551/why-does-guid-tobytearray-order-the-bytes-the-way-it-does
     ble::UUID uuid{};
-
-    uuid.data7 = static_cast<uint16_t>(guid.Data1 >> 16);
-    uuid.data6 = static_cast<uint16_t>(guid.Data1 & 0x0000'FFFF);
+    uuid.data[0] = (guid.Data1 & 0xFF00'0000) >> 24;
+    uuid.data[1] = (guid.Data1 & 0x00FF'0000) >> 16;
+    uuid.data[2] = (guid.Data1 & 0x0000'FF00) >> 8;
+    uuid.data[3] = (guid.Data1 & 0x0000'00FF);
     
-    uuid.data5 = guid.Data2;
-    uuid.data4 = guid.Data3;
+    uuid.data[4] = (guid.Data2 & 0x0000'FF00) >> 8;
+    uuid.data[5] = (guid.Data2 & 0x0000'00FF);
     
-    uuid.data3 = static_cast<uint16_t>(guid.Data4[0] << 8);
-    uuid.data3 = uuid.data3 | static_cast<uint16_t>(guid.Data4[1]);
+    uuid.data[6] = (guid.Data3 & 0x0000'FF00) >> 8;
+    uuid.data[7] = (guid.Data3 & 0x0000'00FF);
     
-    uuid.custom = static_cast<uint16_t>(guid.Data4[5] << 8);
-    uuid.custom = uuid.custom | static_cast<uint16_t>(guid.Data4[4]);
+    uuid.data[8] = guid.Data4[0];
+    uuid.data[9] = guid.Data4[1];
+    uuid.data[10] = guid.Data4[2];
+    uuid.data[11] = guid.Data4[3];
+    uuid.data[12] = guid.Data4[4];
+    uuid.data[13] = guid.Data4[5];
+    uuid.data[14] = guid.Data4[6];
+    uuid.data[15] = guid.Data4[7];
     
-    uuid.data1 = static_cast<uint32_t>(guid.Data4[7] << 24);
-    uuid.data1 = uuid.data1 | static_cast<uint32_t>(guid.Data4[6] << 16);
-    uuid.data1 = uuid.data1 | static_cast<uint32_t>(guid.Data4[3] << 8);
-    uuid.data1 = uuid.data1 | static_cast<uint32_t>(guid.Data4[2]);
-
 #ifndef NDEBUG
-    ble::UUID whoami{ ble::BaseUUID };
-    whoami.custom = ble::ID_SERVICE_WHOAMI;
-    ble::UUID serverAuth{ ble::BaseUUID };
-    serverAuth.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
-    ble::UUID clientAuth{ ble::BaseUUID };
-    clientAuth.custom = ble::ID_CHARACTERISTIC_CLIENT_AUTH;
-    
-    ASSERT((uuid == whoami) || (uuid == serverAuth) || (uuid == clientAuth), "Unknown uuid!");
+    ASSERT( (uuid == uuid_service_whoami()) ||
+            (uuid == uuid_characteristic_whoami_authenticate()) ||
+            (uuid == uuid_service_whereami()) ||
+            (uuid == uuid_characteristic_whereami_send_rssi()) ||
+            (uuid == uuid_characteristic_whereami_demand_rssi()) ||
+            (uuid == client_characteristic_configuration_descriptor()), "Unknown uuid!");
 #endif
     
     return uuid;
@@ -70,17 +68,14 @@ template<typename uuid_t>
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
     return hexValues[ index ];
 }
-
 [[nodiscard]] inline char low_nibble_as_char(uint8_t byte)
 {
     return byte_to_hex_char(byte & 0x0F);
 }
-
 [[nodiscard]] inline char high_nibble_as_char(uint8_t byte)
 {
     return byte_to_hex_char(byte >> 4u);
 }
-
 [[nodiscard]] inline std::string hex_addr_to_str(uint64_t addr)
 {
     std::string address(17, ':');
@@ -97,14 +92,12 @@ template<typename uuid_t>
     
     return address;
 }
-
 enum class AddressType
 {
     real,
     random,
     none
 };
-
 [[nodiscard]] inline std::string_view address_type_to_str(AddressType type)
 {
     UNHANDLED_CASE_PROTECTION_ON
@@ -130,7 +123,6 @@ enum class AddressType
     
     std::unreachable();
 }
-
 struct DeviceInfo
 {
     std::optional<uint64_t> address;

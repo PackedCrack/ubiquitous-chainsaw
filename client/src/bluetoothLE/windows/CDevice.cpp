@@ -32,7 +32,6 @@ CDevice::awaitable_t CDevice::make(uint64_t address)
     * */
     if(*(expected->m_pDevice))
     {
-        LOG_INFO("m_pDevice returned ok");
         co_await expected->query_services();
     }
     else
