@@ -4,10 +4,11 @@ idf_component_register(
 	"sys/CNonVolatileStorage.cpp" 
 	"sys/CChip.cpp" 
 	"sys/CSystem.cpp"
-
+    
 	"ble/CNimble.cpp"
 	"ble/CGap.cpp"
 	"ble/CConnection.cpp"
+    "ble/ble_common.cpp"
 	
 	"ble/profiles/CProfileCache.cpp"
 	"ble/profiles/CProfileCacheBuilder.cpp"

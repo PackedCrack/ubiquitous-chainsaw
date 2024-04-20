@@ -12,12 +12,6 @@
 #include <cstring> 
 #include <type_traits>
 
-
-
-namespace
-{
-}	// namespace
-
 namespace ble
 {
 CWhoAmI::CWhoAmI()
@@ -40,7 +34,6 @@ CWhoAmI& CWhoAmI::operator=(const CWhoAmI& other)
     {
         copy(other);
     }
-
     return *this;
 }
 void CWhoAmI::copy(const CWhoAmI& other)
@@ -57,17 +50,15 @@ void CWhoAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 }
 void CWhoAmI::sign_server_mac_address()
 {
-    // TODO: replace with expected
-    Result<std::string, ble::NimbleErrorCode> addressResult = ble::current_mac_address<std::string>(ble::AddressType::randomMac);
-    if (addressResult.error != ble::NimbleErrorCode::success)
+    std::expected<std::string, ble::NimbleErrorCode> addressResult = ble::current_mac_address(ble::AddressType::randomMac);
+    if (!addressResult)
     {
-        LOG_FATAL("UNABLE TO RETRIEVE A MAC ADDRESS!");
+        LOG_FATAL_FMT("UNABLE TO RETRIEVE A MAC ADDRESS! ERROR = {}", nimble_error_to_string(addressResult.error()));
     }
-
-    std::unique_ptr<security::CEccPrivateKey> pPrivateKey = load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
+   
     security::CRandom rng = security::CRandom::make_rng().value();
-    security::CHash<security::Sha2_256> hash{ std::move(*addressResult.value) };
-    std::vector<security::byte> signature = pPrivateKey->sign_hash(rng, hash);
+    security::CHash<security::Sha2_256> hash{ std::move(addressResult.value())};
+    std::vector<security::byte> signature = m_pPrivateKey->sign_hash(rng, hash);
 
     size_t packetSize = sizeof(ServerAuthHeader) + hash.size() + signature.size();
     std::vector<security::byte> packetData{ common::assert_down_cast<uint8_t>(static_cast<uint8_t>(HashType::Sha2_256)),

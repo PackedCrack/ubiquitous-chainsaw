@@ -66,7 +66,6 @@ inline void print_task_info(const char* str)
 					str == nullptr ? "Caller" : str, status.xTaskNumber, static_cast<void*>(status.pxStackBase), status.usStackHighWaterMark);
 }
 
-
 template<typename key_t>
 requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, security::CEccPrivateKey>
 [[nodiscard]] inline std::unique_ptr<key_t> load_key(std::string_view key)
