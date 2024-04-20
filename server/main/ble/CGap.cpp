@@ -241,7 +241,7 @@ void CGap::set_connection(CConnection&& newConncetion)
 {
     m_ActiveConnection = std::move(newConncetion);
 }
-void clear_connection()
+void CGap::clear_connection()
 {
     // Just set it to an empty CConnection
     m_ActiveConnection = CConnection{};
