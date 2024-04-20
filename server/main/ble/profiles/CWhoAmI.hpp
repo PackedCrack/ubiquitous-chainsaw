@@ -23,8 +23,8 @@ public:
 private:
 	void sign_server_mac_address();
 	[[nodiscard]] std::vector<CCharacteristic> make_characteristics(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] auto make_callback_server_auth(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] CCharacteristic make_characteristic_server_auth(const std::shared_ptr<Profile>& pProfile);
+	[[nodiscard]] auto make_callback_authenticate(const std::shared_ptr<Profile>& pProfile);
+	[[nodiscard]] CCharacteristic make_characteristic_authenticate(const std::shared_ptr<Profile>& pProfile);
 private:
     std::unique_ptr<security::CEccPrivateKey> m_pPrivateKey = nullptr;
 	std::vector<security::byte> m_SignedMacData;

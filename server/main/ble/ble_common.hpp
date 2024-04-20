@@ -131,6 +131,71 @@ enum class EspErrorCode : int32_t
 
 	__builtin_unreachable();
 }
+[[nodiscard]] inline ble_uuid128_t make_ble_uuid128(uint16_t uniqueValue)
+{
+	ble_uuid128_t uuid{};
+	uuid.u.type = BLE_UUID_TYPE_128;
+  
+    ble::UUID base = BaseUUID;
+    ble::UUID::apply_custom_id(base, uniqueValue);
+    std::reverse(std::begin(base.data), std::end(base.data));
+
+    static_assert(std::is_trivially_copy_constructible_v<decltype(uuid)>);
+  	static_assert(std::is_trivially_copyable_v<decltype(BaseUUID)>);
+	static_assert(ARRAY_SIZE(uuid.value) == sizeof(decltype(BaseUUID)));
+    // cppcheck-suppress sizeofDivisionMemfunc
+    std::memcpy(&(uuid.value[0]), base.data.data(), ARRAY_SIZE(uuid.value));
+
+	return uuid;
+}
+/// @brief Retrieves the MAC address for the choosen address type.
+/// @tparam return_t How the returned MAC address should be represented. Can be either std::string or std::array<uint8_t, 6u>
+/// @param type Decides the type of MAC address to try and retrieve.
+/// @return Returns a Result<return_t, NimbleErrorCode> with the MAC address on success or a NimbleErrorCode on failure.
+/// Possible error codes: "noConfiguredIdentityAddress" indicates that there is no configured MAC address for the choosen type. 
+/// "invalidArguments" indicates that the passed type is not a valid type.
+template<typename return_t>
+requires std::is_same_v<return_t, std::string> || std::is_same_v<return_t, std::array<uint8_t, 6u>>
+[[nodiscard]] Result<return_t, NimbleErrorCode> current_mac_address(AddressType type)
+{
+	uint8_t addressType = static_cast<uint8_t>(type);
+	std::array<uint8_t, 6u> addr{ 0u };
+	auto returnCode = NimbleErrorCode{ ble_hs_id_copy_addr(addressType, addr.data(), nullptr) };
+	
+	Result<return_t, NimbleErrorCode> r{
+		.value = std::nullopt,
+		.error = returnCode
+	};
+	if(returnCode == NimbleErrorCode::success)
+	{
+		if constexpr(std::is_same_v<return_t, std::string>)
+		{
+			r.value = std::make_optional<std::string>(FMT("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                                           addr[5], addr[4], addr[3], 
+                                           addr[2], addr[1], addr[0]));
+		}
+		else if constexpr(std::is_same_v<return_t, std::array<uint8_t, 6u>>)
+		{
+			r.value = std::make_optional<std::array<uint8_t, 6u>>(addr);
+		}
+	}
+	else if(returnCode == NimbleErrorCode::noConfiguredIdentityAddress)
+	{
+		LOG_WARN_FMT("Could not retrieve Mac address for type: \"{}\", because no address has been configured for that type.", address_type_to_str(type));
+	}
+	else if(returnCode == NimbleErrorCode::invalidArguments)
+	{
+		LOG_ERROR_FMT("Could not retrieve Mac address because the passed adress type parameter: \"{}\" is invalid.", addressType);
+	}
+	else
+	{
+		LOG_ERROR_FMT("Unexpected error: \"{}\" - \"{}\", when trying to retrieve MAC address.", 
+						static_cast<int32_t>(returnCode), 
+						nimble_error_to_string(returnCode));
+	}
+
+	return r;
+}
 template<typename buffer_t>
 requires common::const_buffer<buffer_t>
 [[nodiscard]] NimbleErrorCode append_read_data(os_mbuf* om, buffer_t&& data)
