@@ -20,6 +20,10 @@ IGNORE_WARNING_POP
 
 namespace sys
 {
+using fire_and_forget_t = os_fire_and_forget_t;
+template<typename return_t>
+using awaitable_t = os_awaitable_t<return_t>;
+
 void cowabunga();
 void auto_wakeup_timer(std::chrono::seconds&& delay);
 void restrict_file_permissions(const std::filesystem::path& file);

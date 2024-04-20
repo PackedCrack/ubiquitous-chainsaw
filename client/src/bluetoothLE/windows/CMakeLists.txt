@@ -1,11 +1,15 @@
 # TODO: Checks that we are configuring for windows
 
 SET(WINDOWS_BLE_SRCS
-        CScanner.cpp
+	CScanner.cpp
+	CScanner.hpp
+	CDevice.cpp
         CDevice.hpp
-        CDevice.cpp
         CService.cpp
+		CService.hpp
         CCharacteristic.cpp
-        CDescriptor.cpp)
+		CCharacteristic.hpp
+        CDescriptor.cpp
+		CDescriptor.hpp)
 
 target_sources(${MAIN_PROJECT} PRIVATE ${WINDOWS_BLE_SRCS})

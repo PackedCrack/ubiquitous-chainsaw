@@ -15,6 +15,9 @@ template<typename device_t, typename... make_args_t>
 concept Device = requires(const device_t constDevice, const UUID uuid)
 {
     awaitable_make<device_t, make_args_t...>;
+    typename device_t::Error;
+    typename device_t::make_t;
+    requires std::same_as<typename device_t::make_t, std::expected<device_t, typename device_t::Error>>;
     typename device_t::service_container_t; // todo add constraints to the container
     
     { constDevice.address() } -> std::convertible_to<uint64_t>;

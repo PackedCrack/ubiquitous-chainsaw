@@ -30,12 +30,12 @@ SET(SECURITY_DIR "${CMAKE_SOURCE_DIR}/../shared/security/")
 
 add_executable(${TEST_PROJECT}
         test_CThreadSafeHashMap.cpp
+        test_CThreadSafeQueue.cpp
         test_CMutex.cpp
         # security test
         test_CRandom.cpp
         ${SECURITY_DIR}/CRandom.cpp
         test_CHash.cpp
-        ${SECURITY_DIR}/sha.cpp
         test_EccKey.cpp
         ${SECURITY_DIR}/ecc_key.cpp
 )

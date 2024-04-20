@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "sha.hpp"
 #include "CHash.hpp"
+#include <string_view>
 
 
 using namespace security;
@@ -46,13 +47,13 @@ void hash_data_integrity(const byte* pData, size_t dataSize, std::span<uint8_t> 
 class CHashSha224Test : public ::testing::Test
 {
 protected:
-    CHash<Sha2_224> hash{ "Test string to hash" };
+    CHash<Sha2_224> hash{ std::string_view{ "Test string to hash" } };
     // https://emn178.github.io/online-tools/sha224.html
     std::string expectedResult = "1a1363206077c19beff06ff526c7a13c07f31c5cb05bf245270dc9d8";
 };
 TEST_F(CHashSha224Test, Hash_Size)
 {
-    EXPECT_EQ(hash.size(), Sha2_224::hash_size());
+    EXPECT_EQ(hash.size(), Sha2_224::HASH_SIZE);
 }
 TEST_F(CHashSha224Test, Hash_Output_String)
 {
@@ -69,14 +70,14 @@ TEST_F(CHashSha224Test, Hash_Data_Integrity)
 /// </summary>
 class CHashSha256Test : public ::testing::Test
 {
-    protected:
-    CHash<Sha2_256> hash{ "Test string to hash" };
+protected:
+    CHash<Sha2_256> hash{ std::string_view{ "Test string to hash" } };
     // https://emn178.github.io/online-tools/sha256.html
     std::string expectedResult = "0dd8a7fc5978ddc5b751276017d4ffd142a89c67241efd5fcc3ea6d40ec6c743";
 };
 TEST_F(CHashSha256Test, Hash_Size)
 {
-    EXPECT_EQ(hash.size(), Sha2_256::hash_size());
+    EXPECT_EQ(hash.size(), Sha2_256::HASH_SIZE);
 }
 TEST_F(CHashSha256Test, Hash_Output_String)
 {
@@ -93,14 +94,14 @@ TEST_F(CHashSha256Test, Hash_Data_Integrity)
 /// </summary>
 class CHashSha3_224Test : public ::testing::Test
 {
-    protected:
-    CHash<Sha3_224> hash{ "Test string to hash" };
+protected:
+    CHash<Sha3_224> hash{ std::string_view{ "Test string to hash" } };
     // https://emn178.github.io/online-tools/sha3_224.html
     std::string expectedResult = "ff6751630fa80e0f63726697b96ec2899bc4db2d4a38d5331709f3c1";
 };
 TEST_F(CHashSha3_224Test, Hash_Size)
 {
-    EXPECT_EQ(hash.size(), Sha3_224::hash_size());
+    EXPECT_EQ(hash.size(), Sha3_224::HASH_SIZE);
 }
 TEST_F(CHashSha3_224Test, Hash_Output_String)
 {
@@ -117,14 +118,14 @@ TEST_F(CHashSha3_224Test, Hash_Data_Integrity)
 /// </summary>
 class CHashSha3_256Test : public ::testing::Test
 {
-    protected:
-    CHash<Sha3_256> hash{ "Test string to hash" };
+protected:
+    CHash<Sha3_256> hash{ std::string_view{ "Test string to hash" } };
     // https://emn178.github.io/online-tools/sha3_256.html
     std::string expectedResult = "7959dbab036b6c1f834ce5e5ad9a4743bfb486c4c5c08c61c9bd2c2365070a2a";
 };
 TEST_F(CHashSha3_256Test, Hash_Size)
 {
-    EXPECT_EQ(hash.size(), Sha3_256::hash_size());
+    EXPECT_EQ(hash.size(), Sha3_256::HASH_SIZE);
 }
 TEST_F(CHashSha3_256Test, Hash_Output_String)
 {
@@ -141,14 +142,14 @@ TEST_F(CHashSha3_256Test, Hash_Data_Integrity)
 /// </summary>
 class CHashSha3_384Test : public ::testing::Test
 {
-    protected:
-    CHash<Sha3_384> hash{ "Test string to hash" };
+protected:
+    CHash<Sha3_384> hash{ std::string_view{ "Test string to hash" } };
     // https://emn178.github.io/online-tools/sha3_384.html
     std::string expectedResult = "15570e86ffed68a4951262639c1319ac9993916057cb6fe4b80e0b8aea388c1215e049d82279a97cc249cb546ca1f8c3";
 };
 TEST_F(CHashSha3_384Test, Hash_Size)
 {
-    EXPECT_EQ(hash.size(), Sha3_384::hash_size());
+    EXPECT_EQ(hash.size(), Sha3_384::HASH_SIZE);
 }
 TEST_F(CHashSha3_384Test, Hash_Output_String)
 {
@@ -165,14 +166,14 @@ TEST_F(CHashSha3_384Test, Hash_Data_Integrity)
 /// </summary>
 class CHashSha3_512Test : public ::testing::Test
 {
-    protected:
-    CHash<Sha3_512> hash{ "Test string to hash" };
+protected:
+    CHash<Sha3_512> hash{ std::string_view{ "Test string to hash" } };
     // https://emn178.github.io/online-tools/sha3_512.html
     std::string expectedResult = "71098856025d177202d0225313a170f459b5a095871cd9ead119c959a731a15f18c250fab39437e2f2005f2dcb20a4df9462feeb16220fae8c125f003cda1ad9";
 };
 TEST_F(CHashSha3_512Test, Hash_Size)
 {
-    EXPECT_EQ(hash.size(), Sha3_512::hash_size());
+    EXPECT_EQ(hash.size(), Sha3_512::HASH_SIZE);
 }
 TEST_F(CHashSha3_512Test, Hash_Output_String)
 {

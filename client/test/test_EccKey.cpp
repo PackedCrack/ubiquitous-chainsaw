@@ -73,26 +73,30 @@ protected:
 };
 TEST_F(CEccKeyTest, Sign_String)
 {
-    CHash<Sha2_256> hash{ "Very nice message" };
+    std::string_view msg = "Very nice message";
+    CHash<Sha2_256> hash{ msg };
     std::vector<byte> signature = m_pPrivKey->sign_hash(m_Rng, hash);
     EXPECT_FALSE(signature.empty());
 }
 TEST_F(CEccKeyTest, Move_Then_Sign_String)
 {
-    CHash<Sha2_256> hash{ "Very nice message" };
+    std::string_view msg = "Very nice message";
+    CHash<Sha2_256> hash{ msg };
     CEccPrivateKey key = std::move(*m_pPrivKey);
     std::vector<byte> signature = key.sign_hash(m_Rng, hash);
     EXPECT_FALSE(signature.empty());
 }
 TEST_F(CEccKeyTest, Verify_Signed_String)
 {
-    CHash<Sha2_256> hash{ "Very nice message" };
+    std::string_view msg = "Very nice message";
+    CHash<Sha2_256> hash{ msg };
     std::vector<byte> signature = m_pPrivKey->sign_hash(m_Rng, hash);
     EXPECT_TRUE(m_pPubKey->verify_hash(signature, hash));
 }
 TEST_F(CEccKeyTest, Move_Then_Verify_Signed_String)
 {
-    CHash<Sha2_256> hash{ "Very nice message" };
+    std::string_view msg = "Very nice message";
+    CHash<Sha2_256> hash{ msg };
     std::vector<byte> signature = m_pPrivKey->sign_hash(m_Rng, hash);
     CEccPublicKey key = std::move(*m_pPubKey);
     EXPECT_TRUE(key.verify_hash(signature, hash));

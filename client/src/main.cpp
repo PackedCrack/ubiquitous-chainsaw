@@ -11,6 +11,7 @@
 #include "client_defines.hpp"
 #include "gfx/CRenderer.hpp"
 #include "gui/CGui.hpp"
+#include "common/CStopWatch.hpp"
 
 #include <winrt/Windows.Foundation.h>
 
@@ -21,10 +22,10 @@
 
 namespace
 {
-constexpr std::string_view CLIENT_PUB_NAME = "client_public.der";
-constexpr std::string_view CLIENT_PRIV_NAME = "client_private.der";
-constexpr std::string_view SERVER_PUB_NAME = "server_public.der";
-constexpr std::string_view SERVER_PRIV_NAME = "server_private.der";
+constexpr std::string_view CLIENT_PUBLIC_KEY_NAME = "client_public.der";
+constexpr std::string_view CLIENT_PRIVATE_KEY_NAME = "client_private.der";
+constexpr std::string_view SERVER_PUBLIC_KEY_NAME = "server_public.der";
+constexpr std::string_view SERVER_PRIVATE_KEY_NAME = "server_private.der";
 
 
 void validate_app_directory()
@@ -55,28 +56,7 @@ void validate_app_directory()
             .and_then(validate_key_directory)
             .or_else(log_failure);
 }
-[[nodiscard]] auto make_save_invokable(std::string_view filename)
-{
-    return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)
-    {
-        std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
-        if(expected)
-        {
-            std::filesystem::path filepath = expected->string() / filename;
-            std::fstream file{ filepath, std::ios::out | std::ios::binary | std::ios::trunc };
-            
-            static_assert(alignof(const char) == alignof(decltype(*(key.data()))));
-            file.write(reinterpret_cast<const char*>(key.data()), key.size());
-            return true;
-        }
-        else
-        {
-            LOG_ERROR_FMT("Could not retrieve key location. Failed with: \"{}\"", expected.error());
-            return false;
-        }
-    };
-}
-[[nodiscard]] auto make_load_invokable(std::string_view filename)
+[[nodiscard]] auto make_invokable_load_file(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, std::string>
     {
@@ -115,6 +95,41 @@ void validate_app_directory()
         }
     };
 }
+template<typename key_t>
+requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, security::CEccPrivateKey>
+[[nodiscard]] std::unique_ptr<key_t> load_key(std::string_view keyName)
+{
+    auto loadKey = make_invokable_load_file(keyName);
+    
+    std::optional<key_t> key = security::make_ecc_key<key_t>(loadKey);
+    if(!key)
+    {
+        LOG_FATAL_FMT("Cannot continue because \"{}\" could not be loaded.", keyName);
+    }
+    
+    return std::make_unique<key_t>(std::move(*key));
+}
+[[nodiscard]] auto make_invokable_save_file(std::string_view filename)
+{
+    return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)
+    {
+        std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
+        if(expected)
+        {
+            std::filesystem::path filepath = expected->string() / filename;
+            std::fstream file{ filepath, std::ios::out | std::ios::binary | std::ios::trunc };
+            
+            static_assert(alignof(const char) == alignof(decltype(*(key.data()))));
+            file.write(reinterpret_cast<const char*>(key.data()), key.size());
+            return true;
+        }
+        else
+        {
+            LOG_ERROR_FMT("Could not retrieve key location. Failed with: \"{}\"", expected.error());
+            return false;
+        }
+    };
+}
 std::tuple<security::CEccPublicKey, security::CEccPrivateKey> make_ecc_keys()
 {
     security::CRandom rng = security::CRandom::make_rng().value();
@@ -124,11 +139,11 @@ std::tuple<security::CEccPublicKey, security::CEccPrivateKey> make_ecc_keys()
 }
 void save_ecc_keys(security::CEccPublicKey& pub, security::CEccPrivateKey& priv, std::string_view pubkey, std::string_view privkey)
 {
-    if(!pub.write_to_disk(make_save_invokable(pubkey)))
+    if(!pub.write_to_disk(make_invokable_save_file(pubkey)))
     {
         LOG_FATAL("Could not save public key to disk!");
     }
-    if(!priv.write_to_disk(make_save_invokable(privkey)))
+    if(!priv.write_to_disk(make_invokable_save_file(privkey)))
     {
         LOG_FATAL("Could not save private key to disk!");
     }
@@ -161,12 +176,11 @@ void process_cmd_line_args(int argc, char** argv)
         {
             {
                 auto[pubKey, privKey] = make_ecc_keys();
-                save_ecc_keys(pubKey, privKey, SERVER_PUB_NAME, SERVER_PRIV_NAME);
+                save_ecc_keys(pubKey, privKey, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME);
             }
-            // Client
             {
                 auto[pubKey, privKey] = make_ecc_keys();
-                save_ecc_keys(pubKey, privKey, CLIENT_PUB_NAME, CLIENT_PRIV_NAME);
+                save_ecc_keys(pubKey, privKey, CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME);
             }
         }
         if(arg == "--print-keys")
@@ -192,10 +206,10 @@ void process_cmd_line_args(int argc, char** argv)
             };
             
             static constexpr std::array<std::string_view, 4u> keyNames =
-                    { CLIENT_PUB_NAME, CLIENT_PRIV_NAME, SERVER_PUB_NAME, SERVER_PRIV_NAME };
+                    { CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME };
             for(auto&& keyName : keyNames)
             {
-                auto load_key = make_load_invokable(keyName);
+                auto load_key = make_invokable_load_file(keyName);
                 [[maybe_unused]] auto result = load_key()
                         .and_then(print_key(keyName))
                         .or_else(log_failure);
@@ -207,106 +221,104 @@ void process_cmd_line_args(int argc, char** argv)
 
 
 
-winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
-{
-    ble::CDevice device = co_await ble::make_device<ble::CDevice>(bluetoothAddress);
-    
-    ble::UUID whoami = ble::BaseUUID;
-    whoami.custom = ble::ID_SERVICE_WHOAMI;
-    
-    auto services = device.services();
-    auto iter = services.find(whoami);
-    if(iter != std::end(services))
-    {
-        const ble::CService& service = iter->second;
-        ble::UUID characteristicUuid = ble::BaseUUID;
-        characteristicUuid.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
-        
-        auto result = service.characteristic(characteristicUuid);
-        if(result)
-        {
-            LOG_INFO("Reading characteristic value!");
-            const ble::CCharacteristic* pCharacteristic = result.value();
-            auto data = co_await pCharacteristic->read_value();
-            if(data)
-            {
-                std::cout << "\nPrinting raw bytes: ";
-                for(uint8_t byte : *data)
-                    std::cout << byte;
-                std::cout << std::endl;
-            }
-            else
-            {
-                LOG_ERROR("characteristic.read_value() returned no data.");
-            }
-        }
-        else
-        {
-            LOG_ERROR("Failed to find characteristic");
-        }
-    }
-    else
-    {
-        LOG_ERROR("Unable to find service with given UUID");
-    }
-}
-
-
-void test_ecc_sign()
-{
-    security::CRandom rng = security::CRandom::make_rng().value();
-    security::CEccKeyPair keyPair{ rng };
-    security::CEccPublicKey pubKey = keyPair.public_key();
-    security::CEccPrivateKey privKey = keyPair.private_key();
-    
-    //security::CEccPublicKey pubKey2{ std::move(pubKey) };
-    security::CEccPublicKey pubKey2 = std::move(pubKey);
-    security::CEccPrivateKey privKey2 { std::move(privKey) };
-    
-    privKey2.write_to_disk(make_save_invokable("PRIVATE_KEY"));
-    pubKey2.write_to_disk(make_save_invokable("PUBLIC_KEY"));
-    
-    sys::restrict_file_permissions("C:\\Users\\qwerty\\Desktop\\PRIVATE_KEY");
-    
-    std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_load_invokable("PUBLIC_KEY"));
-    std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_load_invokable("PRIVATE_KEY"));
-    
-    
-    const char* msg = "Very nice message";
-    security::CHash<security::Sha2_256> hash{ msg };
-    std::vector<byte> signature = privKey3->sign_hash(rng, hash);
-    bool verified = pubKey2.verify_hash(signature, hash);
-    if (verified) {
-        std::printf("\nSignature Verified Successfully.\n");
-    } else {
-        std::printf("\nFailed to verify Signature.\n");
-    }
-}
+//winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
+//{
+//    ble::CDevice device = co_await ble::make_device<ble::CDevice>(bluetoothAddress);
+//    
+//    ble::UUID whoami = ble::BaseUUID;
+//    whoami.custom = ble::ID_SERVICE_WHOAMI;
+//    
+//    auto services = device.services();
+//    auto iter = services.find(whoami);
+//    if(iter != std::end(services))
+//    {
+//        const ble::CService& service = iter->second;
+//        ble::UUID characteristicUuid = ble::BaseUUID;
+//        characteristicUuid.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
+//        
+//        auto result = service.characteristic(characteristicUuid);
+//        if(result)
+//        {
+//            LOG_INFO("Reading characteristic value!");
+//            const ble::CCharacteristic* pCharacteristic = result.value();
+//            auto data = co_await pCharacteristic->read_value();
+//            if(data)
+//            {
+//                std::cout << "\nPrinting raw bytes: ";
+//                for(uint8_t byte : *data)
+//                    std::cout << byte;
+//                std::cout << std::endl;
+//            }
+//            else
+//            {
+//                LOG_ERROR("characteristic.read_value() returned no data.");
+//            }
+//        }
+//        else
+//        {
+//            LOG_ERROR("Failed to find characteristic");
+//        }
+//    }
+//    else
+//    {
+//        LOG_ERROR("Unable to find service with given UUID");
+//    }
+//}
+//void test_ecc_sign()
+//{
+//    security::CRandom rng = security::CRandom::make_rng().value();
+//    security::CEccKeyPair keyPair{ rng };
+//    security::CEccPublicKey pubKey = keyPair.public_key();
+//    security::CEccPrivateKey privKey = keyPair.private_key();
+//    
+//    //security::CEccPublicKey pubKey2{ std::move(pubKey) };
+//    security::CEccPublicKey pubKey2 = std::move(pubKey);
+//    security::CEccPrivateKey privKey2 { std::move(privKey) };
+//    
+//    privKey2.write_to_disk(make_invokable_save_file("PRIVATE_KEY"));
+//    pubKey2.write_to_disk(make_invokable_save_file("PUBLIC_KEY"));
+//    
+//    sys::restrict_file_permissions("C:\\Users\\qwerty\\Desktop\\PRIVATE_KEY");
+//    
+//    std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_invokable_load_file("PUBLIC_KEY"));
+//    std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_invokable_load_file("PRIVATE_KEY"));
+//    
+//    
+//    const char* msg = "Very nice message";
+//    security::CHash<security::Sha2_256> hash{ msg };
+//    std::vector<byte> signature = privKey3->sign_hash(rng, hash);
+//    bool verified = pubKey2.verify_hash(signature, hash);
+//    if (verified) {
+//        std::printf("\nSignature Verified Successfully.\n");
+//    } else {
+//        std::printf("\nFailed to verify Signature.\n");
+//    }
+//}
 
 
 
 int main(int argc, char** argv)
 {
-    tf::Executor& executor = sys::executor();
-    
     sys::CSystem system{};
-    executor.silent_async([argc, argv]()
-    {
-        auto wc = security::CWolfCrypt::instance();
-        validate_app_directory();
-        process_cmd_line_args(argc, argv);
-    });
+
+    auto wc = security::CWolfCrypt::instance();
+    validate_app_directory();
+    process_cmd_line_args(argc, argv);
+
+    std::unique_ptr<security::CEccPublicKey> pPublicKey = load_key<security::CEccPublicKey>(CLIENT_PUBLIC_KEY_NAME);
+    std::unique_ptr<security::CEccPrivateKey> pPrivateKey = load_key<security::CEccPrivateKey>(CLIENT_PRIVATE_KEY_NAME);
+    std::unique_ptr<security::CEccPublicKey> pServerKey = load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME);
+
+    ble::CScanner scanner = ble::make_scanner<ble::CScanner>();
     
-    auto scanner = ble::make_scanner<ble::CScanner>();
-    
-    
+    // SDL window and input must be called on the same thread
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
-    gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner);
+    
+    CAuthenticator authenticator{ pServerKey.get() };
+    gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
     gui::Widget& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
-    
-    
     
     bool exit = false;
     while (!exit)

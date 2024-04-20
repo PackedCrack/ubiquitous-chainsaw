@@ -3,11 +3,15 @@
 //
 
 #pragma once
+#include "../CAuthenticator.hpp"
+#include "taskflow/taskflow.hpp"
 #include "common/Pointer.hpp"
+#include "security/ecc_key.hpp"
 #include "../bluetoothLE/Scanner.hpp"
 #include "../bluetoothLE/Device.hpp"
 #include "../common/CMutex.hpp"
 #include "../common/CStopWatch.hpp"
+#include "../system/System.hpp"
 
 
 namespace gui
@@ -19,7 +23,7 @@ class CDeviceList
 public:
     static constexpr std::string_view KEY = "devicelist";
 public:
-    explicit CDeviceList(ble::CScanner& scanner);
+    explicit CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator);
     ~CDeviceList() = default;
     CDeviceList(const CDeviceList& other);
     CDeviceList(CDeviceList&& other) noexcept;
@@ -36,6 +40,7 @@ private:
     void device_list();
 private:
     Pointer<ble::CScanner> m_pScanner = nullptr;
+    Pointer<CAuthenticator> m_pAuthenticator = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;
     std::unique_ptr<mutex_t> m_pMutex;
     common::CStopWatch<time_t> m_Timer;

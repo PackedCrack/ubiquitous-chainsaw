@@ -1,5 +1,7 @@
 SET(MAIN_SRCS 
         main.cpp
+		CAuthenticator.cpp
+		CAuthenticator.hpp
         resource.hpp
         win32.hpp
         client_defines.hpp

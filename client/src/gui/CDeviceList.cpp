@@ -2,6 +2,8 @@
 // Created by qwerty on 2024-04-03.
 //
 #include "CDeviceList.hpp"
+#include "security/CHash.hpp"
+#include "security/sha.hpp"
 #include "../system/System.hpp"
 #include "../common/CStopWatch.hpp"
 #include "../bluetoothLE/Device.hpp"
@@ -11,8 +13,11 @@
 
 namespace
 {
-winrt::fire_and_forget characteristic_action(const ble::CCharacteristic* pCharacteristic, const std::vector<uint8_t>* writeData = nullptr)
-{
+
+//////////////////////////
+winrt::fire_and_forget characteristic_action(const ble::CCharacteristic* pCharacteristic,
+                                                 const std::vector<uint8_t>* writeData = nullptr)
+    {
     if(writeData == nullptr)
     {
         ble::CCharacteristic::read_t result = co_await pCharacteristic->read_value();
@@ -38,7 +43,11 @@ winrt::fire_and_forget characteristic_action(const ble::CCharacteristic* pCharac
 }
 winrt::fire_and_forget do_connection_test(uint64_t address)
 {
-    ble::CDevice device = co_await ble::make_device<ble::CDevice>(address);
+    std::expected<ble::CDevice, ble::CDevice::Error> expected = co_await ble::make_device<ble::CDevice>(address);
+    if(!expected)
+        co_return;
+    
+    ble::CDevice& device = *expected;
     std::optional<const ble::CService*> service = device.service(ble::uuid_service_whoami());
     if(service)
     {
@@ -57,23 +66,28 @@ winrt::fire_and_forget do_connection_test(uint64_t address)
             
             if (clientAuth)
             {
-                std::vector<uint8_t> data{ 'H', 'E', 'L', 'L', 'O', ' ', 'W', 'O', 'R', 'L', 'D' };
+                std::vector<uint8_t> data{
+                    'H', 'E', 'L', 'L', 'O', ' ', 'W', 'O', 'R', 'L', 'D'
+                };
                 characteristic_action(*clientAuth, &data);
             }
         }
     }
 }
+/////////////////////////////////
 }   // namespace
 namespace gui
 {
-CDeviceList::CDeviceList(ble::CScanner& scanner)
+CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
     : m_pScanner{ &scanner }
+    , m_pAuthenticator{ &authenticator }
     , m_Devices{}
     , m_pMutex{ std::make_unique<std::mutex>() }
     , m_Timer{}
 {}
 CDeviceList::CDeviceList(const CDeviceList& other)
-    : m_pScanner{}
+    : m_pScanner{ nullptr }
+    , m_pAuthenticator{ nullptr }
     , m_Devices{}
     , m_pMutex{ nullptr }
     , m_Timer{}
@@ -81,13 +95,15 @@ CDeviceList::CDeviceList(const CDeviceList& other)
     copy(other);
 }
 CDeviceList::CDeviceList(CDeviceList&& other) noexcept
-    : m_pScanner{}
+    : m_pScanner{ nullptr }
+    , m_pAuthenticator{ nullptr }
     , m_Devices{}
     , m_pMutex{ nullptr }
 {
     other.m_pMutex->lock();
     
     m_pScanner = std::exchange(other.m_pScanner, nullptr);
+    m_pAuthenticator = std::exchange(other.m_pAuthenticator, nullptr);
     m_Devices = std::move(other.m_Devices);
     m_pMutex = std::exchange(other.m_pMutex, nullptr);
     
@@ -107,6 +123,7 @@ CDeviceList& CDeviceList::operator=(CDeviceList&& other) noexcept
     other.m_pMutex->lock();
     
     m_pScanner = std::exchange(other.m_pScanner, nullptr);
+    m_pAuthenticator = std::exchange(other.m_pAuthenticator, nullptr);
     m_Devices = std::move(other.m_Devices);
     m_pMutex = std::exchange(other.m_pMutex, nullptr);
     
@@ -117,6 +134,7 @@ void CDeviceList::copy(const CDeviceList& other)
 {
     std::lock_guard<mutex_t> lock{ *other.m_pMutex };
     m_pScanner = other.m_pScanner;
+    m_pAuthenticator = other.m_pAuthenticator;
     m_Devices = other.m_Devices;
     m_pMutex = std::make_unique<std::remove_cvref_t<decltype(*m_pMutex)>>();
     m_Timer = other.m_Timer;
@@ -158,7 +176,8 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
                         static_cast<int64_t>(prevFound),
                         static_cast<int64_t>(foundDevices - prevFound));
                 
-                for(auto&& info : infos)
+                m_pAuthenticator->enqueue_devices(infos);
+                for (auto&& info : infos)
                     m_Devices.push_back(info);
                 
                 prevFound = m_Devices.size();
@@ -206,6 +225,15 @@ void CDeviceList::device_list()
             std::string address = ble::DeviceInfo::address_as_str(deviceInfo.address.value());
             if (ImGui::TreeNode(static_cast<void*>(&deviceNum), "%s", address.c_str()))
             {
+                if (m_pAuthenticator->server_identified())
+                {
+                    if (m_pAuthenticator->server_address() == address)
+                    {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(0.36f, 0.72f, 0.0f, 0.55f), "Authenticated");
+                    }
+                }
+
                 ImGui::SameLine();
                 if(ImGui::Button("Connect"))
                     do_connection_test(deviceInfo.address.value());

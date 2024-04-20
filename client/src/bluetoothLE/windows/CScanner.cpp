@@ -42,6 +42,7 @@ CScanner::~CScanner()
 }
 CScanner::CScanner(CScanner&& other) noexcept
         : m_Watcher{}
+        , m_ReceivedRevoker{ std::move(other.m_ReceivedRevoker) }
         , m_FoundDevices{ std::move(other.m_FoundDevices) }
         , m_DeviceCache{ std::move(other.m_DeviceCache) }
         , m_Count{ m_FoundDevices.size() }
@@ -54,6 +55,7 @@ CScanner& CScanner::operator=(CScanner&& other) noexcept
     if(this != &other)
     {
         m_FoundDevices = std::move(other.m_FoundDevices);
+        m_ReceivedRevoker = std::move(other.m_ReceivedRevoker);
         m_pMutex = std::move(other.m_pMutex);
         m_Count = m_FoundDevices.size();
         move_impl(other);

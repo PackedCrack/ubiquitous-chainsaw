@@ -11,21 +11,29 @@
 /// Concepts
 namespace common
 {
-template<typename buffer_t>
-concept buffer = requires(buffer_t buffer)
+template<typename T>
+[[nodiscard]] consteval bool type_size(int32_t expected)
 {
-    { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
-    { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::pointer>;
-};
+    return sizeof(T) == expected;
+}
 template<typename buffer_t>
 concept const_buffer = requires(buffer_t buffer)
 {
     { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
     { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::const_pointer>;
 };
-template<typename string_t>
-concept basic_string = requires(string_t str)
+template<typename buffer_t>
+concept buffer = requires(buffer_t buffer)
 {
+    //typename buffer_t::value_type;
+    //requires type_size<typename buffer_t::value_type>(1);
+    { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::pointer>;
+    //requires const_buffer<buffer_t>;
+};
+template<typename string_t>
+concept string = requires(string_t str)
+{
+    requires const_buffer<string_t>;
 	{ std::is_same_v<std::remove_cvref_t<string_t>, std::string> };
 };
 template<typename class_t, typename... ctor_args_t>

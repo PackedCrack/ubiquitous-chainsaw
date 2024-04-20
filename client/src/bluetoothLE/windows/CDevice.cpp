@@ -24,26 +24,25 @@ CDevice::awaitable_t CDevice::make(uint64_t address)
 {
     using namespace winrt::Windows::Devices::Bluetooth;
     
-    CDevice device{};
+    std::expected<CDevice, CDevice::Error> expected{};
+    expected->m_pDevice = std::make_shared<BluetoothLEDevice>(co_await BluetoothLEDevice::FromBluetoothAddressAsync(address));
+    /*
+    * The returned BluetoothLEDevice is set to null if
+    * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
+    * */
+    if(*(expected->m_pDevice))
     {
-        /*
-        * The returned BluetoothLEDevice is set to null if
-        * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
-        * */
-        device.m_pDevice = std::make_shared<BluetoothLEDevice>(co_await BluetoothLEDevice::FromBluetoothAddressAsync(address));
-        // cppcheck-suppress knownConditionTrueFalse
-        if(device.m_pDevice)
-        {
-            co_await device.query_services();
-        }
-        else
-        {
-            LOG_ERROR_FMT(
-                    "Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
-        }
+        LOG_INFO("m_pDevice returned ok");
+        co_await expected->query_services();
+    }
+    else
+    {
+        LOG_WARN_FMT(
+                "Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
+        co_return std::unexpected(Error::invalidAddress);
     }
     
-    co_return device;
+    co_return expected;
 }
 uint64_t CDevice::address() const
 {
