@@ -18,7 +18,7 @@ CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
     , m_pAuthenticator{ &authenticator }
     , m_Devices{}
     , m_pMutex{ std::make_unique<std::mutex>() }
-    , m_Timer{}
+    , m_ScanTimer{}
 {
     new_scan();
 }
@@ -26,7 +26,7 @@ CDeviceList::~CDeviceList()
 {
     if(m_pScanner->scanning())
     {
-        m_Timer.stop();
+        m_ScanTimer.stop();
         // spin until the thread has stopped
         while(m_pScanner->scanning()) {};
     }
@@ -36,7 +36,7 @@ CDeviceList::CDeviceList(const CDeviceList& other)
     , m_pAuthenticator{ nullptr }
     , m_Devices{}
     , m_pMutex{ nullptr }
-    , m_Timer{}
+    , m_ScanTimer{}
 {
     copy(other);
 }
@@ -45,7 +45,7 @@ CDeviceList::CDeviceList(CDeviceList&& other) noexcept
     , m_pAuthenticator{ nullptr }
     , m_Devices{}
     , m_pMutex{ nullptr }
-    , m_Timer{}
+    , m_ScanTimer{}
 {
     other.m_pMutex->lock();
     
@@ -53,8 +53,8 @@ CDeviceList::CDeviceList(CDeviceList&& other) noexcept
     m_pAuthenticator = std::exchange(other.m_pAuthenticator, nullptr);
     m_Devices = std::move(other.m_Devices);
     m_pMutex = std::exchange(other.m_pMutex, nullptr);
-    static_assert(std::is_trivially_copyable_v<decltype(other.m_Timer)>);
-    m_Timer = other.m_Timer;
+    static_assert(std::is_trivially_copyable_v<decltype(other.m_ScanTimer)>);
+    m_ScanTimer = other.m_ScanTimer;
     
     m_pMutex->unlock();
 }
@@ -75,8 +75,8 @@ CDeviceList& CDeviceList::operator=(CDeviceList&& other) noexcept
     m_pAuthenticator = std::exchange(other.m_pAuthenticator, nullptr);
     m_Devices = std::move(other.m_Devices);
     m_pMutex = std::exchange(other.m_pMutex, nullptr);
-    static_assert(std::is_trivially_copyable_v<decltype(other.m_Timer)>);
-    m_Timer = other.m_Timer;
+    static_assert(std::is_trivially_copyable_v<decltype(other.m_ScanTimer)>);
+    m_ScanTimer = other.m_ScanTimer;
     
     m_pMutex->unlock();
     return *this;
@@ -88,7 +88,7 @@ void CDeviceList::copy(const CDeviceList& other)
     m_pAuthenticator = other.m_pAuthenticator;
     m_Devices = other.m_Devices;
     m_pMutex = std::make_unique<std::remove_cvref_t<decltype(*m_pMutex)>>();
-    m_Timer = other.m_Timer;
+    m_ScanTimer = other.m_ScanTimer;
 }
 void CDeviceList::push()
 {
@@ -112,11 +112,11 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
     return [this, seconds]()
     {
         size_t prevFound = 0;
-        m_Timer.reset();
+        m_ScanTimer.reset();
         m_pScanner->begin_scan();
-        while(m_Timer.active())
+        while(m_ScanTimer.active())
         {
-            if(m_Timer.lap<float>() > static_cast<float>(seconds.count()) ||
+            if(m_ScanTimer.lap<float>() > static_cast<float>(seconds.count()) ||
                 m_pAuthenticator->server_identified())
             {
                 break;
@@ -145,6 +145,8 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
 }
 void CDeviceList::new_scan()
 {
+    ASSERT(!m_pScanner->scanning(), "Already scanning!");
+    
     std::lock_guard<mutex_t> lock{ *m_pMutex };
     m_Devices.clear();
     tf::Executor& executor = sys::executor();
@@ -154,7 +156,7 @@ void CDeviceList::authentication_status()
 {
     if(m_pScanner->scanning())
     {
-        float progress = m_Timer.lap<float>() / static_cast<float>(SCAN_TIME.count());
+        float progress = m_ScanTimer.lap<float>() / static_cast<float>(SCAN_TIME.count());
         ImGui::ProgressBar(progress, ImVec2{ -FLT_MIN, 0.0f });
     }
     else

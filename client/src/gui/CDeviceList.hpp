@@ -45,6 +45,6 @@ private:
     Pointer<CAuthenticator> m_pAuthenticator = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;
     std::unique_ptr<mutex_t> m_pMutex;
-    common::CStopWatch<time_t> m_Timer;
+    common::CStopWatch<time_t> m_ScanTimer;
 };
 }   // namespace gui
