@@ -17,10 +17,10 @@
 // freertos
 #include "freertos/task.h"
 
-constexpr std::string_view NVS_ENC_NAMESPACE = "ENC_STORAGE";
-constexpr std::string_view NVS_ENC_PRIV_KEY = "ENC_PRIV";
-constexpr std::string_view NVS_ENC_PUB_KEY = "ENC_PUB";
-constexpr std::string_view NVS_ENC_CLIENT_KEY = "ENC_CLIENT";
+constexpr std::string_view NVS_ENCRYPTION_NAMESPACE = "ENC_STORAGE";
+constexpr std::string_view NVS_KEY_SERVER_PRIVATE = "ENC_PRIV";
+constexpr std::string_view NVS_KEY_SERVER_PUBLIC = "ENC_PUB";
+constexpr std::string_view NVS_KEY_CLIENT_PUBLIC = "ENC_CLIENT";
 constexpr std::string_view NVS_RSSI_NAMESPACE = "RSSI_STORAGE";
 constexpr std::string_view NVS_RSSI_KEY = "RSSI";
 
@@ -66,11 +66,21 @@ inline void print_task_info(const char* str)
 					str == nullptr ? "Caller" : str, status.xTaskNumber, static_cast<void*>(status.pxStackBase), status.usStackHighWaterMark);
 }
 
-
-
-inline std::expected<std::vector<security::byte>, std::string> sign_data(std::string_view data)
+template<typename key_t>
+requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, security::CEccPrivateKey>
+[[nodiscard]] inline std::unique_ptr<key_t> load_key(std::string_view key)
 {
-
-	return std::vector<security::byte> {1,2,3,4};
+    std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(NVS_ENCRYPTION_NAMESPACE);
+    if (!reader.has_value())
+    {
+        LOG_FATAL("Failed to initilize NVS CReader");
+    }
+    storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> readResult = reader.value().read_binary(key);
+    if (readResult.code != storage::NvsErrorCode::success)
+    {
+        LOG_FATAL("Failed to retrieve the private key");
+    }
+    
+    return std::make_unique<key_t>(std::move(*readResult.data));
 }
 
