@@ -33,6 +33,17 @@ requires HashAlgorithm<algorithm_t>
 class CHash
 {
 public:
+    /**
+    * @brief Constructs an instance of CHash by creating a hash from the given buffer.
+    *
+    * This template constructor accepts a buffer of type `buffer_t` and initializes the `m_Hash` member
+    * with a hash computed from this buffer.
+    *
+    * @tparam buffer_t The type of the data buffer, must satisfy `common::const_buffer<buffer_t>`.
+    * @param data A universal reference to the data buffer from which to create the hash.
+    * @pre The type `buffer_t` must be a model of `common::const_buffer`.
+    * @post `m_Hash` is resized to `hash_type::HASH_SIZE` and filled with the hash computed from the provided data.
+    */
     template<typename buffer_t>
     requires common::const_buffer<buffer_t>
     explicit CHash(buffer_t&& data)
@@ -41,12 +52,24 @@ public:
         m_Hash.resize(hash_type::HASH_SIZE);
         create_hash(std::forward<buffer_t>(data));
     };
-    //explicit CHash(std::string_view text)
-    //        : m_Hash{}
-    //{
-    //    m_Hash.resize(hasher::hash_size());
-    //    create_hash(text);
-    //};
+    /**
+    * @brief Constructs an instance of CHash by initializing the hash with values from a given range of a std::span.
+    *
+    * This constructor receives two constant iterators defining the beginning and the end of a range within
+    * a `std::span<uint8_t>` and uses this range to initialize the `m_Hash` member.
+    *
+    * @param begin A constant iterator to the beginning of the data range within a std::span of uint8_t.
+    * @param end A constant iterator to the end of the data range within a std::span of uint8_t.
+    * @pre `begin` and `end` must define a valid and non-empty range within the std::span.
+    * @post `m_Hash` is initialized with data from the specified range and resized to `hash_type::HASH_SIZE`.
+    */
+    explicit CHash(std::span<uint8_t>::const_iterator begin, std::span<uint8_t>::const_iterator end)
+            : m_Hash{ begin, end }
+    {
+        // cppcheck-suppress ignoredReturnValue
+        ASSERT_FMT(m_Hash.size() == hash_type::HASH_SIZE, "Unexpected size of buffer after inserting span data. Expected: \"{}\", actual size is: \"{}\"", hash_type::HASH_SIZE, m_Hash.size());
+        m_Hash.resize(hash_type::HASH_SIZE);
+    };
     ~CHash() = default;
     CHash(const CHash& other) = default;
     CHash(CHash&& other) = default;

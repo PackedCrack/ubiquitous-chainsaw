@@ -309,7 +309,7 @@ int main(int argc, char** argv)
     std::unique_ptr<security::CEccPrivateKey> pPrivateKey = load_key<security::CEccPrivateKey>(CLIENT_PRIVATE_KEY_NAME);
     std::unique_ptr<security::CEccPublicKey> pServerKey = load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME);
 
-    ble::CScanner scanner = ble::make_scanner<ble::CScanner>();
+    auto scanner = ble::make_scanner<ble::CScanner>();
     
     // SDL window and input must be called on the same thread
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };

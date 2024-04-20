@@ -13,14 +13,34 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
     UNHANDLED_CASE_PROTECTION_ON
     switch (type)
     {
-        case ble::HashType::Sha2_224: return CHash<Sha2_224>{ hashData };
-        case ble::HashType::Sha2_256: return CHash<Sha2_256>{ hashData };
-        case ble::HashType::Sha3_224: return CHash<Sha3_224>{ hashData };
-        case ble::HashType::Sha3_256: return CHash<Sha3_256>{ hashData };
-        case ble::HashType::Sha3_384: return CHash<Sha3_384>{ hashData };
-        case ble::HashType::Sha3_512: return CHash<Sha3_512>{ hashData };
+        case ble::HashType::Sha2_224: return CHash<Sha2_224>{ std::cbegin(hashData), std::cend(hashData) };
+        case ble::HashType::Sha2_256: return CHash<Sha2_256>{ std::cbegin(hashData), std::cend(hashData) };
+        case ble::HashType::Sha3_224: return CHash<Sha3_224>{ std::cbegin(hashData), std::cend(hashData) };
+        case ble::HashType::Sha3_256: return CHash<Sha3_256>{ std::cbegin(hashData), std::cend(hashData) };
+        case ble::HashType::Sha3_384: return CHash<Sha3_384>{ std::cbegin(hashData), std::cend(hashData) };
+        case ble::HashType::Sha3_512: return CHash<Sha3_512>{ std::cbegin(hashData), std::cend(hashData) };
         case ble::HashType::count:
-            LOG_FATAL("Value of \"count\" passed unexpectedly from ble::HashType");
+            LOG_ERROR("Value of \"count\" passed unexpectedly from ble::HashType");
+            return CHash<Sha2_224>{ std::string_view{ "0000000000" } };
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    
+    std::unreachable();
+}
+[[nodiscard]] size_t size_of_hash_type(ble::HashType type)
+{
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (type)
+    {
+        case ble::HashType::Sha2_224: return Sha2_224::HASH_SIZE;
+        case ble::HashType::Sha2_256: return Sha2_256::HASH_SIZE;
+        case ble::HashType::Sha3_224: return Sha3_224::HASH_SIZE;
+        case ble::HashType::Sha3_256: return Sha3_256::HASH_SIZE;
+        case ble::HashType::Sha3_384: return Sha3_384::HASH_SIZE;
+        case ble::HashType::Sha3_512: return Sha3_512::HASH_SIZE;
+        case ble::HashType::count:
+            LOG_ERROR("Value of \"count\" passed unexpectedly from ble::HashType");
+            return 0;
     }
     UNHANDLED_CASE_PROTECTION_OFF
     
@@ -41,10 +61,13 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
 [[nodiscard]] bool buffer_size_mismatch(auto&& buffer)
 {
     static constexpr ble::ServerAuthHeader HEADER = ble::whoami_server_auth_header();
-    static constexpr size_t expectedBufferSize = sizeof(HEADER) + HEADER.hashSize + HEADER.signatureSize;
-    if (expectedBufferSize != buffer.size())
+    const size_t EXPECTED_BUFFER_SIZE =
+            sizeof(HEADER) +
+            size_of_hash_type(ble::HashType{ buffer[HEADER.hashType] }) +
+            buffer[HEADER.signatureSize];
+    if (EXPECTED_BUFFER_SIZE != buffer.size())
     {
-        LOG_ERROR_FMT("Buffer size mismatch. Expected {} bytes, but buffer was {}", expectedBufferSize, buffer.size());
+        LOG_ERROR_FMT("Buffer size mismatch. Expected {} bytes, but buffer was {}", EXPECTED_BUFFER_SIZE, buffer.size());
         return true;
     }
     
@@ -74,10 +97,14 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
                 security::CHash<sha_type> macHash{ macAddress };
                 if (hash.size() != sha_type::HASH_SIZE)
                 {
+                    LOG_ERROR_FMT("Hash size mismatch. Received: {}. Self created: {}", hash.size(), sha_type::HASH_SIZE);
                     result = false;
                 }
                 else if (macHash != hash)
                 {
+                    LOG_ERROR_FMT("Self created hash of mac address is not the same as received hashed. Recived: {}. Self created: {}",
+                                  macHash.as_string(),
+                                  hash.as_string());
                     result = false;
                 }
                 else
@@ -90,7 +117,6 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
     co_return result;
 }
 }   // namespace
-
 
 CAuthenticator::CAuthenticator(security::CEccPublicKey* pServerKey)
     : m_pServerKey{ pServerKey }
@@ -177,14 +203,18 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(ble::DeviceInfo inf
             if (!valid_hash_type(buffer))
                 co_return false;
             
-            
             static constexpr ble::ServerAuthHeader HEADER = ble::whoami_server_auth_header();
             auto hashType = ble::HashType{ buffer[HEADER.hashType] };
-            ShaHash hash = make_hash(hashType, std::span<uint8_t>{ std::begin(buffer) + HEADER.hashOffset, HEADER.hashSize });
             
-            std::span<uint8_t> signature{ std::begin(buffer) + HEADER.signatureOffset, HEADER.signatureSize };
+            const uint8_t HASH_OFFSET = buffer[HEADER.hashOffset];
+            const uint8_t HASH_SIZE = buffer[HEADER.hashSize];
+            ShaHash hash = make_hash(hashType, std::span<uint8_t>{ std::begin(buffer) + HASH_OFFSET, HASH_SIZE });
+            
+            const uint8_t SIGNATURE_OFFSET = buffer[HEADER.signatureOffset];
+            const uint8_t SIGNATURE_SIZE = buffer[HEADER.signatureSize];
+            std::span<uint8_t> signature{ std::begin(buffer) + SIGNATURE_OFFSET, SIGNATURE_SIZE };
+            
             std::string macAddress = ble::DeviceInfo::address_as_str(info.address.value());
-            
             co_return co_await verify_hash_and_signature(macAddress, m_pServerKey, hash, signature);
         }
         else

@@ -4,7 +4,6 @@
 #include "profiles.hpp"
 #include <memory>
 
-
 namespace ble
 {
 class CWhoAmI
@@ -27,6 +26,7 @@ private:
 private:
 	std::string m_ServerMac;
 	std::string m_ClientMac;
+	std::vector<security::byte> m_SignedMacData;
 	std::vector<CCharacteristic> m_Characteristics;
 	CGattService m_Service;
 };

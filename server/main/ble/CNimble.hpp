@@ -28,8 +28,6 @@ public:
     CNimble& operator=(CNimble&& other) = default;
 public:
 	static void sync_callback();
-    const CGap* gap_handle() const; 
-
 private:
 	[[nodiscard]] static std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>> synchronization_primitives();
 private:

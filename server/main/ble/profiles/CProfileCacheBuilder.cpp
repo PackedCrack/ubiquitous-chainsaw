@@ -13,6 +13,15 @@ CProfileCacheBuilder& CProfileCacheBuilder::add_whoami()
 
 	return *this;
 }
+CProfileCacheBuilder& CProfileCacheBuilder::add_whereami() 
+{ 
+	if(!try_emplace_profile<CWhereAmI>(CProfileCache::KEY_WHEREAMI))
+	{
+		LOG_FATAL("CProfileCacheBuilder failed to add CWhereAmI profile to the cache.");
+	}
+
+	return *this;
+}
 std::unique_ptr<CProfileCache> CProfileCacheBuilder::build() 
 { 
 	using Error = CProfileCache::Error;

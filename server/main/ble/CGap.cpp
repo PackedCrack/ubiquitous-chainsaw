@@ -151,10 +151,10 @@ namespace ble
 {
 int CGap::event_callback_caller(ble_gap_event* pEvent, void* eventCallback)
 {
-	const std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
-	cb(pEvent);
+    const std::function<void(ble_gap_event*)>& cb = *static_cast<std::function<void(ble_gap_event*)>*>(eventCallback);
+    cb(pEvent);
 
-	return 0;
+    return 0;
 }
 CGap::CGap() 
     : m_BleAddressType{ generate_random_device_address() } // nimble_port_run(); has to be called before this
@@ -165,103 +165,90 @@ CGap::CGap()
     ASSERT(m_BleAddressType != AddressType::invalid, "Failed to generate a random device address");
 
     std::string deviceName = "Chainsaw-server";
-	{
-		auto result = NimbleErrorCode{ ble_svc_gap_device_name_set(deviceName.data()) }; // haven't found which error code is returned when this fails
+    {
+    	auto result = NimbleErrorCode{ ble_svc_gap_device_name_set(deviceName.data()) }; // haven't found which error code is returned when this fails
     	if (result != NimbleErrorCode::success)
     	{
-			LOG_WARN_FMT("CGap constructor could not set the name of the server. Failed with: \"{}\" - \"{}\"", 
-							static_cast<int32_t>(result), 
-							nimble_error_to_string(result));
+    		LOG_WARN_FMT("CGap constructor could not set the name of the server. Failed with: \"{}\" - \"{}\"", 
+    						static_cast<int32_t>(result), 
+    						nimble_error_to_string(result));
     	}
-	}
+    }
     
-	{
-		std::optional<NimbleErrorCode> error = set_adv_fields(deviceName);
-		if(error)
-		{
-			if(error == NimbleErrorCode::isBusy)
-			{
-				LOG_WARN_FMT("CGap constructor could not set advertisment fields. Because Advertising is already in progress: \"{}\"",
-								nimble_error_to_string(*error));
-			}
-			else if(error == NimbleErrorCode::toSmallBuffer)
-			{
-				LOG_ERROR_FMT("Failure when trying to set advertisment fields. Because Advertising is already in progress: \"{}\"",
-								nimble_error_to_string(*error));
-			}
-			else if(error == NimbleErrorCode::unexpectedFailure)
-			{
-				LOG_FATAL_FMT("Unexpected failure when trying to set advertisment fields. ErrorCode: \"{}\"", 
-								nimble_error_to_string(*error));
-			}
-			else
-			{
-				ASSERT(false, "set_adv_fields returned an undocumented error code.");
-			}
-		}
-	}
+    {
+        std::optional<NimbleErrorCode> error = set_adv_fields(deviceName);
+        if(error)
+        {
+            if(error == NimbleErrorCode::isBusy)
+            {
+            	LOG_WARN_FMT("CGap constructor could not set advertisment fields. Because Advertising is already in progress: \"{}\"",
+            					nimble_error_to_string(*error));
+            }
+            else if(error == NimbleErrorCode::toSmallBuffer)
+            {
+            	LOG_ERROR_FMT("Failure when trying to set advertisment fields. Because Advertising is already in progress: \"{}\"",
+            					nimble_error_to_string(*error));
+            }
+            else if(error == NimbleErrorCode::unexpectedFailure)
+            {
+            	LOG_FATAL_FMT("Unexpected failure when trying to set advertisment fields. ErrorCode: \"{}\"", 
+            					nimble_error_to_string(*error));
+            }
+            else
+            {
+            	ASSERT(false, "set_adv_fields returned an undocumented error code.");
+            }
+        }
+    }
 
-	ASSERT(!is_advertising(), "Advertisment was unexpectedly on.");
-	std::optional<Error> error = begin_advertise();
+    ASSERT(!is_advertising(), "Advertisment was unexpectedly on.");
+    std::optional<Error> error = begin_advertise();
     if (error)
     {
-		LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", error->msg);
-	}
+    	LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", error->msg);
+    }
 }
 CGap::~CGap()
 {
-	if(is_advertising())
-	{
-		std::optional<CGap::Error> error = end_advertise();
-    	if (error)
-    	{
-			LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", error->msg);
-    	}
-	}
+    if(is_advertising())
+    {
+        std::optional<CGap::Error> error = end_advertise();
+        if (error)
+        {
+        	LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", error->msg);
+        }
+    }
 }
 CGap::CGap(CGap&& other) noexcept
     : m_BleAddressType{ other.m_BleAddressType }
     , m_Params{ std::move(other.m_Params) } 
     , m_ActiveConnection{ std::move(other.m_ActiveConnection) }
-	, m_EventCallback{ make_event_callback() }
+    , m_EventCallback{ make_event_callback() }
 {}
 CGap& CGap::operator=(CGap&& other) noexcept
 {
-	if(this != &other)
-	{
-		m_BleAddressType = other.m_BleAddressType;
-    	m_Params = std::move(other.m_Params);
-    	m_ActiveConnection = std::move(other.m_ActiveConnection);
-		m_EventCallback = make_event_callback();
-	}
-
-	return *this;
-}
-std::optional<int8_t> CGap::rssi() const
-{
-	if ( !m_ActiveConnection.handle().has_value() )
-	{
-        return std::nullopt;
-	}
-
-    int8_t rssiValue {};
-    int result = ble_gap_conn_rssi(m_ActiveConnection.handle().value(), &rssiValue);
-    if (result != ESP_OK)
+    if(this != &other)
     {
-        return std::nullopt;
+        m_BleAddressType = other.m_BleAddressType;
+        m_Params = std::move(other.m_Params);
+        m_ActiveConnection = std::move(other.m_ActiveConnection);
+        m_EventCallback = make_event_callback();
     }
-    else
-    {
-        return rssiValue;
-    }
+
+    return *this;
 }
 void CGap::set_connection(CConnection&& newConncetion)
 {
     m_ActiveConnection = std::move(newConncetion);
 }
+void CGap::clear_connection()
+{
+    // Just set it to an empty CConnection
+    m_ActiveConnection = CConnection{};
+}
 std::optional<CConnection*> CGap::active_connection()
 {
-	return m_ActiveConnection ? std::make_optional<CConnection*>(&m_ActiveConnection) : std::nullopt;
+    return m_ActiveConnection ? std::make_optional<CConnection*>(&m_ActiveConnection) : std::nullopt;
 }
 /// @brief 
 /// @param int32_t reason 
@@ -272,7 +259,7 @@ std::optional<CConnection::Error> CGap::drop_connection(CConnection::DropCode re
 {
     // if we drop connection manually, ble will start advertising automatically
     //return 
-    
+        
     return m_ActiveConnection.drop(reason);
 }
 /// @brief 
@@ -280,165 +267,165 @@ std::optional<CConnection::Error> CGap::drop_connection(CConnection::DropCode re
 std::optional<CGap::Error> CGap::begin_advertise()
 { 
     int32_t result = ble_gap_adv_start(
-		static_cast<uint8_t>(m_BleAddressType), nullptr, BLE_HS_FOREVER, &m_Params, CGap::event_callback_caller, &m_EventCallback);
+        static_cast<uint8_t>(m_BleAddressType), nullptr, BLE_HS_FOREVER, &m_Params, CGap::event_callback_caller, &m_EventCallback);
     if(result == static_cast<int32_t>(NimbleErrorCode::success))
-		return std::nullopt;
+        return std::nullopt;
 
     return std::optional<Error> { Error {
-			.code = NimbleErrorCode::unexpectedFailure,
+            .code = NimbleErrorCode::unexpectedFailure,
             .msg = "Unknown error received when starting advertising. Return code from nimble: " + std::to_string(result)
-		}};
+        }};
 }
 /// @brief 
 /// @return std::nullopt on success. NimbleErrorCode::inProgressOrCompleted if there is no active advertising procedur. NimbleErrorCode::unknown on failure.
 std::optional<CGap::Error> CGap::end_advertise()
 { 
-	int32_t result = ble_gap_adv_stop();
-	if(result == static_cast<int32_t>(NimbleErrorCode::success))
-		return std::nullopt;
+    int32_t result = ble_gap_adv_stop();
+    if(result == static_cast<int32_t>(NimbleErrorCode::success))
+        return std::nullopt;
 
-	if(result == static_cast<int32_t>(NimbleErrorCode::inProgressOrCompleted))
-	{
-		return std::optional{ Error {
-			.code = NimbleErrorCode::inProgressOrCompleted,
-			.msg = "no active advertising procedure"			
-		}};
-	}
-	else
-	{
-		return std::optional<Error> { Error {
-			.code = NimbleErrorCode::unexpectedFailure,
+    if(result == static_cast<int32_t>(NimbleErrorCode::inProgressOrCompleted))
+    {
+        return std::optional{ Error {
+            .code = NimbleErrorCode::inProgressOrCompleted,
+            .msg = "no active advertising procedure"
+        }};
+    }
+    else
+    {
+        return std::optional<Error> { Error {
+            .code = NimbleErrorCode::unexpectedFailure,
             .msg = "Unknown error received. Return code from nimble: " + std::to_string(result)
-		}};
-	}
+        }};
+    }
 }
 bool CGap::is_advertising() const
 {
-	return ble_gap_adv_active();
+    return ble_gap_adv_active();
 }
 std::function<void(ble_gap_event*)> CGap::make_event_callback()
 {
-	return [this](ble_gap_event* pEvent)
-	{
-		auto evnt = CGap::Event{ pEvent->type };
-		UNHANDLED_CASE_PROTECTION_ON
-		switch(evnt)
-		{
-			case CGap::Event::connect:
-			{
-				LOG_INFO("BLE_GAP_EVENT_CONNECT");
+    return [this](ble_gap_event* pEvent)
+    {
+        auto evnt = CGap::Event{ pEvent->type };
+        UNHANDLED_CASE_PROTECTION_ON
+        switch(evnt)
+        {
+            case CGap::Event::connect:
+            {
+                LOG_INFO("BLE_GAP_EVENT_CONNECT");
 
 
-				CConnection connection{ pEvent->connect.conn_handle };
-				if(!this->active_connection())
-				{
-					this->set_connection(std::move(connection));
+                CConnection connection{ pEvent->connect.conn_handle };
+                if(!this->active_connection())
+                {
+                    this->set_connection(std::move(connection));
 
-					if(this->is_advertising())
-					{
-						std::optional<CGap::Error> result = this->end_advertise();
-						if (result)
-            			{
-							LOG_ERROR_FMT("Gap event callback failed to end advertisment when recieving incoming connection! Reason: \"{}\"",
-							 				result->msg);
-            			}
-					}
-				}
-				else
-				{
-            		std::optional<CConnection::Error> result = connection.drop(CConnection::DropCode::busy);
-					if(result)
-					{
-						LOG_ERROR_FMT("Could not drop secondary incoming connection. Reason: \"{}\"", result->msg);
-					}
-				}
-            	return;
-			}
-			case CGap::Event::disconnect:
-			{
-				LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
-			
-				std::optional<CConnection*> activeCon = this->active_connection();
-				if(activeCon)
-				{
-					const CConnection* pActiveConnection = *activeCon;
-					CConnection connection{ pEvent->disconnect.conn.conn_handle };
+                    if(this->is_advertising())
+                    {
+                        std::optional<CGap::Error> result = this->end_advertise();
+                        if (result)
+                        {
+                            LOG_ERROR_FMT("Gap event callback failed to end advertisment when recieving incoming connection! Reason: \"{}\"",
+                             				result->msg);
+                        }
+                    }
+                }
+                else
+                {
+                    std::optional<CConnection::Error> result = connection.drop(CConnection::DropCode::busy);
+                    if(result)
+                    {
+                        LOG_ERROR_FMT("Could not drop secondary incoming connection. Reason: \"{}\"", result->msg);
+                    }
+                }
+                return;
+            }
+            case CGap::Event::disconnect:
+            {
+                LOG_INFO("BLE_GAP_EVENT_DISCONNECT");
 
-					if(*pActiveConnection == connection)
-					{
-						this->set_connection(CConnection{});
+                std::optional<CConnection*> activeCon = this->active_connection();
+                if(activeCon)
+                {
+                    const CConnection* pActiveConnection = *activeCon;
+                    CConnection connection{ pEvent->disconnect.conn.conn_handle };
 
-						if(!this->is_advertising())
-						{
-							std::optional<CGap::Error> result = this->begin_advertise();
-            				if (result)
-            				{
-								LOG_ERROR_FMT(
-									"Gap event callback failed to start advertisment when disconnecting previous connection! Reason: \"{}\"",
-									 result->msg);
-            				}
-						}
-					}
-				}
-            	return;
-			}
-			case CGap::Event::update:
-			[[fallthrough]];
-			case CGap::Event::updateReq:
-			[[fallthrough]];
-			case ble::CGap::Event::l2capUpdateReq: 
-			[[fallthrough]];
-			case ble::CGap::Event::termFailure: 
-			[[fallthrough]];
-			case ble::CGap::Event::disc: 
-			[[fallthrough]];
-			case ble::CGap::Event::discComplete: 
-			[[fallthrough]];
-			case ble::CGap::Event::advertismentComplete: 
-			[[fallthrough]];
-			case ble::CGap::Event::encryptionChanged: 
-			[[fallthrough]];
-			case ble::CGap::Event::passkeyAction:
-			[[fallthrough]];
-			case ble::CGap::Event::notifyRecieve: 
-			[[fallthrough]];
-			case ble::CGap::Event::notifyTransfer: 
-			[[fallthrough]];
-			case ble::CGap::Event::subscribe: 
-			[[fallthrough]];
-			case ble::CGap::Event::mtu: 
-			[[fallthrough]];
-			case ble::CGap::Event::identityResolved: 
-			[[fallthrough]];
-			case ble::CGap::Event::repeatPairing: 
-			[[fallthrough]];
-			case ble::CGap::Event::physicalUpdateComplete: 
-			[[fallthrough]];
-			case ble::CGap::Event::extDisc: 
-			[[fallthrough]];
-			case ble::CGap::Event::periodicSync: 
-			[[fallthrough]];
-			case ble::CGap::Event::periodicSyncReport:
-			[[fallthrough]];
-			case ble::CGap::Event::periodicSyncLost: 
-			[[fallthrough]];
-			case ble::CGap::Event::scanRequireRCVD: 
-			[[fallthrough]];
-			case ble::CGap::Event::periodicTransfer: 
-			[[fallthrough]];
-			case ble::CGap::Event::pathlossThreshold: 
-			[[fallthrough]];
-			case ble::CGap::Event::transmitPower: 
-			[[fallthrough]];
-			case ble::CGap::Event::subrateChange:
-			{
-				LOG_WARN_FMT("Unhandled Gap Event: \"{}\"", gap_event_to_str(evnt));
-				return;
-			}
-		};
-		UNHANDLED_CASE_PROTECTION_OFF
+                    if(*pActiveConnection == connection)
+                    {
+                        this->clear_connection();
 
-		LOG_ERROR_FMT("Unknown gap event: \"{}\"!", pEvent->type);
-	};
+                        if(!this->is_advertising())
+                        {
+                            std::optional<CGap::Error> result = this->begin_advertise();
+                            if (result)
+                            {
+                                LOG_ERROR_FMT(
+                                    "Gap event callback failed to start advertisment when disconnecting previous connection! Reason: \"{}\"",
+                                     result->msg);
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+            case CGap::Event::update:
+            [[fallthrough]];
+            case CGap::Event::updateReq:
+            [[fallthrough]];
+            case ble::CGap::Event::l2capUpdateReq: 
+            [[fallthrough]];
+            case ble::CGap::Event::termFailure: 
+            [[fallthrough]];
+            case ble::CGap::Event::disc: 
+            [[fallthrough]];
+            case ble::CGap::Event::discComplete: 
+            [[fallthrough]];
+            case ble::CGap::Event::advertismentComplete: 
+            [[fallthrough]];
+            case ble::CGap::Event::encryptionChanged: 
+            [[fallthrough]];
+            case ble::CGap::Event::passkeyAction:
+            [[fallthrough]];
+            case ble::CGap::Event::notifyRecieve: 
+            [[fallthrough]];
+            case ble::CGap::Event::notifyTransfer: 
+            [[fallthrough]];
+            case ble::CGap::Event::subscribe: 
+            [[fallthrough]];
+            case ble::CGap::Event::mtu: 
+            [[fallthrough]];
+            case ble::CGap::Event::identityResolved: 
+            [[fallthrough]];
+            case ble::CGap::Event::repeatPairing: 
+            [[fallthrough]];
+            case ble::CGap::Event::physicalUpdateComplete: 
+            [[fallthrough]];
+            case ble::CGap::Event::extDisc: 
+            [[fallthrough]];
+            case ble::CGap::Event::periodicSync: 
+            [[fallthrough]];
+            case ble::CGap::Event::periodicSyncReport:
+            [[fallthrough]];
+            case ble::CGap::Event::periodicSyncLost: 
+            [[fallthrough]];
+            case ble::CGap::Event::scanRequireRCVD: 
+            [[fallthrough]];
+            case ble::CGap::Event::periodicTransfer: 
+            [[fallthrough]];
+            case ble::CGap::Event::pathlossThreshold: 
+            [[fallthrough]];
+            case ble::CGap::Event::transmitPower: 
+            [[fallthrough]];
+            case ble::CGap::Event::subrateChange:
+            {
+                LOG_WARN_FMT("Unhandled Gap Event: \"{}\"", gap_event_to_str(evnt));
+                return;
+            }
+        };
+        UNHANDLED_CASE_PROTECTION_OFF
+
+        LOG_ERROR_FMT("Unknown gap event: \"{}\"!", pEvent->type);
+    };
 }
 } // namespace ble
