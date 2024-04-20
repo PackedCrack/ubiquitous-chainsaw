@@ -170,7 +170,7 @@ requires std::is_same_v<return_t, std::string> || std::is_same_v<return_t, std::
 	{
 		if constexpr(std::is_same_v<return_t, std::string>)
 		{
-			r.value = std::make_optional<std::string>(FMT("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+			r.value = std::make_optional<std::string>(FMT("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
                                            addr[5], addr[4], addr[3], 
                                            addr[2], addr[1], addr[0]));
 		}

@@ -113,6 +113,7 @@ void CWhoAmI::retrieve_server_mac()
         security::CEccPrivateKey privateKey { std::move(readResult.data.value()) };
         security::CRandom rng = security::CRandom::make_rng().value();
         security::CHash<security::Sha2_256> hash{ m_ServerMac };
+
         std::vector<security::byte> signature = privateKey.sign_hash(rng, hash);
 
         size_t packetSize = sizeof(ServerAuthHeader) + hash.size() + signature.size();
