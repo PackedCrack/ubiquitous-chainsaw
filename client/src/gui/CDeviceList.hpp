@@ -22,9 +22,10 @@ class CDeviceList
     using mutex_t = std::mutex;
 public:
     static constexpr std::string_view KEY = "devicelist";
+    static constexpr std::chrono::seconds SCAN_TIME{ 25 };
 public:
     explicit CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator);
-    ~CDeviceList() = default;
+    ~CDeviceList();
     CDeviceList(const CDeviceList& other);
     CDeviceList(CDeviceList&& other) noexcept;
     CDeviceList& operator=(const CDeviceList& other);
@@ -37,12 +38,13 @@ public:
 private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
     void new_scan();
+    void authentication_status();
     void device_list();
 private:
     Pointer<ble::CScanner> m_pScanner = nullptr;
     Pointer<CAuthenticator> m_pAuthenticator = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;
     std::unique_ptr<mutex_t> m_pMutex;
-    common::CStopWatch<time_t> m_Timer;
+    common::CStopWatch<time_t> m_ScanTimer;
 };
 }   // namespace gui
