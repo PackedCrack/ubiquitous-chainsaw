@@ -1,25 +1,15 @@
 #include "CWhoAmI.hpp"
 #include "common/ble_services.hpp"
-#include "../../server_common.hpp"
 #include "CGattCharacteristic.hpp"
+#include "../../server_common.hpp"
 #include "../../shared/common/ble_services.hpp"
-#include "../../shared/common/common.hpp"	
-
-//#include "security/CWolfCrypt.hpp"
-//#include "security/CRandom.hpp"
-//#include "security/ecc_key.hpp"
-//#include "security/CHash.hpp"
-//#include "security/sha.hpp"
-//#include "../sys/CNonVolatileStorage.hpp"
-
-
+#include "../../shared/common/common.hpp"
 // std
 #include <cstdint>
 #include <stdexcept>
 #include <array>
 #include <cstring> 
 #include <type_traits>
-
 
 
 namespace
@@ -164,8 +154,6 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
                         if(pSelf->m_ServerMac.empty())
                             pSelf->retrieve_server_mac();
 
-                        std::printf("Server MAC: %s \n", pSelf->m_ServerMac.c_str());
-
                         NimbleErrorCode code = append_read_data(pContext->om, pSelf->m_SignedMacData);
                         if(code != NimbleErrorCode::success)
                         {
@@ -173,7 +161,6 @@ auto CWhoAmI::make_callback_server_auth(const std::shared_ptr<Profile>& pProfile
                                             nimble_error_to_string(code));
                         }
 
-                        print_task_info("nimble_host");
                         return static_cast<int32_t>(code);
                     }
                     case CharacteristicAccess::write:
