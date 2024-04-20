@@ -11,71 +11,6 @@
 #include "imgui/imgui.h"
 
 
-namespace
-{
-
-//////////////////////////
-winrt::fire_and_forget characteristic_action(const ble::CCharacteristic* pCharacteristic,
-                                                 const std::vector<uint8_t>* writeData = nullptr)
-    {
-    if(writeData == nullptr)
-    {
-        ble::CCharacteristic::read_t result = co_await pCharacteristic->read_value();
-        if(result)
-        {
-            std::vector<uint8_t> readData = result.value();
-            
-            std::string str{};
-            str.resize(readData.size() + 1);
-            std::memcpy(str.data(), readData.data(), readData.size());
-            LOG_INFO_FMT("VALUE: {}", str);
-        }
-        else
-        {
-            LOG_ERROR("failed to read data");
-        }
-    }
-    else
-    {
-        auto status = co_await pCharacteristic->write_data(*writeData);
-        LOG_INFO_FMT("Status after write: {}", static_cast<int32_t>(status));
-    }
-}
-winrt::fire_and_forget do_connection_test(uint64_t address)
-{
-    std::expected<ble::CDevice, ble::CDevice::Error> expected = co_await ble::make_device<ble::CDevice>(address);
-    if(!expected)
-        co_return;
-    
-    ble::CDevice& device = *expected;
-    std::optional<const ble::CService*> service = device.service(ble::uuid_service_whoami());
-    if(service)
-    {
-        const ble::CService* pService = service.value();
-        {
-            std::optional<const ble::CCharacteristic*> serverAuth =
-                    pService->characteristic(ble::uuid_characteristic_server_auth());
-            
-            if (serverAuth)
-            {
-                characteristic_action(*serverAuth);
-            }
-            
-            std::optional<const ble::CCharacteristic*> clientAuth =
-                    pService->characteristic(ble::uuid_characteristic_client_auth());
-            
-            if (clientAuth)
-            {
-                std::vector<uint8_t> data{
-                    'H', 'E', 'L', 'L', 'O', ' ', 'W', 'O', 'R', 'L', 'D'
-                };
-                characteristic_action(*clientAuth, &data);
-            }
-        }
-    }
-}
-/////////////////////////////////
-}   // namespace
 namespace gui
 {
 CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
@@ -84,7 +19,18 @@ CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
     , m_Devices{}
     , m_pMutex{ std::make_unique<std::mutex>() }
     , m_Timer{}
-{}
+{
+    new_scan();
+}
+CDeviceList::~CDeviceList()
+{
+    if(m_pScanner->scanning())
+    {
+        m_Timer.stop();
+        // spin until the thread has stopped
+        while(m_pScanner->scanning()) {};
+    }
+}
 CDeviceList::CDeviceList(const CDeviceList& other)
     : m_pScanner{ nullptr }
     , m_pAuthenticator{ nullptr }
@@ -99,6 +45,7 @@ CDeviceList::CDeviceList(CDeviceList&& other) noexcept
     , m_pAuthenticator{ nullptr }
     , m_Devices{}
     , m_pMutex{ nullptr }
+    , m_Timer{}
 {
     other.m_pMutex->lock();
     
@@ -106,6 +53,8 @@ CDeviceList::CDeviceList(CDeviceList&& other) noexcept
     m_pAuthenticator = std::exchange(other.m_pAuthenticator, nullptr);
     m_Devices = std::move(other.m_Devices);
     m_pMutex = std::exchange(other.m_pMutex, nullptr);
+    static_assert(std::is_trivially_copyable_v<decltype(other.m_Timer)>);
+    m_Timer = other.m_Timer;
     
     m_pMutex->unlock();
 }
@@ -126,6 +75,8 @@ CDeviceList& CDeviceList::operator=(CDeviceList&& other) noexcept
     m_pAuthenticator = std::exchange(other.m_pAuthenticator, nullptr);
     m_Devices = std::move(other.m_Devices);
     m_pMutex = std::exchange(other.m_pMutex, nullptr);
+    static_assert(std::is_trivially_copyable_v<decltype(other.m_Timer)>);
+    m_Timer = other.m_Timer;
     
     m_pMutex->unlock();
     return *this;
@@ -146,7 +97,7 @@ void CDeviceList::push()
     if(ImGui::Begin("DeviceList"), nullptr, WINDOW_FLAGS)
     {
         device_list();
-        new_scan();
+        authentication_status();
     }
     
     ImGui::End();
@@ -163,10 +114,16 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
         size_t prevFound = 0;
         m_Timer.reset();
         m_pScanner->begin_scan();
-        while(m_Timer.lap<float>() <= static_cast<float>(seconds.count()))
+        while(m_Timer.active())
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            if(m_Timer.lap<float>() > static_cast<float>(seconds.count()) ||
+                m_pAuthenticator->server_identified())
+            {
+                break;
+            }
             
+            // Intentionally throttle so this thread doesnt go bananas
+            std::this_thread::sleep_for(std::chrono::milliseconds(25));
             size_t foundDevices = m_pScanner->num_devices().load();
             if(prevFound < foundDevices)
             {
@@ -188,23 +145,24 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
 }
 void CDeviceList::new_scan()
 {
-    std::chrono::seconds scanTime{ 10 };
-    
+    std::lock_guard<mutex_t> lock{ *m_pMutex };
+    m_Devices.clear();
+    tf::Executor& executor = sys::executor();
+    executor.silent_async(time_limited_scan(SCAN_TIME));
+}
+void CDeviceList::authentication_status()
+{
     if(m_pScanner->scanning())
     {
-        float progress = m_Timer.lap<float>() / static_cast<float>(scanTime.count());
+        float progress = m_Timer.lap<float>() / static_cast<float>(SCAN_TIME.count());
         ImGui::ProgressBar(progress, ImVec2{ -FLT_MIN, 0.0f });
     }
     else
     {
-        std::lock_guard<mutex_t> lock{ *m_pMutex };
-        if(ImGui::Button("Start scan", ImVec2{ -FLT_MIN, 0.0f }))
-        {
-            m_Devices.clear();
-            
-            tf::Executor& executor = sys::executor();
-            executor.silent_async(time_limited_scan(scanTime));
-        }
+        if (m_pAuthenticator->server_identified())
+            ImGui::TextColored(ImVec4(0.36f, 0.72f, 0.0f, 1.0f), "Authenticated");
+        else
+            ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.15f, 1.0f), "No server authenticated");
     }
 }
 void CDeviceList::device_list()
@@ -230,14 +188,9 @@ void CDeviceList::device_list()
                     if (m_pAuthenticator->server_address() == address)
                     {
                         ImGui::SameLine();
-                        ImGui::TextColored(ImVec4(0.36f, 0.72f, 0.0f, 0.55f), "Authenticated");
+                        ImGui::TextColored(ImVec4(0.36f, 0.72f, 0.0f, 1.0f), "Authenticated");
                     }
                 }
-
-                ImGui::SameLine();
-                if(ImGui::Button("Connect"))
-                    do_connection_test(deviceInfo.address.value());
-                
                 
                 // Use SetNextItemOpen() so set the default state of a node to be open. We could
                 // also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
