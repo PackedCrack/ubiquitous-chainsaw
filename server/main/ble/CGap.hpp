@@ -74,6 +74,7 @@ public:
 public:
 	static int event_callback_caller(ble_gap_event* pEvent, function eventCallback);
 	void set_connection(CConnection&& newConncetion);
+    void clear_connection();
 	[[nodiscard]] std::optional<CConnection*> active_connection();
     [[nodiscard]] std::optional<CConnection::Error> drop_connection(CConnection::DropCode reason);
     [[nodiscard]] std::optional<Error> begin_advertise();
