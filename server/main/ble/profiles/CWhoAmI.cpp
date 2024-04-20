@@ -5,26 +5,12 @@
 #include "../../shared/common/ble_services.hpp"
 #include "../../shared/common/common.hpp"	
 
-//#include "security/CWolfCrypt.hpp"
-//#include "security/CRandom.hpp"
-//#include "security/ecc_key.hpp"
-//#include "security/CHash.hpp"
-//#include "security/sha.hpp"
-//#include "../sys/CNonVolatileStorage.hpp"
-
-
 // std
 #include <cstdint>
 #include <stdexcept>
 #include <array>
 #include <cstring> 
 #include <type_traits>
-
-
-
-namespace
-{
-}	// namespace
 
 namespace ble
 {
