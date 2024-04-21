@@ -3,6 +3,27 @@
 
 namespace ble
 {
+
+std::expected<uint16_t, ble::NimbleErrorCode> chr_attri_handle(uint16_t svcUUID, uint16_t chrUUID)
+{
+    const ble_uuid128_t svcUuid = make_ble_uuid128(svcUUID);
+    const ble_uuid128_t chrUuid = make_ble_uuid128(chrUUID);
+    uint16_t attributeHandle{};
+
+    NimbleErrorCode result = static_cast<NimbleErrorCode>(ble_gatts_find_chr(reinterpret_cast<const ble_uuid_t*>(&svcUuid), 
+                                                         reinterpret_cast<const ble_uuid_t*>(&chrUuid), 
+                                                         NULL, &attributeHandle));
+    if (result == NimbleErrorCode::success)
+    {
+        return attributeHandle;
+    }
+    else
+    {
+        return std::unexpected(result);
+    }
+    
+}
+
 std::expected<std::string, ble::NimbleErrorCode> current_mac_address(AddressType type)
 {
 	uint8_t addressType = static_cast<uint8_t>(type);

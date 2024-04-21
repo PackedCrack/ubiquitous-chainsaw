@@ -4,6 +4,7 @@
 #include "../../shared/common/ble_services.hpp"
 #include "../../shared/common/common.hpp"	
 #include "../../server_common.hpp"
+#include "../ble_common.hpp"
 
 
 #include <chrono>
@@ -28,6 +29,7 @@ namespace ble
 {
 CWhereAmI::CWhereAmI()
 	: m_Rssi{}
+    , m_NotifyHandle{ INVALID_ATTR_HANDLE }
     , m_pPrivateKey{ load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE) }
     , m_pClientPublicKey{ load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC) }
     , m_Characteristics{}
@@ -35,6 +37,7 @@ CWhereAmI::CWhereAmI()
 {}
 CWhereAmI::CWhereAmI(const CWhereAmI& other)
 	: m_Rssi{}
+    , m_NotifyHandle{ INVALID_ATTR_HANDLE }
     , m_pPrivateKey{ nullptr }
     , m_pClientPublicKey{ nullptr } 
     , m_Characteristics{}
@@ -54,6 +57,7 @@ CWhereAmI& CWhereAmI::operator=(const CWhereAmI& other)
 void CWhereAmI::copy(const CWhereAmI& other)
 {
     m_Rssi = other.m_Rssi;
+    m_NotifyHandle = other.m_NotifyHandle;
     m_pPrivateKey =  load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
     m_pClientPublicKey = load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC);
 	m_Characteristics = std::vector<CCharacteristic>{};
@@ -129,11 +133,25 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
                         }
 
                         pSelf->m_Rssi = rssiValue;
-                        std::printf("Rssi: %i", pSelf->m_Rssi);
+                        std::printf("Rssi: %i\n", pSelf->m_Rssi);
                         
-                        // notify
-                        //int result = ble_gatts_notify_custom(connectionHandle, 3u, NULL);
 
+                        if (pSelf->m_NotifyHandle == INVALID_ATTR_HANDLE)
+                        {
+                            auto result = chr_attri_handle(ID_SERVICE_WHEREAMI, ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI);
+                            if (!result)
+                            {
+                                LOG_FATAL("Failed to retrieve a valid chr attribute handle!");
+                            }
+                            else
+                            {
+                                pSelf->m_NotifyHandle = result.value();
+                            }
+                        }
+
+                        std::printf("Handle: %u\n",  pSelf->m_NotifyHandle);
+                        
+                        //int result = ble_gatts_notify_custom(connectionHandle, pSelf->m_NotifyHandle, NULL);
 
                         //double elapsedTime = elapsed_time(startTime);
                         //LOG_INFO_FMT("Elapsed time for write callback {}s", elapsedTime);
