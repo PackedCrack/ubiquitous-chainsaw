@@ -66,7 +66,6 @@ private:
     
     std::unreachable();
 }
-
 [[nodiscard]] constexpr const char* prot_level_to_str(ProtectionLevel level)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
