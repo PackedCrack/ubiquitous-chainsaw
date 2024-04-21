@@ -22,9 +22,10 @@ public:
 	[[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
 private:
 	[[nodiscard]] std::vector<CCharacteristic> make_characteristics(const std::shared_ptr<Profile>& pProfile);
-
-	[[nodiscard]] auto make_callback_client_query(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] CCharacteristic make_characteristic_client_query(const std::shared_ptr<Profile>& pProfile);
+	[[nodiscard]] auto make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile);
+	[[nodiscard]] CCharacteristic make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] auto make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile);
+	[[nodiscard]] CCharacteristic make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile);
 private:
     int8_t m_Rssi;
     std::unique_ptr<security::CEccPrivateKey> m_pPrivateKey = nullptr;

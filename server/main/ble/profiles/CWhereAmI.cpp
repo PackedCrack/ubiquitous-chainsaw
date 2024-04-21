@@ -5,55 +5,6 @@
 #include "../../shared/common/common.hpp"	
 #include "../../server_common.hpp"
 
-// std
-
-namespace
-{
-[[nodiscard]] auto make_callback_client_notify()
-{
-	// typedef int ble_gatt_access_fn(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
-	return [](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
-	{
-		auto operation = ble::CharacteristicAccess{ pContext->op };
-		UNHANDLED_CASE_PROTECTION_ON
-		switch (operation) 
-		{
-    	case ble::CharacteristicAccess::read: 
-    	{
-    	    std::printf("aah, notify me AGAIN!\n");
-
-            std::printf("ConnectionHandle: %u\n", connectionHandle); // is 65535 here
-
-
-            int8_t rssiValue {};
-            int rssiResult = ble_gap_conn_rssi(1u, &rssiValue);
-            if (rssiResult != ESP_OK)
-            {
-                LOG_ERROR("Failed to retrieve RSSI value");
-            }
-            std::printf("RSSI result %u \n", rssiResult);
-            std::printf("Rssi value: %d \n", rssiValue);
-
-
-            return static_cast<int32_t>(ble::NimbleErrorCode::success);
-    	}
-    	case ble::CharacteristicAccess::write:
-    	{
-            LOG_ERROR_FMT("Notify only Characteristic \"Server Auth\" recieved a Write operation from connection handle: \"{}\"",
-										connectionHandle);
-    	}
-    	} // switch
-		// cppcheck-suppress unknownMacro
-		UNHANDLED_CASE_PROTECTION_OFF
-    	return static_cast<int32_t>(ble::NimbleErrorCode::unexpectedCallbackBehavior);
-	};
-}   
-[[nodiscard]] ble::CCharacteristic make_characteristic_client_notify()
-{
-	return ble::make_characteristic(ble::ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI, make_callback_client_notify(), ble::CharsPropertyFlag::read, ble::CharsPropertyFlag::notify);
-}
-}	// namespace
-
 namespace ble
 {
 CWhereAmI::CWhereAmI()
@@ -101,12 +52,12 @@ ble_gatt_svc_def CWhereAmI::as_nimble_service() const
 std::vector<CCharacteristic> CWhereAmI::make_characteristics(const std::shared_ptr<Profile>& pProfile)
 {
 	std::vector<CCharacteristic> chars{};
-	chars.emplace_back(make_characteristic_client_notify());
-	chars.emplace_back(make_characteristic_client_query(pProfile));
+	chars.emplace_back(make_characteristic_demand_rssi(pProfile));
+	chars.emplace_back(make_characteristic_send_rssi(pProfile));
 
 	return chars;
 }
-auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProfile)
+auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile)
 {
 		return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int
 	{
@@ -121,11 +72,16 @@ auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProf
 				{
 					case CharacteristicAccess::write:
 					{
-                        LOG_INFO("WHEREAMI write callback event!");
-    	                if (pContext->om == nullptr || pContext->om->om_len < 1)
+                        LOG_INFO("WHERE_AM_I WRITE EVENT!");
+    	                if (pContext->om == nullptr)
     	                {
-    	                    LOG_WARN("NO DATA WAS WRITTEN!");
+    	                    LOG_WARN("os_mbuf is invalid!");
     	                    return static_cast<int32_t>(ble::NimbleErrorCode::invalidArguments);
+    	                }
+                        if (pContext->om->om_len < 1)
+    	                {
+    	                    LOG_WARN("No data was written to the os_mbuf!");
+    	                    return static_cast<int32_t>(ble::NimbleErrorCode::toSmallBuffer);
     	                }
 
                         uint8_t* pPayloadBuffer = pContext->om->om_databuf;
@@ -134,18 +90,27 @@ auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProf
                         const uint8_t PAYLOAD_END = PAYLOAD_OFFSET + PAYLOAD_LEN;
 
                         std::span<uint8_t> packetPayload(pPayloadBuffer + PAYLOAD_OFFSET, PAYLOAD_LEN);
+                        
+                        //bool verifyResult = pSelf->m_pClientPublicKey->verify_hash(signature, hash);
+                        //if (!verifyResult)
+                        //{
+                        //    LOG_WARN("Was unable to verify the clients signature!");
+                        //    return static_cast<int32_t>(ble::NimbleErrorCode::insufficientAuthen);
+                        //}
 
-                        std::printf("Received payload: \n");
-                        for (auto&& bite : packetPayload) 
+                        // get rssi value
+                        int8_t rssiValue {};
+                        NimbleErrorCode rssiResult = static_cast<NimbleErrorCode>(ble_gap_conn_rssi(connectionHandle, &rssiValue));
+                        if (rssiResult != NimbleErrorCode::success)
                         {
-                            std::printf("0x%02x\n", bite);
+                            LOG_WARN_FMT("Unable to retrieve rssi value. Reason: {}", static_cast<int32_t>(rssiResult));
+                            return static_cast<int32_t>(rssiResult);
                         }
 
-                        //const int MAX_UUID_LEN = 128;
-                        //char uuidBuf [MAX_UUID_LEN];
-                        //std::string_view charUuid = ble_uuid_to_str((const ble_uuid_t* )&pContext->chr->uuid, uuidBuf);
-                        //LOG_INFO_FMT("{} bytes was written to characteristic={}", DATA_LEN, charUuid);
-            
+                        pSelf->m_Rssi = rssiValue;
+                        std::printf("Rssi: %i", pSelf->m_Rssi);
+                        
+                        // notify
                         //int result = ble_gatts_notify_custom(connectionHandle, 3u, NULL);
                         return static_cast<int32_t>(ble::NimbleErrorCode::success);
 					}
@@ -164,8 +129,60 @@ auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProf
 		return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
 	};
 }
-CCharacteristic CWhereAmI::make_characteristic_client_query(const std::shared_ptr<Profile>& pProfile)
+CCharacteristic CWhereAmI::make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI, make_callback_client_query(pProfile), CharsPropertyFlag::write);
+	return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI, make_callback_demand_rssi(pProfile), CharsPropertyFlag::write);
 }
+
+
+auto CWhereAmI::make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile)
+{
+        // cppcheck-suppress constParameterPointer
+		return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int
+	{
+		std::shared_ptr<Profile> pProfile = wpProfile.lock();
+		if(pProfile)
+		{
+			const CWhereAmI* pSelf = std::get_if<CWhereAmI>(pProfile.get());
+			if(pSelf != nullptr)
+			{
+				auto operation = CharacteristicAccess{ pContext->op };
+				switch (operation) 
+				{
+					case CharacteristicAccess::read:
+					{
+                        LOG_INFO("WHERE_AM_I NOTIFY EVENT!");
+
+
+                        //NimbleErrorCode code = append_read_data(pContext->om, rssiValue);
+                        //if(code != NimbleErrorCode::success)
+                        //{
+                        //    LOG_ERROR_FMT("Characteristic callback for Server Auth failed to append its data to the client: \"{}\"", 
+                        //                    nimble_error_to_string(code));
+                        //}
+
+
+                        return static_cast<int32_t>(ble::NimbleErrorCode::success);
+					}
+        		}
+			}
+			else
+			{
+				LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
+			}
+		}
+		else
+		{
+			LOG_WARN("Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
+		}
+
+		return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
+	};
+}
+CCharacteristic CWhereAmI::make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile)
+{
+	return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI, make_callback_send_rssi(pProfile), CharsPropertyFlag::notify);
+}
+
+
 }	// namespace ble
