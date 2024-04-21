@@ -57,32 +57,37 @@ namespace
 namespace ble
 {
 CWhereAmI::CWhereAmI()
-	: m_Characteristics{}
+	: m_Rssi{}
+    , m_pPrivateKey{ load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE) }
+    , m_pClientPublicKey{ load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC) }
+    , m_Characteristics{}
 	, m_Service{}
 {}
 CWhereAmI::CWhereAmI(const CWhereAmI& other)
-	: m_Characteristics{}
+	: m_Rssi{}
+    , m_pPrivateKey{ nullptr }
+    , m_pClientPublicKey{ nullptr } 
+    , m_Characteristics{}
 	, m_Service{}
-{}
+{
+    copy(other);
+}
 CWhereAmI& CWhereAmI::operator=(const CWhereAmI& other)
 {
 	if(this != &other)
 	{
-		m_Characteristics = std::vector<CCharacteristic>{};
-		m_Service = CGattService{};
+        copy(other);
 	}
 
 	return *this;
 }
-CWhereAmI& CWhereAmI::operator=(CWhereAmI&& other) noexcept
+void CWhereAmI::copy(const CWhereAmI& other)
 {
-	if(this != &other)
-	{
-		m_Characteristics = std::move(other.m_Characteristics);
-		m_Service = std::move(other.m_Service);
-	}
-
-	return *this;
+    m_Rssi = other.m_Rssi;
+    m_pPrivateKey =  load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
+    m_pClientPublicKey = load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC);
+	m_Characteristics = std::vector<CCharacteristic>{};
+    m_Service = CGattService{};
 }
 void CWhereAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 {
@@ -112,47 +117,39 @@ auto CWhereAmI::make_callback_client_query(const std::shared_ptr<Profile>& pProf
 			if(pSelf != nullptr)
 			{
 				auto operation = CharacteristicAccess{ pContext->op };
-				UNHANDLED_CASE_PROTECTION_ON
 				switch (operation) 
 				{
-					case CharacteristicAccess::read:
-					{
-                        LOG_ERROR_FMT("Write only Characteristic \"Server Auth\" recieved a Write operation from connection handle: \"{}\"",
-										connectionHandle);
-					}
 					case CharacteristicAccess::write:
 					{
-                        //LOG_INFO("BLE_GATT_ACCESS_OP_WRITE_CHR");
-    	                //if (pContext->om == nullptr || pContext->om->om_len < 1)
-    	                //{
-    	                //    LOG_WARN("NO DATA WAS WRITTEN!");
-    	                //    return static_cast<int32_t>(ble::NimbleErrorCode::invalidArguments);
-    	                //}
-                        //uint8_t* pDataBuffer = pContext->om->om_databuf;
-                        //// TODO check if this is always the case! 
-                        //const uint16_t DATA_OFFSET = 19;
-                        //const uint8_t NUM_DATA = *pDataBuffer;
-                        //const uint8_t DATA_END = DATA_OFFSET + NUM_DATA;
-                        //// Print Size of data written to which characteristic
+                        LOG_INFO("WHEREAMI write callback event!");
+    	                if (pContext->om == nullptr || pContext->om->om_len < 1)
+    	                {
+    	                    LOG_WARN("NO DATA WAS WRITTEN!");
+    	                    return static_cast<int32_t>(ble::NimbleErrorCode::invalidArguments);
+    	                }
+
+                        uint8_t* pPayloadBuffer = pContext->om->om_databuf;
+                        const uint16_t PAYLOAD_OFFSET = 19;
+                        const uint8_t PAYLOAD_LEN = *pPayloadBuffer;
+                        const uint8_t PAYLOAD_END = PAYLOAD_OFFSET + PAYLOAD_LEN;
+
+                        std::span<uint8_t> packetPayload(pPayloadBuffer + PAYLOAD_OFFSET, PAYLOAD_LEN);
+
+                        std::printf("Received payload: \n");
+                        for (auto&& bite : packetPayload) 
+                        {
+                            std::printf("0x%02x\n", bite);
+                        }
+
                         //const int MAX_UUID_LEN = 128;
                         //char uuidBuf [MAX_UUID_LEN];
                         //std::string_view charUuid = ble_uuid_to_str((const ble_uuid_t* )&pContext->chr->uuid, uuidBuf);
-                        //LOG_INFO_FMT("{} bytes was written to characteristic={}", NUM_DATA, charUuid);
-                        //// Print the written value to terminal
-                        //for (int i = 0; i < DATA_END; ++i)
-                        //{
-                        //    std::printf("Data read[%d]: 0x%02x\n", i, pDataBuffer[i]);
-                        //}
-	
-                        std::printf("oohh, write me AGAIN!\n");
-                        std::printf("ConnectionHandle: %u\n", connectionHandle);
-
-                        int result = ble_gatts_notify_custom(connectionHandle, 3u, NULL);
-                        std::printf("ble_gatts_notify() Result: %u\n", result);
+                        //LOG_INFO_FMT("{} bytes was written to characteristic={}", DATA_LEN, charUuid);
+            
+                        //int result = ble_gatts_notify_custom(connectionHandle, 3u, NULL);
                         return static_cast<int32_t>(ble::NimbleErrorCode::success);
 					}
         		}
-				UNHANDLED_CASE_PROTECTION_OFF
 			}
 			else
 			{
