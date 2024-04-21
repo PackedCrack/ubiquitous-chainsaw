@@ -17,6 +17,7 @@ namespace ble
 
 constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
 constexpr int SUCCESS = 0;
+constexpr uint16_t INVALID_ATTR_HANDLE = 0u;
 
 enum class AddressType : uint8_t
 {
@@ -161,4 +162,5 @@ requires common::const_buffer<buffer_t>
 }
 
 [[nodiscard]] std::expected<std::string, ble::NimbleErrorCode> current_mac_address(AddressType type);
+[[nodiscard]] std::expected<uint16_t, ble::NimbleErrorCode> chr_attri_handle(uint16_t svcUUID, uint16_t chrUUID);
 }	  // namespace ble
