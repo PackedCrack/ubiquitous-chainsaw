@@ -240,7 +240,7 @@ CGui::CGui()
     load_layout();
     
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->AddFontFromMemoryTTF(FontLouisGeorge.data(), FontLouisGeorge.size(), 18);
+    io.Fonts->AddFontFromMemoryTTF(FontLouisGeorge.data(), static_cast<int32_t>(FontLouisGeorge.size()), 18);
 }
 CGui::~CGui()
 {

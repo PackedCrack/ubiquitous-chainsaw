@@ -20,7 +20,7 @@ CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
     , m_pMutex{ std::make_unique<std::mutex>() }
     , m_ScanTimer{}
 {
-    new_scan();
+    recreate_list();
 }
 CDeviceList::~CDeviceList()
 {
@@ -143,7 +143,7 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
         m_pScanner->end_scan();
     };
 }
-void CDeviceList::new_scan()
+void CDeviceList::recreate_list()
 {
     ASSERT(!m_pScanner->scanning(), "Already scanning!");
     
@@ -185,7 +185,7 @@ void CDeviceList::device_list()
             {
                 if (m_pAuthenticator->server_identified())
                 {
-                    if (m_pAuthenticator->server_address() == address)
+                    if (m_pAuthenticator->server_address() == deviceInfo.address.value())
                     {
                         ImGui::SameLine();
                         ImGui::TextColored(ImVec4(0.36f, 0.72f, 0.0f, 1.0f), "Authenticated");

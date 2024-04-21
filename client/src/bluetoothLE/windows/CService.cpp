@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-03-01.
 //
 #include "CService.hpp"
-#include "../ble_common.hpp"
+#include "win_ble_common.hpp"
 
 
 namespace ble
@@ -14,6 +14,18 @@ CService::awaitable_t CService::make(const winrt::Windows::Devices::Bluetooth::G
     co_await sv.query_characteristics();
     
     co_return sv;
+}
+CService::~CService()
+{
+    if (m_pService)
+    {
+        LOG_INFO_FMT("Use count: {}", m_pService.use_count());
+
+        if (m_pService.use_count() == 1)
+            m_pService->Close();
+    }
+        
+            
 }
 CService::CService(GattDeviceService service)
     : m_pService{ std::make_shared<GattDeviceService>(std::move(service)) }
@@ -58,7 +70,7 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Characteristics from Service with UUID: \"{}\"",
-                      gatt_communication_status_to_str(result.Status()),
+                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
                       uuid_as_str());
     }
 }

@@ -69,7 +69,6 @@ requires std::integral<std::remove_cvref_t<small_t>> && std::integral<std::remov
     ASSERT(large <= (std::numeric_limits<small_t>::max)(), "Overflow or wraparound!");
     return static_cast<small_t>(large);
 };
-
 template<typename enum_t>
 requires std::is_enum_v<enum_t>
 [[nodiscard]] constexpr bool enum_to_bool(enum_t&& properties)

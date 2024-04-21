@@ -1,6 +1,7 @@
 # TODO: Checks that we are configuring for windows
 
 SET(WINDOWS_BLE_SRCS
+		win_ble_common.hpp
 	CScanner.cpp
 	CScanner.hpp
 	CDevice.cpp

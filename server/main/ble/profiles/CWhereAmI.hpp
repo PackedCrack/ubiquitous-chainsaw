@@ -4,6 +4,7 @@
 #include "profiles.hpp"
 #include <memory>
 
+
 namespace ble
 {
 class CWhereAmI

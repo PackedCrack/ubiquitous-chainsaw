@@ -34,10 +34,10 @@ private:
     void copy(const CDeviceList& other);
 public:
     void push();
+    void recreate_list();
     [[nodiscard]] std::vector<ble::DeviceInfo> device_infos() const;
 private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
-    void new_scan();
     void authentication_status();
     void device_list();
 private:
