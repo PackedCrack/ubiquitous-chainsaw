@@ -5,6 +5,25 @@
 #include "../../shared/common/common.hpp"	
 #include "../../server_common.hpp"
 
+
+#include <chrono>
+namespace
+{
+
+//std::chrono::steady_clock::time_point startTime;
+//
+//std::chrono::steady_clock::time_point start_timer() {
+//    return std::chrono::steady_clock::now();
+//}
+//double elapsed_time(const std::chrono::steady_clock::time_point& start) {
+//    std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
+//    std::chrono::duration<double> elapsedTime = endTime - start;
+//    return elapsedTime.count(); 
+//}
+
+} // namespace
+
+
 namespace ble
 {
 CWhereAmI::CWhereAmI()
@@ -72,6 +91,8 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
 				{
 					case CharacteristicAccess::write:
 					{
+                        //startTime = start_timer();
+
                         LOG_INFO("WHERE_AM_I WRITE EVENT!");
     	                if (pContext->om == nullptr)
     	                {
@@ -112,6 +133,10 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
                         
                         // notify
                         //int result = ble_gatts_notify_custom(connectionHandle, 3u, NULL);
+
+
+                        //double elapsedTime = elapsed_time(startTime);
+                        //LOG_INFO_FMT("Elapsed time for write callback {}s", elapsedTime);
                         return static_cast<int32_t>(ble::NimbleErrorCode::success);
 					}
         		}
