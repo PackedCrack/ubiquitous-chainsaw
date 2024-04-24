@@ -1,0 +1,152 @@
+---
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: "true"
+AlignConsecutiveAssignments: "false"
+AlignConsecutiveDeclarations: "false"
+AlignEscapedNewlines: Right
+AlignOperands: Align
+AlignTrailingComments: "true"
+AllowAllArgumentsOnNextLine: "true"
+AllowAllConstructorInitializersOnNextLine: "false"
+AllowAllParametersOfDeclarationOnNextLine: "true"
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: "false"
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: "false"
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: "false"
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BreakAfterJavaFieldAnnotations: "true"
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Custom
+BreakBeforeTernaryOperators: "true"
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeComma
+BreakStringLiterals: "true"
+ColumnLimit: "140"
+CompactNamespaces: "false"
+ConstructorInitializerAllOnOneLineOrOnePerLine: "true"
+ConstructorInitializerIndentWidth: "4"
+ContinuationIndentWidth: "0"
+Cpp11BracedListStyle: "false"
+DerivePointerAlignment: "false"
+DisableFormat: "false"
+ExperimentalAutoDetectBinPacking: "false"
+FixNamespaceComments: "true"
+IncludeBlocks: Preserve
+IndentCaseLabels: "false"
+IndentPPDirectives: BeforeHash
+IndentWidth: "4"
+IndentWrappedFunctionNames: "true"
+KeepEmptyLinesAtTheStartOfBlocks: "false"
+Language: Cpp
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: Inner
+PointerAlignment: Left
+ReflowComments: "true"
+SortIncludes: Never
+SpaceAfterCStyleCast: "true"
+SpaceAfterLogicalNot: "false"
+SpaceAfterTemplateKeyword: "false"
+SpaceBeforeAssignmentOperators: "true"
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: "true"
+SpaceBeforeInheritanceColon: "true"
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: "true"
+SpaceInEmptyParentheses: "false"
+SpacesBeforeTrailingComments: "4"
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: "false"
+SpacesInContainerLiterals: "false"
+SpacesInParentheses: "false"
+SpacesInSquareBrackets: "false"
+Standard: Latest
+TabWidth: "4"
+UseTab: Never
+BraceWrapping:
+  BeforeLambdaBody: "true"
+  SplitEmptyFunction: false
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterControlStatement: Always
+  AfterNamespace: true
+  AfterObjCDeclaration: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+  BeforeWhile: false
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Always
+PackConstructorInitializers: Never
+BinPackParameters: false
+PPIndentWidth: 0
+RemoveSemicolon: false
+RequiresClausePosition: OwnLine
+RequiresExpressionIndentation: OuterScope
+SeparateDefinitionBlocks: Never
+SortUsingDeclarations: Lexicographic
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeCaseColon: false
+SpaceBeforeJsonColon: false
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+SpacesInParensOptions:
+  InConditionalStatements: false
+  InCStyleCasts: false
+  InEmptyParentheses: false
+  Other: false
+SpacesInParens: Custom
+RemoveParentheses: MultipleParentheses
+RemoveBracesLLVM: false
+ReferenceAlignment: Pointer
+QualifierAlignment: Left
+LineEnding: DeriveLF
+LambdaBodyIndentation: Signature
+KeepEmptyLinesAtEOF: false
+IntegerLiteralSeparator:
+  Binary: 4
+  BinaryMinDigits: 5
+  DecimalMinDigits: 4
+  Decimal: 3
+  HexMinDigits: 3
+  Hex: 2
+InsertNewlineAtEOF: true
+InsertBraces: true
+IndentRequiresClause: false
+IndentGotoLabels: false
+IndentExternBlock: AfterExternBlock
+IndentCaseBlocks: false
+IndentAccessModifiers: false
+BreakBeforeInlineASMColon: Never
+BreakBeforeConceptDeclarations: Always
+BreakArrays: true
+BreakAfterAttributes: Never
+BreakAdjacentStringLiterals: true
+BracedInitializerIndentWidth: 4
+BitFieldColonSpacing: After
+AllowShortEnumsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: true
+AllowBreakBeforeNoexceptSpecifier: Never
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AlignCaseColons: false
+  AcrossComments: true
+  AcrossEmptyLines: true
+AlignConsecutiveBitFields:
+  Enabled: false
+AlignArrayOfStructures: Right
