@@ -27,11 +27,11 @@ public:
     CNimble& operator=(const CNimble& other) = delete;
     CNimble& operator=(CNimble&& other) = default;
 public:
-	static void sync_callback();
+    static void sync_callback();
 private:
-	[[nodiscard]] static std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>> synchronization_primitives();
+    [[nodiscard]] static std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>> synchronization_primitives();
 private:
-	std::unique_ptr<CGap> m_pGap = nullptr;
-	std::unique_ptr<CProfileCache> m_pProfileCache = nullptr;
+    std::unique_ptr<CGap> m_pGap = nullptr;
+    std::unique_ptr<CProfileCache> m_pProfileCache = nullptr;
 };
 } // namespace ble

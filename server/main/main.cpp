@@ -29,29 +29,29 @@ namespace
 void init_singletons()
 {
     auto const crypto = security::CWolfCrypt::instance();
-	if (!crypto)
-	{
-		LOG_INFO("Tried to initilize WolfCrypt, but it has already been initlized!");
-	}
-	[[maybe_unused]] const storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
+    if (!crypto)
+    {
+        LOG_INFO("Tried to initilize WolfCrypt, but it has already been initlized!");
+    }
+    [[maybe_unused]] const storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
 }
 } // namespace
 
 void print_chip_info()
 {
-	sys::CSystem system{};
-	sys::CChip chip = system.chip_info();
+    sys::CSystem system{};
+    sys::CChip chip = system.chip_info();
 
-	std::printf("\nChip information");
-	std::printf("\nRevision: %s", chip.revision().c_str());
-	std::printf("\nNumber of Cores: %i", chip.cores());
-	std::printf("\nFlash Memory: %s", chip.embedded_psram() ? "Embedded" : "External");
-	std::printf("\nPSRAM: %s", chip.embedded_flash_memory() ? "Embedded" : "External");
-	std::printf("\nSupports Wifi 2.4ghz: %s", chip.wifi() ? "True" : "False");
-	std::printf("\nSupports Bluetooth LE: %s", chip.bluetooth_le() ? "True" : "False");
-	std::printf("\nSupports Bluetooth Classic: %s", chip.bluetooth_classic() ? "True" : "False");
-	std::printf("\nSupports IEEE 802.15.4: %s", chip.IEEE_802_15_4() ? "True" : "False");
-	std::printf("\nCurrent minimum free heap: %u bytes\n\n", static_cast<unsigned int>(system.min_free_heap()));
+    std::printf("\nChip information");
+    std::printf("\nRevision: %s", chip.revision().c_str());
+    std::printf("\nNumber of Cores: %i", chip.cores());
+    std::printf("\nFlash Memory: %s", chip.embedded_psram() ? "Embedded" : "External");
+    std::printf("\nPSRAM: %s", chip.embedded_flash_memory() ? "Embedded" : "External");
+    std::printf("\nSupports Wifi 2.4ghz: %s", chip.wifi() ? "True" : "False");
+    std::printf("\nSupports Bluetooth LE: %s", chip.bluetooth_le() ? "True" : "False");
+    std::printf("\nSupports Bluetooth Classic: %s", chip.bluetooth_classic() ? "True" : "False");
+    std::printf("\nSupports IEEE 802.15.4: %s", chip.IEEE_802_15_4() ? "True" : "False");
+    std::printf("\nCurrent minimum free heap: %u bytes\n\n", static_cast<unsigned int>(system.min_free_heap()));
 }
 
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/performance/speed.html#measuring-performance
@@ -59,13 +59,13 @@ void measure_important_function(void) {
     const unsigned MEASUREMENTS = 5000;
     uint64_t start = esp_timer_get_time();
 
-	using namespace storage;
-	[[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
-	[[maybe_unused]] std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
+    using namespace storage;
+    [[maybe_unused]] const CNonVolatileStorage& nvs = CNonVolatileStorage::instance();
+    [[maybe_unused]] std::optional<CNonVolatileStorage::CReader> reader = CNonVolatileStorage::CReader::make_reader("STORAGE");
 
     for (int retries = 0; retries < MEASUREMENTS; retries++) 
-	{
-		//CNonVolatileStorage::ReadBinaryResult result = reader.value().read_binary("BinaryData");
+    {
+    //CNonVolatileStorage::ReadBinaryResult result = reader.value().read_binary("BinaryData");
     }
 
     uint64_t end = esp_timer_get_time();
@@ -77,27 +77,27 @@ void measure_important_function(void) {
 
 void write_key_to_nvs(std::string_view nameSpace, std::string_view key, const std::vector<uint8_t>& keyData)
 {
-	std::optional<storage::CNonVolatileStorage::CWriter> writer = storage::CNonVolatileStorage::CWriter::make_writer(nameSpace);
-	if (!writer.has_value())
-	{
-		LOG_FATAL("Failed to initilize NVS CWriter");
-	}
+    std::optional<storage::CNonVolatileStorage::CWriter> writer = storage::CNonVolatileStorage::CWriter::make_writer(nameSpace);
+    if (!writer.has_value())
+    {
+        LOG_FATAL("Failed to initilize NVS CWriter");
+    }
 
-	auto writerResult = writer.value().write_binary(key, keyData);
-	if (writerResult.code != storage::NvsErrorCode::success)
-	{
-		LOG_FATAL("FAILED TO WRITE ENC KEY");
-	}
+    auto writerResult = writer.value().write_binary(key, keyData);
+    if (writerResult.code != storage::NvsErrorCode::success)
+    {
+        LOG_FATAL("FAILED TO WRITE ENC KEY");
+    }
 }
 
 storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs(std::string_view nameSpace, std::string_view key)
 {
-	std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(nameSpace);
-	if (!reader.has_value())
-	{
-		LOG_FATAL("Failed to initilize NVS CReader");
-	}
-	return reader.value().read_binary(key);
+    std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(nameSpace);
+    if (!reader.has_value())
+    {
+        LOG_FATAL("Failed to initilize NVS CReader");
+    }
+    return reader.value().read_binary(key);
 }
 
 
@@ -105,12 +105,12 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
 {
     return [nameSpace, key]() -> std::expected<std::vector<security::byte>, std::string>
     {
-		auto readResult = read_key_from_nvs(nameSpace, key);
-		if (readResult.code != storage::NvsErrorCode::success)
-		{
-			LOG_FATAL("Unable to read servers private encryption key");
-		}
-		return std::expected<std::vector<security::byte>, std::string> {std::move(readResult.data.value())};
+        auto readResult = read_key_from_nvs(nameSpace, key);
+        if (readResult.code != storage::NvsErrorCode::success)
+        {
+            LOG_FATAL("Unable to read servers private encryption key");
+        }
+        return std::expected<std::vector<security::byte>, std::string> {std::move(readResult.data.value())};
     };
 }
 
@@ -161,32 +161,32 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
 
 extern "C" void app_main(void)
 {
-	sys::CSystem system{};
-	try 
-	{
-		//print_chip_info();
-		init_singletons();
+    sys::CSystem system{};
+    try 
+    {
+        //print_chip_info();
+        init_singletons();
 
 
-		//verify_ecc_keys();
-		//write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY, SERVER_PRIV);
+        //verify_ecc_keys();
+        //write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PRIV_KEY, SERVER_PRIV);
         //write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_PUB_KEY, server_public);
         //write_key_to_nvs(NVS_ENC_NAMESPACE, NVS_ENC_CLIENT_KEY, client_public);
 
-		
-		using namespace storage;
-		ble::CNimble nimble {};
+        
+        using namespace storage;
+        ble::CNimble nimble {};
 
-		while (true)
-		{
-			vTaskDelay(pdMS_TO_TICKS(1000)); // milisecs
-		}
+        while (true)
+        {
+        	vTaskDelay(pdMS_TO_TICKS(1000)); // milisecs
+        }
     } 
-	catch (const exception::fatal_error& error) 
-	{
-		LOG_ERROR_FMT("Caught exception: {}", error.what());
+    catch (const exception::fatal_error& error) 
+    {
+        LOG_ERROR_FMT("Caught exception: {}", error.what());
 //
-		// TODO:: we should do more than restart here
-		system.restart();
+        // TODO:: we should do more than restart here
+        system.restart();
     }
 }

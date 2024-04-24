@@ -14,35 +14,34 @@
 
 namespace ble
 {
-
 constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
 constexpr int SUCCESS = 0;
 constexpr uint16_t INVALID_ATTR_HANDLE = 0u;
 
 enum class AddressType : uint8_t
 {
-	publicMac = BLE_ADDR_PUBLIC,
-	randomMac = BLE_ADDR_RANDOM,
-	invalid = INVALID_ADDRESS_TYPE
+    publicMac = BLE_ADDR_PUBLIC,
+    randomMac = BLE_ADDR_RANDOM,
+    invalid = INVALID_ADDRESS_TYPE
 };
 [[nodiscard]] constexpr std::string_view address_type_to_str(AddressType type)
 {
-	UNHANDLED_CASE_PROTECTION_ON
-	switch(type)
-	{
-		case AddressType::publicMac: { return "publicMac"; }
-		case AddressType::randomMac: { return "randomMac"; }
-		case AddressType::invalid: { return "invalid"; }
-	}
-	UNHANDLED_CASE_PROTECTION_OFF
+    UNHANDLED_CASE_PROTECTION_ON
+    switch(type)
+    {
+        case AddressType::publicMac: { return "publicMac"; }
+        case AddressType::randomMac: { return "randomMac"; }
+        case AddressType::invalid: { return "invalid"; }
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
 
-	__builtin_unreachable();
+    __builtin_unreachable();
 }
 enum class NimbleErrorCode : int32_t
 {
-	success = SUCCESS, // (not defined by nimble)
+    success = SUCCESS, // (not defined by nimble)
     temporaryFailure = BLE_HS_EAGAIN, // Temporary failure; try again
-	inProgressOrCompleted = BLE_HS_EALREADY, // Operation already in progress or completed
+    inProgressOrCompleted = BLE_HS_EALREADY, // Operation already in progress or completed
     invalidArguments = BLE_HS_EINVAL, // One or more arguments are invalid
     toSmallBuffer = BLE_HS_EMSGSIZE, //The provided buffer is too small
     noEntry = BLE_HS_ENOENT, // No entry matching the specified criteria
@@ -78,8 +77,8 @@ enum class EspErrorCode : int32_t
     success = ESP_OK, /*!< esp_err_t value indicating success (no error) */
     fail = ESP_FAIL, /*!< Generic esp_err_t code indicating failure */
     noMemory = ESP_ERR_NO_MEM, /*!< Out of memory */
-	invalidArg = ESP_ERR_INVALID_ARG, /*!< Invalid argument */
-	invalidState = ESP_ERR_INVALID_STATE, /*!< Invalid state */
+    invalidArg = ESP_ERR_INVALID_ARG, /*!< Invalid argument */
+    invalidState = ESP_ERR_INVALID_STATE, /*!< Invalid state */
     invalidSize = ESP_ERR_INVALID_SIZE, /*!< Invalid size */
     resourceNotFound = ESP_ERR_NOT_FOUND, /*!< Requested resource not found */
     operationNotSupported = ESP_ERR_NOT_SUPPORTED, /*!< Operation or feature not supported */
@@ -127,40 +126,38 @@ enum class EspErrorCode : int32_t
         case NimbleErrorCode::preemptedOperation: { return "Operation preempted"; }
         case NimbleErrorCode::disabledFeature: { return "FDisabled feature"; }
         case NimbleErrorCode::operationStalled: { return "Operation stalled"; }
-	}
-	UNHANDLED_CASE_PROTECTION_OFF
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
 
-	__builtin_unreachable();
+    __builtin_unreachable();
 }
 [[nodiscard]] inline ble_uuid128_t make_ble_uuid128(uint16_t uniqueValue)
 {
-	ble_uuid128_t uuid{};
-	uuid.u.type = BLE_UUID_TYPE_128;
-  
+    ble_uuid128_t uuid{};
+    uuid.u.type = BLE_UUID_TYPE_128;
+    
     ble::UUID base = BaseUUID;
     ble::UUID::apply_custom_id(base, uniqueValue);
     std::reverse(std::begin(base.data), std::end(base.data));
 
     static_assert(std::is_trivially_copy_constructible_v<decltype(uuid)>);
-  	static_assert(std::is_trivially_copyable_v<decltype(BaseUUID)>);
-	static_assert(ARRAY_SIZE(uuid.value) == sizeof(decltype(BaseUUID)));
+    static_assert(std::is_trivially_copyable_v<decltype(BaseUUID)>);
+    static_assert(ARRAY_SIZE(uuid.value) == sizeof(decltype(BaseUUID)));
     // cppcheck-suppress sizeofDivisionMemfunc
     std::memcpy(&(uuid.value[0]), base.data.data(), ARRAY_SIZE(uuid.value));
 
-	return uuid;
+    return uuid;
 }
-
-
 template<typename buffer_t>
 requires common::const_buffer<buffer_t>
 [[nodiscard]] NimbleErrorCode append_read_data(os_mbuf* om, buffer_t&& data)
 {
-	ASSERT(data.size() <= UINT16_MAX, "Buffer is too big!");
-	ASSERT(om != nullptr, "A os buffer is required!");
+    ASSERT(data.size() <= UINT16_MAX, "Buffer is too big!");
+    ASSERT(om != nullptr, "A os buffer is required!");
 
-	return NimbleErrorCode{ os_mbuf_append(om, data.data(), static_cast<uint16_t>(data.size())) };
+    return NimbleErrorCode{ os_mbuf_append(om, data.data(), static_cast<uint16_t>(data.size())) };
 }
 
 [[nodiscard]] std::expected<std::string, ble::NimbleErrorCode> current_mac_address(AddressType type);
 [[nodiscard]] std::expected<uint16_t, ble::NimbleErrorCode> chr_attri_handle(uint16_t svcUUID, uint16_t chrUUID);
-}	  // namespace ble
+}   // namespace ble
