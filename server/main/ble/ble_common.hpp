@@ -7,9 +7,14 @@
 #include <string_view>
 #include <array>
 // nimble
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "host/ble_uuid.h"
 #include "host/ble_gatt.h"
 #include "host/ble_hs.h"
+#pragma GCC diagnostic pop
 
 
 namespace ble

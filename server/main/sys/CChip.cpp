@@ -1,8 +1,6 @@
 #include "CChip.hpp"
-
 // third_party
 #include "esp_chip_info.h"
-//#include "freertos/FreeRTOS.h"
 
 
 namespace sys

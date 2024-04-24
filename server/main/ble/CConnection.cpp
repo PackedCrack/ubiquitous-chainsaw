@@ -2,7 +2,11 @@
 // std
 #include <utility>
 // ble
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wshadow"
 #include "host/../../src/ble_hs_conn_priv.h"
+#pragma GCC diagnostic pop
 
 
 extern ble_hs_conn* ble_hs_conn_find(uint16_t conn_handle);

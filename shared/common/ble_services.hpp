@@ -12,8 +12,8 @@ struct UUID
     
     static constexpr void apply_custom_id(UUID& uuid, uint16_t id)
     {
-        uuid.data[2] = (id & 0xFF00) >> 8;
-        uuid.data[3] = id & 0x00FF;
+        uuid.data[2] = static_cast<uint8_t>((id & 0xFF00) >> 8);
+        uuid.data[3] = static_cast<uint8_t>(id & 0x00FF);
     }
     [[nodiscard]] friend bool operator==(const UUID& lhs, const UUID& rhs)
     {

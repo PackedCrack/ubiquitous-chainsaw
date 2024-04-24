@@ -13,7 +13,7 @@ namespace
     // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_eccpublickeytoder
     WCResult result = wc_EccPublicKeyToDer(&key, buffer.data(), common::assert_down_cast<word32>(buffer.size()), TRUE);
     assert(result > 0);
-    buffer.resize(result);
+    buffer.resize(static_cast<std::size_t>(result));
     
     return buffer;
 }
@@ -25,7 +25,7 @@ namespace
     // Could be this: https://www.wolfssl.com/documentation/manuals/wolfssl/group__ASN.html#function-wc_ecckeytoder
     WCResult result = wc_EccPrivateKeyToDer(&key, buffer.data(), common::assert_down_cast<word32>(buffer.size()));
     assert(result > 0);
-    buffer.resize(result);
+    buffer.resize(static_cast<std::size_t>(result));
     
     return buffer;
 }

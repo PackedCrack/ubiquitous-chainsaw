@@ -4,6 +4,7 @@
 // third_party
 #include "nvs_handle.hpp"
 
+
 namespace
 {
 void handle_read_write_constructor_error(esp_err_t error, std::string_view nameSpace)

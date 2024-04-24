@@ -1,26 +1,20 @@
 #pragma once
-/* Project */
+// project
 #include "ble_common.hpp"
 #include "CConnection.hpp"
-/* STD */
+// std
 #include <type_traits>
 #include <vector>
 #include <array>
 #include <optional>
 #include <functional>
-//#include <format> // apparently i dont have c++20
-
-//#include <utility>
-/* BLE */
+// nimble
 #include "host/ble_hs_adv.h"
 #include "host/ble_gap.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "host/ble_uuid.h"
 #include "host/util/util.h"
-
-
-//#include "nimble/nimble_port.h"
 
 
 namespace ble
