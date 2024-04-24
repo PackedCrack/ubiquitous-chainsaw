@@ -162,6 +162,7 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
 extern "C" void app_main(void)
 {
 	sys::CSystem system{};
+    
 	try 
 	{
 		//print_chip_info();

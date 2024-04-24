@@ -60,15 +60,15 @@ void CWhoAmI::sign_server_mac_address()
     security::CHash<security::Sha2_256> hash{ std::move(addressResult.value())};
     std::vector<security::byte> signature = m_pPrivateKey->sign_hash(rng, hash);
 
-    size_t packetSize = sizeof(ServerAuthHeader) + hash.size() + signature.size();
+    size_t packetSize = sizeof(AuthenticateHeader) + hash.size() + signature.size();
     std::vector<security::byte> packetData{ common::assert_down_cast<uint8_t>(static_cast<uint8_t>(HashType::Sha2_256)),
-                                            common::assert_down_cast<uint8_t>(sizeof(ServerAuthHeader)),
+                                            common::assert_down_cast<uint8_t>(sizeof(AuthenticateHeader)),
                                             common::assert_down_cast<uint8_t>(hash.size()),
-                                            common::assert_down_cast<uint8_t>(sizeof(ServerAuthHeader) + hash.size()),
+                                            common::assert_down_cast<uint8_t>(sizeof(AuthenticateHeader) + hash.size()),
                                             common::assert_down_cast<uint8_t>(signature.size()) };
     packetData.resize(packetSize);
-    std::memcpy(packetData.data() + sizeof(ServerAuthHeader), hash.data(), hash.size());
-    std::memcpy((packetData.data() + hash.size() + sizeof(ServerAuthHeader)), signature.data(), signature.size() * sizeof(security::byte));
+    std::memcpy(packetData.data() + sizeof(AuthenticateHeader), hash.data(), hash.size());
+    std::memcpy((packetData.data() + hash.size() + sizeof(AuthenticateHeader)), signature.data(), signature.size() * sizeof(security::byte));
     
     m_SignedMacData = std::move(packetData);
     if (m_SignedMacData.empty())

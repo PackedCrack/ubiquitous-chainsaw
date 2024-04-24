@@ -32,11 +32,39 @@ public:
     [[nodiscard]] static awaitable_t make(uint64_t address);
     CDevice() = default;
     ~CDevice() = default;
-    CDevice(const CDevice& other) = default;
-    CDevice(CDevice&& other) noexcept = default;
-    CDevice& operator=(const CDevice& other) = default;
-    CDevice& operator=(CDevice&& other) = default;
+    CDevice(const CDevice& other);
+    CDevice(CDevice&& other) noexcept;
+    CDevice& operator=(const CDevice& other);
+    CDevice& operator=(CDevice&& other) noexcept;
+private:
+    void copy(const CDevice& other);
+    void move(CDevice& other);
 public:
+    template<typename invokable_t>
+    requires std::invocable<invokable_t, ConnectionStatus>
+    void set_connection_changed_cb(invokable_t&& cb)
+    {
+        m_ConnectionChanged = std::forward<invokable_t>(cb);
+        m_pDevice->ConnectionStatusChanged(
+        [this](
+            const winrt::Windows::Devices::Bluetooth::BluetoothLEDevice& device, 
+            [[maybe_unused]] const winrt::Windows::Foundation::IInspectable& inspectable)
+        {
+            using Status = winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus;
+
+            Status status = device.ConnectionStatus();
+            ConnectionStatus conStatus{};
+            if (status == Status::Connected)
+                conStatus = ConnectionStatus::connected;
+            else if (status == Status::Disconnected)
+                conStatus = ConnectionStatus::disconnected;
+            else
+                assert(false);
+
+            this->m_ConnectionChanged(conStatus);
+        });
+    }
+    [[nodiscard]] bool connected() const;
     [[nodiscard]] uint64_t address() const;
     [[nodiscard]] std::string address_as_str() const;
     [[nodiscard]] const service_container_t& services() const;
@@ -46,5 +74,6 @@ private:
 private:
     std::shared_ptr<BluetoothLEDevice> m_pDevice;
     service_container_t m_Services;
+    std::function<void(ConnectionStatus)> m_ConnectionChanged;
 };
 }   // namespace ble

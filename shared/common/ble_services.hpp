@@ -75,7 +75,7 @@ enum class HashType : uint8_t
  * within a server packet or similar context. It includes details about both
  * hash and signature blocks contained within the packet.
  */
-struct ServerAuthHeader
+struct AuthenticateHeader
 {
     uint8_t hashType = 0;         ///< Enum value for the type of hash used.
     uint8_t hashOffset = 1u;      ///< Offset where the hash data begins.
@@ -83,9 +83,9 @@ struct ServerAuthHeader
     uint8_t signatureOffset = 3u; ///< Offset where the signature data begins.
     uint8_t signatureSize = 4u;   ///< Size of the signature data in bytes.
 };
-[[nodiscard]] consteval ServerAuthHeader whoami_server_auth_header()
+[[nodiscard]] consteval AuthenticateHeader header_whoami_authenticate()
 {
-    return ServerAuthHeader{};
+    return AuthenticateHeader{};
 }
 [[nodiscard]] consteval UUID uuid_service_whoami()
 {
@@ -102,6 +102,20 @@ struct ServerAuthHeader
 static constexpr uint16_t ID_SERVICE_WHEREAMI = 0xFEED;
 static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI = 0xBEEF;
 static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI = 0xCAFE;
+struct DemandRSSIHeader
+{
+    uint8_t randomDataOffset = 0;
+    uint8_t randomDataSize = 1;
+    uint8_t hashType = 2;
+    uint8_t hashOffset = 3u;
+    uint8_t hashSize = 4u;
+    uint8_t signatureOffset = 5u;
+    uint8_t signatureSize = 6u;
+};
+[[nodiscard]] consteval DemandRSSIHeader header_whereami_demand_rssi()
+{
+    return DemandRSSIHeader{};
+}
 [[nodiscard]] consteval UUID uuid_service_whereami()
 {
     UUID uuid = BaseUUID;

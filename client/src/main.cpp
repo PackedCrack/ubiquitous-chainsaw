@@ -18,6 +18,7 @@
 #include "bluetoothLE/Scanner.hpp"
 #include "bluetoothLE/Device.hpp"
 #include "gui/CDeviceList.hpp"
+#include "common/ble_services.hpp"
 
 
 namespace
@@ -217,84 +218,165 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
+template<typename sha_t>
+[[nodiscard]] uint8_t get_sha_type_id()
+{
+    if constexpr (std::same_as<sha_t, security::Sha2_224>)
+        return std::to_underlying(ble::HashType::Sha2_224);
+    else if constexpr (std::same_as<sha_t, security::Sha2_256>)
+        return std::to_underlying(ble::HashType::Sha2_256);
+    else if constexpr (std::same_as<sha_t, security::Sha3_224>)
+        return std::to_underlying(ble::HashType::Sha3_224);
+    else if constexpr (std::same_as<sha_t, security::Sha3_256>)
+        return std::to_underlying(ble::HashType::Sha3_256);
+    else if constexpr (std::same_as<sha_t, security::Sha3_384>)
+        return std::to_underlying(ble::HashType::Sha3_384);
+    else if constexpr (std::same_as<sha_t, security::Sha3_512>)
+        return std::to_underlying(ble::HashType::Sha3_512);
+    else
+        return std::to_underlying(ble::HashType::Sha2_224);
+}
+[[nodiscard]] std::vector<byte> generate_random_block(security::CRandom& rng)
+{
+    static std::random_device rd{};
+    static std::mt19937_64 generator{ rd() };
+    static std::uniform_int_distribution<size_t> distribution{ 64u, 96u };
+    size_t blockSize = distribution(generator);
+
+    std::expected<std::vector<byte>, security::CRandom::Error> expected = rng.generate_block(blockSize);
+    if (!expected)
+    {
+        LOG_ERROR_FMT("Failed to generate random block of data of size: {}", blockSize);
+        return { 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD, 0xDE, 0xAD };
+    }
+
+    return std::move(*expected);
+}
+[[nodiscard]] std::vector<byte> insert_random_data_block(std::vector<byte>& packet, const std::vector<byte>& randomBlock)
+{
+    static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();
+
+    packet[HEADER.randomDataOffset] = sizeof(decltype(HEADER));
+    packet[HEADER.randomDataSize] = common::assert_down_cast<uint8_t>(randomBlock.size());
+
+    std::span<uint8_t> packetRandomBlock{ std::begin(packet) + packet[HEADER.randomDataOffset], packet[HEADER.randomDataSize] };
+    ASSERT(packetRandomBlock.size() == randomBlock.size(), "Buffer size mismatch when calling memcpy");
+    size_t bytesToCopy = randomBlock.size() < packetRandomBlock.size() ? randomBlock.size() : packetRandomBlock.size();
+    std::memcpy(packetRandomBlock.data(), randomBlock.data(), bytesToCopy);
+
+    return packet;
+}
+template<typename sha_t>
+    requires security::HashAlgorithm<sha_t>
+[[nodiscard]] std::vector<byte> insert_hash(std::vector<byte>& packet, const security::CHash<sha_t>& hash)
+{
+    static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();
+
+    packet[HEADER.hashOffset] = sizeof(decltype(HEADER)) + packet[HEADER.randomDataSize];
+    packet[HEADER.hashSize] = common::assert_down_cast<uint8_t>(hash.size());
+
+    std::span<uint8_t> packetHashBlock{ std::begin(packet) + packet[HEADER.hashOffset], packet[HEADER.hashSize] };
+    ASSERT(packetHashBlock.size() == hash.size(), "Buffer size mismatch when calling memcpy");
+    size_t bytesToCopy = hash.size() < packetHashBlock.size() ? hash.size() : packetHashBlock.size();
+    std::memcpy(packetHashBlock.data(), hash.data(), bytesToCopy);
+
+    return packet;
+}
+[[nodiscard]] std::vector<byte> insert_signature(std::vector<byte>& packet, const std::vector<byte>& signature)
+{
+    static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();
+
+    packet[HEADER.signatureOffset] = sizeof(decltype(HEADER)) + packet[HEADER.randomDataSize] + packet[HEADER.hashSize];
+    packet[HEADER.signatureSize] = common::assert_down_cast<uint8_t>(signature.size());
+
+    std::span<uint8_t> packetSignatureBlock{ std::begin(packet) + packet[HEADER.signatureOffset], packet[HEADER.signatureSize] };
+    ASSERT(packetSignatureBlock.size() == signature.size(), "Buffer size mismatch when calling memcpy");
+    size_t bytesToCopy = signature.size() < packetSignatureBlock.size() ? signature.size() : packetSignatureBlock.size();
+    std::memcpy(packetSignatureBlock.data(), signature.data(), bytesToCopy);
+
+    return packet;
+}
+[[nodiscard]] std::vector<byte> make_packet_demand_rssi(security::CEccPrivateKey* pPrivateKey)
+{
+    using sha_type = security::Sha2_256;
+    static std::expected<security::CRandom, security::CRandom::Error> expected = security::CRandom::make_rng();
+    if (!expected)
+    {
+        LOG_FATAL("Failed to create cryptographic rng generator");
+    }
+
+    security::CRandom& rng = *expected;
+    std::vector<byte> randomBlock = generate_random_block(rng);
+    security::CHash<sha_type> hash{ randomBlock };
+    std::vector<byte> signature = pPrivateKey->sign_hash(rng, hash);
+
+    static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();
+    const size_t PACKET_SIZE = sizeof(decltype(HEADER)) + randomBlock.size() + hash.size() + signature.size();
+    ASSERT(PACKET_SIZE < 216, "Max packet size for BLE is around 216 bytes - give or take");
+
+    std::vector<byte> packet{};
+    packet.resize(PACKET_SIZE);
+    packet[HEADER.hashType] = get_sha_type_id<typename decltype(hash)::hash_type>();
+    packet = insert_random_data_block(packet, randomBlock);
+    packet = insert_hash(packet, hash);
+    packet = insert_signature(packet, signature);
+
+    return packet;
+}
+sys::fire_and_forget_t try_demand_rssi(
+    gfx::CWindow& wnd, 
+    CAuthenticator& authenticator, 
+    const ble::CCharacteristic& characteristic,
+    std::vector<byte> packet)
+{
+    static constexpr int32_t MAX_ATTEMPS = 3;
+    int32_t attempt{};
+    do
+    {
+        auto communicationStatus = co_await characteristic.write_data(packet);
+
+        LOG_INFO_FMT("Write status: {}", ble::gatt_communication_status_to_str(communicationStatus));
+        switch (communicationStatus)
+        {
+        case ble::CommunicationStatus::unreachable:
+        {
+            authenticator.deauth();
+            wnd.popup_warning("Unreachable", "Could not demand RSSI value from server");
+            [[fallthrough]];
+        }
+        case ble::CommunicationStatus::success:
+        {
+            attempt = MAX_ATTEMPS;
+            break;
+        }
+        case ble::CommunicationStatus::accessDenied:
+        {
+            LOG_WARN("Could not write to WhereAmI's demand RSSI characteristic - Access Was Denied");
+            wnd.popup_warning("Access Denied", "Could not demand RSSI value from server");
+            [[fallthrough]];
+        }
+        case ble::CommunicationStatus::protocolError:
+        {
+            ++attempt;
+        }
+        }
+    } while (attempt < MAX_ATTEMPS);
+}
+[[nodiscard]] std::optional<const ble::CCharacteristic*> find_characteristic_demand_rssi(const ble::CService* pService)
+{
+    return pService->characteristic(ble::uuid_characteristic_whereami_demand_rssi());
+}
+[[nodiscard]] auto demand_rssi(gfx::CWindow& wnd, CAuthenticator& authenticator, security::CEccPrivateKey* pPrivateKey)
+{
+    return [&wnd, &authenticator, pPrivateKey](const ble::CCharacteristic* pCharacteristic)
+    {
+        std::vector<byte> packet = make_packet_demand_rssi(pPrivateKey);
+        try_demand_rssi(wnd, authenticator, *pCharacteristic, packet);
+        
+        return std::optional<const ble::CCharacteristic*>{ pCharacteristic };
+    };
+}
 }   // namespace
-
-
-
-//winrt::fire_and_forget query_device(uint64_t bluetoothAddress)
-//{
-//    ble::CDevice device = co_await ble::make_device<ble::CDevice>(bluetoothAddress);
-//    
-//    ble::UUID whoami = ble::BaseUUID;
-//    whoami.custom = ble::ID_SERVICE_WHOAMI;
-//    
-//    auto services = device.services();
-//    auto iter = services.find(whoami);
-//    if(iter != std::end(services))
-//    {
-//        const ble::CService& service = iter->second;
-//        ble::UUID characteristicUuid = ble::BaseUUID;
-//        characteristicUuid.custom = ble::ID_CHARACTERISTIC_SERVER_AUTH;
-//        
-//        auto result = service.characteristic(characteristicUuid);
-//        if(result)
-//        {
-//            LOG_INFO("Reading characteristic value!");
-//            const ble::CCharacteristic* pCharacteristic = result.value();
-//            auto data = co_await pCharacteristic->read_value();
-//            if(data)
-//            {
-//                std::cout << "\nPrinting raw bytes: ";
-//                for(uint8_t byte : *data)
-//                    std::cout << byte;
-//                std::cout << std::endl;
-//            }
-//            else
-//            {
-//                LOG_ERROR("characteristic.read_value() returned no data.");
-//            }
-//        }
-//        else
-//        {
-//            LOG_ERROR("Failed to find characteristic");
-//        }
-//    }
-//    else
-//    {
-//        LOG_ERROR("Unable to find service with given UUID");
-//    }
-//}
-//void test_ecc_sign()
-//{
-//    security::CRandom rng = security::CRandom::make_rng().value();
-//    security::CEccKeyPair keyPair{ rng };
-//    security::CEccPublicKey pubKey = keyPair.public_key();
-//    security::CEccPrivateKey privKey = keyPair.private_key();
-//    
-//    //security::CEccPublicKey pubKey2{ std::move(pubKey) };
-//    security::CEccPublicKey pubKey2 = std::move(pubKey);
-//    security::CEccPrivateKey privKey2 { std::move(privKey) };
-//    
-//    privKey2.write_to_disk(make_invokable_save_file("PRIVATE_KEY"));
-//    pubKey2.write_to_disk(make_invokable_save_file("PUBLIC_KEY"));
-//    
-//    sys::restrict_file_permissions("C:\\Users\\qwerty\\Desktop\\PRIVATE_KEY");
-//    
-//    std::optional<security::CEccPublicKey> pubKey3 = security::make_ecc_key<security::CEccPublicKey>(make_invokable_load_file("PUBLIC_KEY"));
-//    std::optional<security::CEccPrivateKey> privKey3 = security::make_ecc_key<security::CEccPrivateKey>(make_invokable_load_file("PRIVATE_KEY"));
-//    
-//    
-//    const char* msg = "Very nice message";
-//    security::CHash<security::Sha2_256> hash{ msg };
-//    std::vector<byte> signature = privKey3->sign_hash(rng, hash);
-//    bool verified = pubKey2.verify_hash(signature, hash);
-//    if (verified) {
-//        std::printf("\nSignature Verified Successfully.\n");
-//    } else {
-//        std::printf("\nFailed to verify Signature.\n");
-//    }
-//}
-
 
 
 int main(int argc, char** argv)
@@ -315,10 +397,12 @@ int main(int argc, char** argv)
     gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
-    
+ 
     CAuthenticator authenticator{ pServerKey.get() };
-    gui::Widget& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    gui::Widget& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
+    auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
+
+    std::optional<ble::CDevice> device = std::nullopt;
     
     bool exit = false;
     while (!exit)
@@ -330,8 +414,42 @@ int main(int argc, char** argv)
         {
             b = b + 0.35f;
             val = std::sin(b);
-            auto& plot = std::get<gui::CRSSIPlot>(rssiPlot);
-            plot.add_rssi_value(val);
+            rssiPlot.add_rssi_value(val);
+        }
+        
+        static common::CStopWatch<std::chrono::seconds> demandRssiTimer{};
+        if (demandRssiTimer.lap<float>() > static_cast<float>(std::chrono::seconds(5).count()))
+        {
+            if (device && device->connected())
+            {
+                device->service(ble::uuid_service_whereami())
+                .and_then(find_characteristic_demand_rssi)
+                .and_then(demand_rssi(window, authenticator, pPrivateKey.get()));
+                
+                demandRssiTimer.reset();
+            }
+            else
+            {
+                if (authenticator.server_identified())
+                {
+                    device = authenticator.server();
+                }
+                else
+                {
+                    // TODO::
+                    if (!scanner.scanning())
+                    {
+                        deviceList.recreate_list();
+                    }
+
+                    static int ab = 0;
+                    if ((ab % 50) == 0)
+                    {
+                        LOG_INFO("No authenticated server - begin cowabunga timer");
+                        ++ab;
+                    }
+                }
+            }
         }
         
         
@@ -344,100 +462,4 @@ int main(int argc, char** argv)
     }
     
     return EXIT_SUCCESS;
-    
-    
-    
-    
-    
-    
-    
-    
-    //test_ecc_sign();
-    
-    
-    
-    //auto result = security::CWolfCrypt::instance();
-    //sys::CSystem system{};
-    
-    //auto scanner = ble::make_scanner<ble::CScanner>();
-    //scanner.begin_scan();
-    //
-    //size_t numDevices = scanner.num_devices().load();
-    //scanner.num_devices().wait(numDevices);
-    //
-    //std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-    //if(!infos.empty())
-    //{
-    //    for(const auto& info : infos)
-    //    {
-    //        LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-    //                     ble::hex_addr_to_str(info.address.value()),
-    //                     ble::address_type_to_str(info.addressType));
-    //
-    //        query_device(info.address.value());
-    //    }
-    //}
-    //
-    //tf::Executor executor{};
-    
-    //executor.silent_async([&scanner]()
-    //{
-    //    while(true)
-    //    {
-    //        std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-    //        if(!infos.empty())
-    //        {
-    //            for(const auto& info : infos)
-    //            {
-    //                LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-    //                             ble::hex_addr_to_str(info.address.value()),
-    //                             ble::address_type_to_str(info.addressType));
-    //
-    //                query_device(info.address.value());
-    //            }
-    //            break;
-    //        }
-    //
-    //        std::this_thread::sleep_for(std::chrono::seconds(1));
-    //    }
-    //});
-    
-    
-    
-
-    //try
-    //{
-    //    process_cmd_line_args(argc, argv);
-    //
-//
-    //
-    //    gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
-    //    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
-    //    gui::CGui gui{};
-    //
-    //
-    //
-    //
-    //    tf::Executor executor{};
-    //    executor.silent_async(time_limited_scan(scanner, std::chrono::seconds(10)));
-    //
-    //    bool exit = false;
-    //    while (!exit)
-    //    {
-    //        renderer.begin_frame();
-//
-    //        window.process_events(&exit);
-    //        gui.push();
-//
-    //        renderer.end_frame();
-    //    }
-    //
-    //
-    //    return EXIT_SUCCESS;
-    //}
-    //catch(const exception::fatal_error& err)
-    //{
-    //    LOG_ERROR_FMT("Fatal exception: {}", err.what());
-    //    return EXIT_FAILURE;
-    //}
 }

@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-02-23.
 //
 #include "CDevice.hpp"
-#include "../ble_common.hpp"
+#include "win_ble_common.hpp"
 
 
 namespace
@@ -42,6 +42,51 @@ CDevice::awaitable_t CDevice::make(uint64_t address)
     }
     
     co_return expected;
+}
+CDevice::CDevice(const CDevice& other) 
+    : m_pDevice{ nullptr }
+    , m_Services{}
+    , m_ConnectionChanged{}
+{
+    copy(other);
+}
+CDevice::CDevice(CDevice&& other) noexcept 
+    : m_pDevice{ nullptr }
+    , m_Services{}
+    , m_ConnectionChanged{}
+{
+    move(other);
+}
+CDevice& CDevice::operator=(const CDevice& other)
+{
+    if (this != &other)
+        copy(other);
+
+    return *this;
+}
+CDevice& CDevice::operator=(CDevice&& other) noexcept 
+{
+    move(other);
+
+    return *this;
+}
+void CDevice::copy(const CDevice& other)
+{
+    m_pDevice = other.m_pDevice;
+    m_Services = other.m_Services;
+    if (other.m_ConnectionChanged)
+        this->set_connection_changed_cb(other.m_ConnectionChanged);
+}
+void CDevice::move(CDevice& other)
+{
+    m_pDevice = std::move(other.m_pDevice);
+    m_Services = std::move(other.m_Services);
+    if (other.m_ConnectionChanged)
+        this->set_connection_changed_cb(std::move(other.m_ConnectionChanged));
+}
+bool CDevice::connected() const
+{
+    return m_pDevice->ConnectionStatus() == winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus::Connected;
 }
 uint64_t CDevice::address() const
 {
@@ -91,7 +136,7 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Services from device with address: \"{}\"",
-                      gatt_communication_status_to_str(result.Status()),
+                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
                       hex_addr_to_str(m_pDevice->BluetoothAddress()));
     }
 }

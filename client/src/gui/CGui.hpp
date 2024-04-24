@@ -34,14 +34,14 @@ public:
 
     template<typename widget_t, typename... ctor_args_t>
     requires imgui_renderable<widget_t>
-    [[nodiscard]] Widget& emplace(ctor_args_t&&... args)
+    [[nodiscard]] widget_t& emplace(ctor_args_t&&... args)
     {
         static_assert(std::same_as<std::remove_cvref_t<decltype(widget_t::KEY)>, KeyType>);
         // cppcheck-suppress redundantAssignment
         auto[iter, emplaced] = m_Widgets.try_emplace(widget_t::KEY, std::in_place_type<widget_t>, std::forward<ctor_args_t>(args)...);
         ASSERT(emplaced, "Adding widgets should never fail..");
         
-        return iter->second;
+        return std::get<widget_t>(iter->second);
     }
 	void push();
 private:

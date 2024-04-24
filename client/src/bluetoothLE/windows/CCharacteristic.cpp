@@ -3,8 +3,7 @@
 //
 
 #include "CCharacteristic.hpp"
-#include "../ble_common.hpp"
-#include "common/common.hpp"
+#include "win_ble_common.hpp"
 
 #include <winrt/Windows.Storage.Streams.h>
 #include <iostream>
@@ -85,7 +84,6 @@ namespace
     
     return props;
 }
-
 }   // namespace
 namespace ble
 {
@@ -93,23 +91,25 @@ CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& cha
 {
     CCharacteristic charac{ characteristic };
     
-    std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
-    
     // Storing this mostly for debug purposes for now..
     charac.m_Properties = to_props_from_winrt(charac.m_pCharacteristic->CharacteristicProperties());
     std::vector<std::string> properties = properties_to_str(charac.m_Properties);
+    // TODO:: might not need this
+    charac.m_ProtLevel = prot_level_from_winrt(charac.m_pCharacteristic->ProtectionLevel());
+    
+    #ifndef NDEBUG
+    std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
+
     std::printf("\nCharacteristic properties: ");
-    for(auto&& property : properties)
+    for (auto&& property : properties)
     {
         std::printf("%s, ", property.c_str());
     }
-    // TODO:: might not need this
-    charac.m_ProtLevel = prot_level_from_winrt(charac.m_pCharacteristic->ProtectionLevel());
-    // TODO:: Debug print
+
     std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.m_ProtLevel)).c_str());
-    
+    #endif
+
     co_await charac.query_descriptors();
-    
     co_return charac;
 }
 CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
@@ -131,8 +131,8 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
     
     GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
     
-    GattCommunicationStatus status = result.Status();
-    if (status == GattCommunicationStatus::Success)
+    CommunicationStatus status = winrt_status_to_communication_status(result.Status());
+    if (status == CommunicationStatus::success)
     {
         IBuffer buffer = result.Value();
         
@@ -151,15 +151,11 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
 }
 CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data) const
 {
-    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
-    GattCommunicationStatus status = co_await write_data(data, GattWriteOption::WriteWithoutResponse);
-    co_return status;
+    co_return co_await write_data(data, GattWriteOption::WriteWithoutResponse);
 }
 CCharacteristic::awaitable_write_t CCharacteristic::write_data_with_response(const std::vector<uint8_t>& data) const
 {
-    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
-    GattCommunicationStatus status = co_await write_data(data, GattWriteOption::WriteWithResponse);
-    co_return status;
+    co_return co_await write_data(data, GattWriteOption::WriteWithResponse);
 }
 CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data, GattWriteOption option) const
 {
@@ -171,8 +167,22 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector
     buffer.Length(buffer.Capacity());
     std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
     
-    GattCommunicationStatus result = co_await m_pCharacteristic->WriteValueAsync(buffer, option);
-    co_return result;
+    
+    try
+    {
+        co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteValueAsync(buffer, option));
+    }
+    catch (...)    // catch all because i have no clue what windows throws and when
+    {
+        winrt::guid guid = m_pCharacteristic->Uuid();
+        uint16_t uniqueValue = guid.Data1 & 0x0000'FF00;
+        uniqueValue = uniqueValue | (guid.Data1 & 0x0000'00FF);
+
+        LOG_ERROR_FMT("Windows BLE driver exception when trying to Write to characteristic with UUID: \"{}\"", 
+            std::format("{:02X}", uniqueValue));
+
+        co_return ble::CommunicationStatus::unreachable;
+    }
 }
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
@@ -201,7 +211,7 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
-                      gatt_communication_status_to_str(result.Status()),
+                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
                       uuid_as_str());
     }
 }

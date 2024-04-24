@@ -19,10 +19,9 @@ class CCharacteristic
 {
 public:
     using awaitable_t = concurrency::task<CCharacteristic>;
-    using read_t =
-            std::expected<std::vector<uint8_t>, winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
+    using read_t = std::expected<std::vector<uint8_t>, CommunicationStatus>;
     using awaitable_read_t = concurrency::task<read_t>;
-    using awaitable_write_t = concurrency::task<winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus>;
+    using awaitable_write_t = concurrency::task<CommunicationStatus>;
     enum class Properties : uint32_t
     {
         none = 0,
@@ -80,27 +79,4 @@ private:
     ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
     Properties m_Properties = Properties::none;
 };
-
-constexpr const char* gatt_communication_status_to_str(
-        winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
-{
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    
-    UNHANDLED_CASE_PROTECTION_ON
-    switch(status)
-    // cppcheck-suppress missingReturn
-    {
-        case GattCommunicationStatus::Unreachable:
-            return "Unreachable";
-        case GattCommunicationStatus::ProtocolError:
-            return "Protocol Error";
-        case GattCommunicationStatus::AccessDenied:
-            return "Access Denied";
-        case GattCommunicationStatus::Success:
-            return "Success";
-    }
-    UNHANDLED_CASE_PROTECTION_OFF
-    
-    std::unreachable();
-}
 }   // namespace ble

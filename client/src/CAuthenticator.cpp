@@ -61,7 +61,7 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
 }
 [[nodiscard]] bool buffer_size_mismatch(auto&& buffer)
 {
-    static constexpr ble::ServerAuthHeader HEADER = ble::whoami_server_auth_header();
+    static constexpr ble::AuthenticateHeader HEADER = ble::header_whoami_authenticate();
     const size_t EXPECTED_BUFFER_SIZE =
             sizeof(HEADER) +
             size_of_hash_type(ble::HashType{ buffer[HEADER.hashType] }) +
@@ -76,7 +76,7 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
 }
 [[nodiscard]] bool valid_hash_type(auto&& buffer)
 {
-    static constexpr ble::ServerAuthHeader HEADER = ble::whoami_server_auth_header();
+    static constexpr ble::AuthenticateHeader HEADER = ble::header_whoami_authenticate();
     uint8_t hashType = buffer[HEADER.hashType];
     if (hashType < std::to_underlying(ble::HashType::count))
         return true;
@@ -122,14 +122,14 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
 CAuthenticator::CAuthenticator(security::CEccPublicKey* pServerKey)
     : m_pServerKey{ pServerKey }
     , m_Devices{}
-    , m_ServerInfo{ std::nullopt }
+    , m_AuthenticatedServer{ std::nullopt }
     , m_pSharedMutex{ std::make_unique<std::shared_mutex>() }
 {}
 CAuthenticator::CAuthenticator(const CAuthenticator& other)
-        : m_pServerKey{ nullptr }
-        , m_Devices{}
-        , m_ServerInfo{ std::nullopt }
-        , m_pSharedMutex{ nullptr }
+    : m_pServerKey{ nullptr }
+    , m_Devices{}
+    , m_AuthenticatedServer{ std::nullopt }
+    , m_pSharedMutex{ nullptr }
 {
     copy(other);
 }
@@ -144,7 +144,7 @@ void CAuthenticator::copy(const CAuthenticator& other)
 {
     m_pServerKey = other.m_pServerKey;
     m_Devices = other.m_Devices;
-    m_ServerInfo = other.m_ServerInfo;
+    m_AuthenticatedServer = other.m_AuthenticatedServer;
     m_pSharedMutex =  std::make_unique<std::shared_mutex>();
 }
 void CAuthenticator::enqueue_devices(const std::vector<ble::DeviceInfo>& infos)
@@ -152,15 +152,30 @@ void CAuthenticator::enqueue_devices(const std::vector<ble::DeviceInfo>& infos)
     m_Devices.push(infos);
     process_queue();
 }
-[[nodiscard]] bool CAuthenticator::server_identified() const
+void CAuthenticator::deauth()
 {
     std::lock_guard lock{ *m_pSharedMutex };
-    return m_ServerInfo.has_value();
+    m_AuthenticatedServer = std::nullopt;
 }
-[[nodiscard]] std::string CAuthenticator::server_address() const
+bool CAuthenticator::server_identified() const
 {
     std::lock_guard lock{ *m_pSharedMutex };
-    return ble::DeviceInfo::address_as_str(m_ServerInfo->address.value());
+    return m_AuthenticatedServer.has_value();
+}
+ble::CDevice CAuthenticator::server() const
+{
+    std::lock_guard lock{ *m_pSharedMutex };
+    return m_AuthenticatedServer->device;
+}
+uint64_t CAuthenticator::server_address() const
+{
+    std::lock_guard lock{ *m_pSharedMutex };
+    return m_AuthenticatedServer->info.address.value();
+}
+std::string CAuthenticator::server_address_as_str() const
+{
+    std::lock_guard lock{ *m_pSharedMutex };
+    return ble::DeviceInfo::address_as_str(m_AuthenticatedServer->info.address.value());
 }
 sys::fire_and_forget_t CAuthenticator::process_queue()
 {
@@ -169,27 +184,42 @@ sys::fire_and_forget_t CAuthenticator::process_queue()
         ble::DeviceInfo info{};
         m_Devices.pop(info);
         
-        if (bool verified = co_await verify_server_address(info); verified)
+        if (info.address)
         {
-            std::lock_guard lock{ *m_pSharedMutex };
-            m_ServerInfo.emplace(info);
+            std::expected<ble::CDevice, ble::CDevice::Error> expected = co_await ble::make_device<ble::CDevice>(info.address.value());
+            if (expected)
+            {
+                if (bool verified = co_await verify_server_address(*expected, info.address.value()); verified)
+                {
+                    std::lock_guard lock{ *m_pSharedMutex };
+                    m_AuthenticatedServer.emplace(std::move(*expected), info);
+                    m_AuthenticatedServer->device.set_connection_changed_cb(
+                    [this](ble::ConnectionStatus status)
+                    {
+                        switch (status)
+                        {
+                        case ble::ConnectionStatus::connected:
+                            LOG_INFO("Connection status changed to connected ???????????????????????????????");
+                            break;
+                        case ble::ConnectionStatus::disconnected:
+                            std::lock_guard lock{ *m_pSharedMutex };
+                            m_AuthenticatedServer = std::nullopt;
+                            LOG_WARN("Lost connection to authenticated server...");
+                            break;
+                        }
+                    });
+                }
+            }
         }
     }
 }
-sys::awaitable_t<bool> CAuthenticator::verify_server_address(ble::DeviceInfo info) const
+sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice& device, uint64_t address) const
 {
-    if (!info.address)
-        co_return false;
-    
-    std::expected<ble::CDevice, ble::CDevice::Error> expected = co_await ble::make_device<ble::CDevice>(info.address.value());
-    if(!expected)
-        co_return false;
-    
-    std::optional<const ble::CCharacteristic*> characteristic = co_await find_server_auth_characteristic(expected.value());
+    std::optional<const ble::CCharacteristic*> characteristic = co_await find_server_auth_characteristic(device);
     if (!characteristic)
         co_return false;
     
-    
+
     const ble::CCharacteristic* pCharacteristic = characteristic.value();
     static constexpr int32_t MAX_ATTEMPTS = 3u;
     int32_t attempt{ 0 };
@@ -204,7 +234,7 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(ble::DeviceInfo inf
             if (!valid_hash_type(buffer))
                 co_return false;
             
-            static constexpr ble::ServerAuthHeader HEADER = ble::whoami_server_auth_header();
+            static constexpr ble::AuthenticateHeader HEADER = ble::header_whoami_authenticate();
             auto hashType = ble::HashType{ buffer[HEADER.hashType] };
             
             const uint8_t HASH_OFFSET = buffer[HEADER.hashOffset];
@@ -215,7 +245,7 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(ble::DeviceInfo inf
             const uint8_t SIGNATURE_SIZE = buffer[HEADER.signatureSize];
             std::span<uint8_t> signature{ std::begin(buffer) + SIGNATURE_OFFSET, SIGNATURE_SIZE };
             
-            std::string macAddress = ble::DeviceInfo::address_as_str(info.address.value());
+            std::string macAddress = ble::DeviceInfo::address_as_str(address);
             co_return co_await verify_hash_and_signature(macAddress, m_pServerKey, hash, signature);
         }
         else

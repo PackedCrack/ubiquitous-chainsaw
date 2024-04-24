@@ -17,7 +17,7 @@ private:
 public:
     [[nodiscard]] static awaitable_t make(const GattDeviceService& service);
     CService() = default;
-    ~CService() = default;
+    ~CService();
     CService(const CService& other) = default;
     CService(CService&& other) noexcept = default;
     CService& operator=(const CService& other) = default;
