@@ -10,29 +10,29 @@ namespace ble
 class CWhereAmI
 {
 public:
-	CWhereAmI();
-	~CWhereAmI() = default;
-	CWhereAmI(const CWhereAmI& other);
-	CWhereAmI(CWhereAmI&& other) = default;
-	CWhereAmI& operator=(const CWhereAmI& other);
-	CWhereAmI& operator=(CWhereAmI&& other) = default;
+    CWhereAmI();
+    ~CWhereAmI() = default;
+    CWhereAmI(const CWhereAmI& other);
+    CWhereAmI(CWhereAmI&& other) = default;
+    CWhereAmI& operator=(const CWhereAmI& other);
+    CWhereAmI& operator=(CWhereAmI&& other) = default;
 private:
     void copy(const CWhereAmI& other);
 public:
-	void register_with_nimble(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
+    void register_with_nimble(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
 private:
-	[[nodiscard]] std::vector<CCharacteristic> make_characteristics(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] auto make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] CCharacteristic make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] std::vector<CCharacteristic> make_characteristics(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] auto make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] CCharacteristic make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile);
     [[nodiscard]] auto make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile);
-	[[nodiscard]] CCharacteristic make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] CCharacteristic make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile);
 private:
     int8_t m_Rssi;
     uint16_t m_NotifyHandle;
     std::unique_ptr<security::CEccPrivateKey> m_pPrivateKey = nullptr;
     std::unique_ptr<security::CEccPublicKey> m_pClientPublicKey = nullptr;
-	std::vector<CCharacteristic> m_Characteristics;
-	CGattService m_Service;
+    std::vector<CCharacteristic> m_Characteristics;
+    CGattService m_Service;
 };
-}	// namespace ble
+}   // namespace ble

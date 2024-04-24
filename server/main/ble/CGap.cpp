@@ -160,19 +160,19 @@ CGap::CGap()
     : m_BleAddressType{ generate_random_device_address() } // nimble_port_run(); has to be called before this
     , m_Params{ make_default_advertise_params() }
     , m_ActiveConnection{}
-	, m_EventCallback{ make_event_callback() }
+    , m_EventCallback{ make_event_callback() }
 {
     ASSERT(m_BleAddressType != AddressType::invalid, "Failed to generate a random device address");
 
     std::string deviceName = "Chainsaw-server";
     {
-    	auto result = NimbleErrorCode{ ble_svc_gap_device_name_set(deviceName.data()) }; // haven't found which error code is returned when this fails
-    	if (result != NimbleErrorCode::success)
-    	{
-    		LOG_WARN_FMT("CGap constructor could not set the name of the server. Failed with: \"{}\" - \"{}\"", 
-    						static_cast<int32_t>(result), 
-    						nimble_error_to_string(result));
-    	}
+        auto result = NimbleErrorCode{ ble_svc_gap_device_name_set(deviceName.data()) }; // haven't found which error code is returned when this fails
+        if (result != NimbleErrorCode::success)
+        {
+            LOG_WARN_FMT("CGap constructor could not set the name of the server. Failed with: \"{}\" - \"{}\"", 
+                            static_cast<int32_t>(result), 
+                            nimble_error_to_string(result));
+        }
     }
     
     {
@@ -181,22 +181,22 @@ CGap::CGap()
         {
             if(error == NimbleErrorCode::isBusy)
             {
-            	LOG_WARN_FMT("CGap constructor could not set advertisment fields. Because Advertising is already in progress: \"{}\"",
-            					nimble_error_to_string(*error));
+                LOG_WARN_FMT("CGap constructor could not set advertisment fields. Because Advertising is already in progress: \"{}\"",
+                                nimble_error_to_string(*error));
             }
             else if(error == NimbleErrorCode::toSmallBuffer)
             {
-            	LOG_ERROR_FMT("Failure when trying to set advertisment fields. Because Advertising is already in progress: \"{}\"",
-            					nimble_error_to_string(*error));
+                LOG_ERROR_FMT("Failure when trying to set advertisment fields. Because Advertising is already in progress: \"{}\"",
+                                nimble_error_to_string(*error));
             }
             else if(error == NimbleErrorCode::unexpectedFailure)
             {
-            	LOG_FATAL_FMT("Unexpected failure when trying to set advertisment fields. ErrorCode: \"{}\"", 
-            					nimble_error_to_string(*error));
+                LOG_FATAL_FMT("Unexpected failure when trying to set advertisment fields. ErrorCode: \"{}\"", 
+                                nimble_error_to_string(*error));
             }
             else
             {
-            	ASSERT(false, "set_adv_fields returned an undocumented error code.");
+                ASSERT(false, "set_adv_fields returned an undocumented error code.");
             }
         }
     }
@@ -205,7 +205,7 @@ CGap::CGap()
     std::optional<Error> error = begin_advertise();
     if (error)
     {
-    	LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", error->msg);
+        LOG_FATAL_FMT("CGap constructor could not start the advertising process. Reason: \"{}\"", error->msg);
     }
 }
 CGap::~CGap()
@@ -215,7 +215,7 @@ CGap::~CGap()
         std::optional<CGap::Error> error = end_advertise();
         if (error)
         {
-        	LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", error->msg);
+            LOG_ERROR_FMT("CGap destructor could not stop an active advertising process. Reason: \"{}\"", error->msg);
         }
     }
 }
@@ -327,7 +327,7 @@ std::function<void(ble_gap_event*)> CGap::make_event_callback()
                         if (result)
                         {
                             LOG_ERROR_FMT("Gap event callback failed to end advertisment when recieving incoming connection! Reason: \"{}\"",
-                             				result->msg);
+                                            result->msg);
                         }
                     }
                 }

@@ -28,12 +28,12 @@ namespace
 namespace ble
 {
 CWhereAmI::CWhereAmI()
-	: m_Rssi{}
+    : m_Rssi{}
     , m_NotifyHandle{ INVALID_ATTR_HANDLE }
     , m_pPrivateKey{ load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE) }
     , m_pClientPublicKey{ load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC) }
     , m_Characteristics{}
-	, m_Service{}
+    , m_Service{}
 {}
 CWhereAmI::CWhereAmI(const CWhereAmI& other)
 	: m_Rssi{}
@@ -41,18 +41,18 @@ CWhereAmI::CWhereAmI(const CWhereAmI& other)
     , m_pPrivateKey{ nullptr }
     , m_pClientPublicKey{ nullptr } 
     , m_Characteristics{}
-	, m_Service{}
+    , m_Service{}
 {
     copy(other);
 }
 CWhereAmI& CWhereAmI::operator=(const CWhereAmI& other)
 {
-	if(this != &other)
-	{
+    if(this != &other)
+    {
         copy(other);
-	}
+    }
 
-	return *this;
+    return *this;
 }
 void CWhereAmI::copy(const CWhereAmI& other)
 {
@@ -60,54 +60,54 @@ void CWhereAmI::copy(const CWhereAmI& other)
     m_NotifyHandle = other.m_NotifyHandle;
     m_pPrivateKey =  load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
     m_pClientPublicKey = load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC);
-	m_Characteristics = std::vector<CCharacteristic>{};
+    m_Characteristics = std::vector<CCharacteristic>{};
     m_Service = CGattService{};
 }
 void CWhereAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 {
-	m_Characteristics = make_characteristics(pProfile);
-	m_Service = CGattService{ ID_SERVICE_WHEREAMI, m_Characteristics };
+    m_Characteristics = make_characteristics(pProfile);
+    m_Service = CGattService{ ID_SERVICE_WHEREAMI, m_Characteristics };
 }
 ble_gatt_svc_def CWhereAmI::as_nimble_service() const
 {
-	return static_cast<ble_gatt_svc_def>(m_Service);
+    return static_cast<ble_gatt_svc_def>(m_Service);
 }
 std::vector<CCharacteristic> CWhereAmI::make_characteristics(const std::shared_ptr<Profile>& pProfile)
 {
-	std::vector<CCharacteristic> chars{};
-	chars.emplace_back(make_characteristic_demand_rssi(pProfile));
-	chars.emplace_back(make_characteristic_send_rssi(pProfile));
+    std::vector<CCharacteristic> chars{};
+    chars.emplace_back(make_characteristic_demand_rssi(pProfile));
+    chars.emplace_back(make_characteristic_send_rssi(pProfile));
 
-	return chars;
+    return chars;
 }
 auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile)
 {
-		return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int
-	{
-		std::shared_ptr<Profile> pProfile = wpProfile.lock();
-		if(pProfile)
-		{
-			CWhereAmI* pSelf = std::get_if<CWhereAmI>(pProfile.get());
-			if(pSelf != nullptr)
-			{
-				auto operation = CharacteristicAccess{ pContext->op };
-				switch (operation) 
-				{
-					case CharacteristicAccess::write:
-					{
+        return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int
+    {
+        std::shared_ptr<Profile> pProfile = wpProfile.lock();
+        if(pProfile)
+        {
+            CWhereAmI* pSelf = std::get_if<CWhereAmI>(pProfile.get());
+            if(pSelf != nullptr)
+            {
+                auto operation = CharacteristicAccess{ pContext->op };
+                switch (operation) 
+                {
+                    case CharacteristicAccess::write:
+                    {
                         //startTime = start_timer();
 
                         LOG_INFO("WHERE_AM_I WRITE EVENT!");
-    	                if (pContext->om == nullptr)
-    	                {
-    	                    LOG_WARN("os_mbuf is invalid!");
-    	                    return static_cast<int32_t>(ble::NimbleErrorCode::invalidArguments);
-    	                }
+                        if (pContext->om == nullptr)
+                        {
+                            LOG_WARN("os_mbuf is invalid!");
+                            return static_cast<int32_t>(ble::NimbleErrorCode::invalidArguments);
+                        }
                         if (pContext->om->om_len < 1)
-    	                {
-    	                    LOG_WARN("No data was written to the os_mbuf!");
-    	                    return static_cast<int32_t>(ble::NimbleErrorCode::toSmallBuffer);
-    	                }
+                        {
+                            LOG_WARN("No data was written to the os_mbuf!");
+                            return static_cast<int32_t>(ble::NimbleErrorCode::toSmallBuffer);
+                        }
 
                         uint8_t* pPayloadBuffer = pContext->om->om_databuf;
                         const uint16_t PAYLOAD_OFFSET = 19;
@@ -156,44 +156,44 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
                         //double elapsedTime = elapsed_time(startTime);
                         //LOG_INFO_FMT("Elapsed time for write callback {}s", elapsedTime);
                         return static_cast<int32_t>(ble::NimbleErrorCode::success);
-					}
-        		}
-			}
-			else
-			{
-				LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
-			}
-		}
-		else
-		{
-			LOG_WARN("Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
-		}
+                    }
+                }
+            }
+            else
+            {
+                LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
+            }
+        }
+        else
+        {
+        	LOG_WARN("Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
+        }
 
-		return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
-	};
+        return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
+    };
 }
 CCharacteristic CWhereAmI::make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI, make_callback_demand_rssi(pProfile), CharsPropertyFlag::write);
+    return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI, make_callback_demand_rssi(pProfile), CharsPropertyFlag::write);
 }
 
 
 auto CWhereAmI::make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile)
 {
-        // cppcheck-suppress constParameterPointer
-		return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int
-	{
-		std::shared_ptr<Profile> pProfile = wpProfile.lock();
-		if(pProfile)
-		{
-			const CWhereAmI* pSelf = std::get_if<CWhereAmI>(pProfile.get());
-			if(pSelf != nullptr)
-			{
-				auto operation = CharacteristicAccess{ pContext->op };
-				switch (operation) 
-				{
-					case CharacteristicAccess::read:
-					{
+    // cppcheck-suppress constParameterPointer
+    return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int
+    {
+        std::shared_ptr<Profile> pProfile = wpProfile.lock();
+        if(pProfile)
+        {
+            const CWhereAmI* pSelf = std::get_if<CWhereAmI>(pProfile.get());
+            if(pSelf != nullptr)
+            {
+                auto operation = CharacteristicAccess{ pContext->op };
+                switch (operation) 
+                {
+                    case CharacteristicAccess::read:
+                    {
                         LOG_INFO("WHERE_AM_I NOTIFY EVENT!");
 
 
@@ -206,21 +206,21 @@ auto CWhereAmI::make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile
 
 
                         return static_cast<int32_t>(ble::NimbleErrorCode::success);
-					}
-        		}
-			}
-			else
-			{
-				LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
-			}
-		}
-		else
-		{
-			LOG_WARN("Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
-		}
+                    }
+                }
+            }
+            else
+            {
+                LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
+            }
+        }
+        else
+        {
+        	LOG_WARN("Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
+        }
 
-		return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
-	};
+        return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
+    };
 }
 CCharacteristic CWhereAmI::make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile)
 {
@@ -228,4 +228,4 @@ CCharacteristic CWhereAmI::make_characteristic_send_rssi(const std::shared_ptr<P
 }
 
 
-}	// namespace ble
+}   // namespace ble

@@ -3,14 +3,14 @@
 #include "CGattCharacteristic.hpp"
 #include "../../server_common.hpp"
 #include "../../shared/common/ble_services.hpp"
-#include "../../shared/common/common.hpp"	
-
+#include "../../shared/common/common.hpp"
 // std
 #include <cstdint>
 #include <stdexcept>
 #include <array>
 #include <cstring> 
 #include <type_traits>
+
 
 namespace ble
 {
@@ -137,6 +137,6 @@ auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfil
 }
 CCharacteristic CWhoAmI::make_characteristic_authenticate(const std::shared_ptr<Profile>& pProfile)
 {
-	return make_characteristic(ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE, make_callback_authenticate(pProfile), CharsPropertyFlag::read);
+    return make_characteristic(ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE, make_callback_authenticate(pProfile), CharsPropertyFlag::read);
 }
-}	// namespace ble
+}   // namespace ble
