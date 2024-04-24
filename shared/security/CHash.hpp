@@ -51,7 +51,7 @@ public:
     {
         m_Hash.resize(hash_type::HASH_SIZE);
         create_hash(std::forward<buffer_t>(data));
-    };
+    }
     /**
     * @brief Constructs an instance of CHash by initializing the hash with values from a given range of a std::span.
     *
@@ -113,10 +113,10 @@ public:
 
         std::string str{};
         str.reserve(m_Hash.size() * 2u);
-        for (auto&& byte : m_Hash)
+        for (auto&& byte_ : m_Hash)
         {
-            str.push_back(hex[(byte & 0xF0) >> 4]);
-            str.push_back(hex[byte & 0x0F]);
+            str.push_back(hex[(byte_ & 0xF0) >> 4]);
+            str.push_back(hex[byte_ & 0x0F]);
         }
 
         return str;

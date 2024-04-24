@@ -1,11 +1,16 @@
+
+
 #define WOLFSSL_ESPIDF
 #define WOLFSSL_ESPWROOM32
 //#define WOLFSSL_USER_SETTINGS
 #include <wolfssl/wolfcrypt/settings.h>
+
 //#include <wolfssl/version.h>
 //#include <wolfssl/wolfcrypt/port/Espressif/esp32-crypt.h>
 
 //#include <wolfssl/wolfcrypt/types.h>
+
+
 
 #include "sys/CSystem.hpp"
 #include "ble/CNimble.hpp"
@@ -19,9 +24,8 @@
 #include "security/ecc_key.hpp"
 
 #include "esp_system.h"
-
-
 #include "server_common.hpp"
+
 
 
 namespace
@@ -175,7 +179,7 @@ extern "C" void app_main(void)
 
         
         using namespace storage;
-        ble::CNimble nimble {};
+        ble::CNimble nimble{};
 
         while (true)
         {

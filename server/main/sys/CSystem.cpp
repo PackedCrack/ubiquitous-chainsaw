@@ -1,5 +1,4 @@
 #include "CSystem.hpp"
-//#include "esp_chip_info.h"
 #include "freertos/FreeRTOS.h"
 
 

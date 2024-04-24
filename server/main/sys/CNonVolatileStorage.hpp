@@ -1,15 +1,15 @@
 #pragma once
-
-/* NVS */
-#include "nvs_flash.h"
-/* Project*/
+// project
 #include "../server_defines.hpp"
-//#include "common/defines.hpp"
-/* STD*/
+// std
 #include <vector>
 #include <string>
 #include <string_view>
 #include <optional>
+// nvs
+#include "nvs_flash.h"
+
+
 namespace storage
 {
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html#introduction

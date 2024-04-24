@@ -1,12 +1,12 @@
 #pragma once
-/* Project */
+// project
 #include "CGap.hpp"
 #include "profiles/CProfileCache.hpp"
-/* STD */
+// std
 #include <memory>
 #include <mutex>
 #include <condition_variable>
-/* BLE */
+// nimble
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/util/util.h"

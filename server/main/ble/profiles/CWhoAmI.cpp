@@ -88,6 +88,8 @@ std::vector<CCharacteristic> CWhoAmI::make_characteristics(const std::shared_ptr
 }
 auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfile)
 {
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wshadow"
     return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
     {
         std::shared_ptr<Profile> pProfile = wpProfile.lock();
@@ -134,6 +136,7 @@ auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfil
 
         return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
     };
+    #pragma GCC diagnostic pop
 }
 CCharacteristic CWhoAmI::make_characteristic_authenticate(const std::shared_ptr<Profile>& pProfile)
 {

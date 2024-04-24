@@ -59,8 +59,8 @@ CProfileCache::CProfileCache(std::map<CProfileCache::KeyType, std::shared_ptr<Pr
 {
     for(auto&& kvPair : m_Profiles)
     {
-        Profile& profile = *kvPair.second;
-        std::visit([this]<typename profile_t>(profile_t&& profile){ m_Services.emplace_back(profile.as_nimble_service()); }, profile);
+        Profile& p = *kvPair.second;
+        std::visit([this]<typename profile_t>(profile_t&& profile){ m_Services.emplace_back(profile.as_nimble_service()); }, p);
     }
     m_Services.emplace_back(end_of_array());
 
