@@ -2,13 +2,11 @@
 #include "ble_common.hpp"
 // std
 #include <optional>
-
-
 namespace ble
 {
 struct ConnectionHandle
 {
-    template<typename integer_t> 
+    template<typename integer_t>
     requires std::integral<integer_t>
     // We want implicit conversion here - why
     // cppcheck-suppress noExplicitConstructor
@@ -17,7 +15,7 @@ struct ConnectionHandle
     {
         ASSERT(id <= UINT16_MAX, "Conversion wrap around!");
     }
-    template<typename integer_t> 
+    template<typename integer_t>
     requires std::integral<integer_t>
     constexpr ConnectionHandle& operator=(integer_t id)
     {
@@ -68,4 +66,4 @@ public:
 private:
     std::optional<ConnectionHandle> m_Handle = std::nullopt;
 };
-}   // namespace ble
+}    // namespace ble

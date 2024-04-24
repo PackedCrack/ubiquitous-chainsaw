@@ -1,7 +1,5 @@
 #pragma once
 #include "CProfileCache.hpp"
-
-
 namespace ble
 {
 class CProfileCacheBuilder
@@ -15,8 +13,8 @@ private:
     requires NimbleProfile<profile_t>
     [[nodiscard]] bool try_emplace_profile(CProfileCache::KeyType key, ctor_args_t&&... args)
     {
-        auto[iter, emplaced] = m_Profiles.try_emplace(key, make_profile<profile_t>(std::forward<ctor_args_t>(args)...));
-        if(emplaced)
+        auto [iter, emplaced] = m_Profiles.try_emplace(key, make_profile<profile_t>(std::forward<ctor_args_t>(args)...));
+        if (emplaced)
         {
             std::shared_ptr<Profile>& pVariantProfile = iter->second;
             profile_t& profile = std::get<profile_t>(*pVariantProfile);
@@ -28,4 +26,4 @@ private:
 private:
     std::map<std::string_view, std::shared_ptr<Profile>> m_Profiles;
 };
-}   // namespace ble
+}    // namespace ble

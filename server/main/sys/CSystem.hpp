@@ -7,8 +7,6 @@
 // esp
 #include "esp_system.h"
 #include "esp_mac.h"
-
-
 namespace sys
 {
 enum class ResetReason : int32_t
@@ -39,16 +37,24 @@ enum class MacType : int32_t
 [[nodiscard]] constexpr std::string_view mac_type_to_str(MacType type)
 {
     UNHANDLED_CASE_PROTECTION_ON
-    switch(type)
+    switch (type)
     {
-        case MacType::wifiStation: return "Wifi Station";
-        case MacType::wifiSoftAP: return "Wifi Soft AP";
-        case MacType::bluetooth: return "Bluetooth";
-        case MacType::ethernet: return "Ethernet";
-        case MacType::IEEE802154: return "IEEE802154";
-        case MacType::base: return "Base";
-        case MacType::efuseFactory: return "Efuse Factory";
-        case MacType::efuseCustom: return "Efuse Custom";
+    case MacType::wifiStation:
+        return "Wifi Station";
+    case MacType::wifiSoftAP:
+        return "Wifi Soft AP";
+    case MacType::bluetooth:
+        return "Bluetooth";
+    case MacType::ethernet:
+        return "Ethernet";
+    case MacType::IEEE802154:
+        return "IEEE802154";
+    case MacType::base:
+        return "Base";
+    case MacType::efuseFactory:
+        return "Efuse Factory";
+    case MacType::efuseCustom:
+        return "Efuse Custom";
     }
     UNHANDLED_CASE_PROTECTION_OFF
 
@@ -66,14 +72,16 @@ public:
         invalidCrc,
         unknown
     };
-    #if CONFIG_IEEE802154_ENABLED
+#if CONFIG_IEEE802154_ENABLED
     using AddressArray = std::array<uint8_t, 8u>;
-    #else
+#else
     using AddressArray = std::array<uint8_t, 6u>;
-    #endif
+#endif
 private:
-    struct CustomMac{};
-    struct DefaultMac{};
+    struct CustomMac
+    {};
+    struct DefaultMac
+    {};
 public:
     // TODO:
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv429esp_register_shutdown_handler18shutdown_handler_t
@@ -94,30 +102,30 @@ public:
     [[nodiscard]] Result<AddressArray, MacError> default_efuse_mac_address() const;
     template<size_t size>
     [[nodiscard]] MacError set_interface_mac_address(MacType type, const std::array<uint8_t, size>& address)
-	{
-		if (MacType::IEEE802154 == type)
-		{
-			ASSERT(address.size() == 8u, "IEEE802154 Address requires 8 bytes!");
-		}
-		else
-		{
-			ASSERT(address.size() == 6u, "Non IEEE802154 address' should be 6 bytes!");
-		}
+    {
+        if (MacType::IEEE802154 == type)
+        {
+            ASSERT(address.size() == 8u, "IEEE802154 Address requires 8 bytes!");
+        }
+        else
+        {
+            ASSERT(address.size() == 6u, "Non IEEE802154 address' should be 6 bytes!");
+        }
 
-		// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv422esp_iface_mac_addr_setPK7uint8_t14esp_mac_type_t
-		esp_err_t result = esp_iface_mac_addr_set(address.data(), static_cast<esp_mac_type_t>(type));
-		MacError err = to_mac_error(result);
-		if(err == MacError::unknown)
-		{
-			LOG_ERROR_FMT("Failed with code: \"{}\" - \"{}\". When trying to set mac address to: \"{}\" for mac type: \"{}\".", 
-							result, 
-							esp_err_to_str(result), 
-							address, 
-							mac_type_to_str(type));
-		}
+        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv422esp_iface_mac_addr_setPK7uint8_t14esp_mac_type_t
+        esp_err_t result = esp_iface_mac_addr_set(address.data(), static_cast<esp_mac_type_t>(type));
+        MacError err = to_mac_error(result);
+        if (err == MacError::unknown)
+        {
+            LOG_ERROR_FMT("Failed with code: \"{}\" - \"{}\". When trying to set mac address to: \"{}\" for mac type: \"{}\".",
+                          result,
+                          esp_err_to_str(result),
+                          address,
+                          mac_type_to_str(type));
+        }
 
-		return err;
-	}
+        return err;
+    }
     // TODO:
     // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#_CPPv412esp_read_macP7uint8_t14esp_mac_type_t
     // esp_err_t esp_read_mac(uint8_t *mac, esp_mac_type_t type
@@ -126,4 +134,4 @@ public:
 private:
     [[nodiscard]] constexpr MacError to_mac_error(esp_err_t err) const;
 };
-}   // namespace sys
+}    // namespace sys

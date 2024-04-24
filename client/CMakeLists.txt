@@ -105,9 +105,7 @@ add_custom_target(
     COMMAND clang-format -i -style=file ${ALL_SOURCE_FILES}
     COMMENT "Running clang-format on all source files."
 )
-
-# clang-format still needs to be set up with correct settings
-#add_dependencies(${MAIN_PROJECT} clang-format)
+add_dependencies(${MAIN_PROJECT} clang-format)
 
 
 # testing

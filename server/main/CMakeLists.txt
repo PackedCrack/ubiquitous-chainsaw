@@ -60,3 +60,14 @@ use_pch(${COMPONENT_LIB})
 
 include(../cmake/cppcheck.cmake)
 add_dependencies(${COMPONENT_LIB} CPPCHECK_${COMPONENT_LIB})
+
+
+file(GLOB_RECURSE ALL_SOURCE_FILES 
+	"${CMAKE_SOURCE_DIR}/main/*.cpp"
+	"${CMAKE_SOURCE_DIR}/main/*.hpp")
+add_custom_target(
+    clang-format
+    COMMAND clang-format -i -style=file ${ALL_SOURCE_FILES}
+    COMMENT "Running clang-format on all source files."
+)
+add_dependencies(${COMPONENT_LIB} clang-format)

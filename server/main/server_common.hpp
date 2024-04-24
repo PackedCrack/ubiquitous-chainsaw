@@ -24,7 +24,6 @@ constexpr std::string_view NVS_KEY_SERVER_PUBLIC = "ENC_PUB";
 constexpr std::string_view NVS_KEY_CLIENT_PUBLIC = "ENC_CLIENT";
 constexpr std::string_view NVS_RSSI_NAMESPACE = "RSSI_STORAGE";
 constexpr std::string_view NVS_RSSI_KEY = "RSSI";
-
 inline std::string esp_err_to_str(esp_err_t code)
 {
     std::string err{};
@@ -42,7 +41,8 @@ struct Result
     error_t error;
 };
 template<typename error_t>
-constexpr bool success(error_t errorCode) requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
+constexpr bool success(error_t errorCode)
+requires(std::is_same_v<error_t, esp_err_t> || std::is_same_v<error_t, err_t>)
 {
     if constexpr (std::is_same_v<error_t, esp_err_t>)
     {
@@ -62,14 +62,18 @@ inline void print_task_info(const char* str)
     TaskHandle_t xHandle = xTaskGetHandle(str);
     TaskStatus_t status{};
     vTaskGetInfo(xHandle, &status, true, eInvalid);
-    LOG_INFO_FMT("Task \"{}\" info:\nTask Number: {}\nStack base: {:p}\nStack min stack space remaining: {}\n", 
-                    str == nullptr ? "Caller" : str, status.xTaskNumber, static_cast<void*>(status.pxStackBase), status.usStackHighWaterMark);
+    LOG_INFO_FMT("Task \"{}\" info:\nTask Number: {}\nStack base: {:p}\nStack min stack space remaining: {}\n",
+                 str == nullptr ? "Caller" : str,
+                 status.xTaskNumber,
+                 static_cast<void*>(status.pxStackBase),
+                 status.usStackHighWaterMark);
 }
 template<typename key_t>
 requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, security::CEccPrivateKey>
 [[nodiscard]] inline std::unique_ptr<key_t> load_key(std::string_view key)
 {
-    std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(NVS_ENCRYPTION_NAMESPACE);
+    std::optional<storage::CNonVolatileStorage::CReader> reader =
+        storage::CNonVolatileStorage::CReader::make_reader(NVS_ENCRYPTION_NAMESPACE);
     if (!reader.has_value())
     {
         LOG_FATAL("Failed to initilize NVS CReader");
@@ -79,7 +83,6 @@ requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, sec
     {
         LOG_FATAL("Failed to retrieve the private key");
     }
-    
+
     return std::make_unique<key_t>(std::move(*readResult.data));
 }
-

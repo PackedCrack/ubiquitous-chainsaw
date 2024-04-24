@@ -2,8 +2,6 @@
 #include "CGattCharacteristic.hpp"
 // std
 #include <vector>
-
-
 namespace ble
 {
 class CGattService
@@ -22,4 +20,4 @@ private:
     std::unique_ptr<ble_uuid128_t> m_pUUID;
     std::vector<ble_gatt_chr_def> m_Characteristics;
 };
-}   // namespace ble
+}    // namespace ble

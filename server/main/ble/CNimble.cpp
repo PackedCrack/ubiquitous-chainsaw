@@ -5,29 +5,32 @@
 #include "esp_bt.h"
 
 #include <iostream>
-
-namespace 
+namespace
 {
 auto make_callback_gatt_service_register()
 {
     return [](ble_gatt_register_ctxt* ctxt, void* arg)
     {
         std::array<char, BLE_UUID_STR_LEN> buffer{};
-        switch (ctxt->op) 
+        switch (ctxt->op)
         {
-            case BLE_GATT_REGISTER_OP_SVC:
-                LOG_INFO_FMT("Registered service = \"{}\" with handle = \"{}\"",
-                            ble_uuid_to_str(ctxt->svc.svc_def->uuid, buffer.data()), ctxt->svc.handle);
-                return;
-            case BLE_GATT_REGISTER_OP_CHR:
-                LOG_INFO_FMT("Registered characteristic: \"{}\" with "
-                            "def_handle = \"{}\" val_handle = \"{}\"",
-                            ble_uuid_to_str(ctxt->chr.chr_def->uuid, buffer.data()), ctxt->chr.def_handle, ctxt->chr.val_handle);
-                return;
-            case BLE_GATT_REGISTER_OP_DSC:
-                LOG_INFO_FMT("Registered descriptor = \"{}\" with handle = {}",
-                            ble_uuid_to_str(ctxt->dsc.dsc_def->uuid, buffer.data()),ctxt->dsc.handle);
-                return;
+        case BLE_GATT_REGISTER_OP_SVC:
+            LOG_INFO_FMT("Registered service = \"{}\" with handle = \"{}\"",
+                         ble_uuid_to_str(ctxt->svc.svc_def->uuid, buffer.data()),
+                         ctxt->svc.handle);
+            return;
+        case BLE_GATT_REGISTER_OP_CHR:
+            LOG_INFO_FMT("Registered characteristic: \"{}\" with "
+                         "def_handle = \"{}\" val_handle = \"{}\"",
+                         ble_uuid_to_str(ctxt->chr.chr_def->uuid, buffer.data()),
+                         ctxt->chr.def_handle,
+                         ctxt->chr.val_handle);
+            return;
+        case BLE_GATT_REGISTER_OP_DSC:
+            LOG_INFO_FMT("Registered descriptor = \"{}\" with handle = {}",
+                         ble_uuid_to_str(ctxt->dsc.dsc_def->uuid, buffer.data()),
+                         ctxt->dsc.handle);
+            return;
         }
 
         __builtin_unreachable();
@@ -35,16 +38,20 @@ auto make_callback_gatt_service_register()
 }
 auto make_on_reset_handle()
 {
-    return [](int reason){
-        //https://mynewt.apache.org/latest/network/ble_setup/ble_sync_cb.html
-        LOG_ERROR_FMT("Something went horribly wrong. Therefore we reset the whole device in order to make sure that main() is restarted. Reason={}", reason);
-        //syncPromise = std::promise<void>{};
-        //syncFuture = syncPromise.get_future();
+    return [](int reason)
+    {
+        // https://mynewt.apache.org/latest/network/ble_setup/ble_sync_cb.html
+        LOG_ERROR_FMT(
+            "Something went horribly wrong. Therefore we reset the whole device in order to make sure that main() is restarted. Reason={}",
+            reason);
+        // syncPromise = std::promise<void>{};
+        // syncFuture = syncPromise.get_future();
     };
 }
 auto make_host_task()
 {
-    return [](void* param){
+    return [](void* param)
+    {
         // call nimble_port_stop() // to exit from this func
         LOG_INFO("BLE Host Task Started");
         nimble_port_run();
@@ -54,24 +61,28 @@ auto make_host_task()
 void configure_nimble_host()
 {
     // retarded global that all of the example code uses - the api is like this dont blame us.
-    ble_hs_cfg.reset_cb = make_on_reset_handle(); 
+    ble_hs_cfg.reset_cb = make_on_reset_handle();
     ble_hs_cfg.sync_cb = ble::CNimble::sync_callback;
 
-    #ifndef NDEBUG
+#ifndef NDEBUG
     ble_hs_cfg.gatts_register_cb = make_callback_gatt_service_register();
-    #else
+#else
     ble_hs_cfg.gatts_register_cb = nullptr;
-    #endif
+#endif
 
-    ble_hs_cfg.store_status_cb = ble_store_util_status_rr; // NOT THE BEST CALLBACK TO USE FOR PRODUCTION
+    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;    // NOT THE BEST CALLBACK TO USE FOR PRODUCTION
     ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
     ble_hs_cfg.sm_bonding = 1u;
-    ble_hs_cfg.sm_our_key_dist = ble_hs_cfg.sm_our_key_dist | BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the local device is willing to share the encryption key (ENC) during pairing.
-    ble_hs_cfg.sm_their_key_dist = ble_hs_cfg.sm_our_key_dist | BLE_SM_PAIR_KEY_DIST_ENC; // set flag, indicating that the remote device is expected to share the encryption key during pairing.
+    ble_hs_cfg.sm_our_key_dist =
+        ble_hs_cfg.sm_our_key_dist | BLE_SM_PAIR_KEY_DIST_ENC;    // set flag, indicating that the local device is willing to share the
+                                                                  // encryption key (ENC) during pairing.
+    ble_hs_cfg.sm_their_key_dist =
+        ble_hs_cfg.sm_our_key_dist |
+        BLE_SM_PAIR_KEY_DIST_ENC;    // set flag, indicating that the remote device is expected to share the encryption key during pairing.
     ble_hs_cfg.sm_sc = 1u;
-    //ble_store_config_init(); // which header is this?..
+    // ble_store_config_init(); // which header is this?..
 }
-} // namespace
+}    // namespace
 namespace ble
 {
 std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>> CNimble::synchronization_primitives()
@@ -86,7 +97,7 @@ std::pair<std::shared_ptr<std::mutex>, std::shared_ptr<std::condition_variable>>
 }
 void CNimble::sync_callback()
 {
-    auto[pMutex, pCV] = synchronization_primitives();
+    auto [pMutex, pCV] = synchronization_primitives();
     std::unique_lock lock{ *pMutex };
     pCV->notify_one();
 }
@@ -98,7 +109,7 @@ CNimble::CNimble()
     esp_err_t nimbleResult = nimble_port_init();
     if (!success(nimbleResult))
     {
-         if (nimbleResult != ESP_ERR_INVALID_STATE)
+        if (nimbleResult != ESP_ERR_INVALID_STATE)
         {
             LOG_FATAL("Error initilizing nimble_port_init() due to controller is not idle");
         }
@@ -109,14 +120,11 @@ CNimble::CNimble()
     }
 
 
-    auto[pMutex, pCV] = synchronization_primitives();
+    auto [pMutex, pCV] = synchronization_primitives();
     std::unique_lock lock{ *pMutex };
 
     configure_nimble_host();
-    m_pProfileCache = CProfileCacheBuilder()
-                            .add_whoami()
-                            .add_whereami()
-                            .build();
+    m_pProfileCache = CProfileCacheBuilder().add_whoami().add_whereami().build();
 
 
     nimble_port_freertos_init(make_host_task());
@@ -127,34 +135,38 @@ CNimble::CNimble()
 CNimble::~CNimble()
 {
     std::printf("CNimble destructor\n");
-    //esp_restart();
+    // esp_restart();
 
     // destructor order -> CNimble -> Gap -> Gatt
     // since we use deinit in CNimble destructor, the destructors of Gap and Gatt will crash..
 
-    //int result = m_gap.drop_connection(BLE_HS_ENOENT);   
+    // int result = m_gap.drop_connection(BLE_HS_ENOENT);
 
-    if(m_pGap)
+    if (m_pGap)
+    {
         [[maybe_unused]] const ble::CGap* pGap = m_pGap.release();
+    }
 
-    if(m_pProfileCache)
+    if (m_pProfileCache)
+    {
         [[maybe_unused]] const ble::CProfileCache* pProfileCache = m_pProfileCache.release();
+    }
 
-    //std::optional<CGap::Error> result = m_gap.end_advertise();
-    //if (result != std::nullopt)
+    // std::optional<CGap::Error> result = m_gap.end_advertise();
+    // if (result != std::nullopt)
     //{
-    //    LOG_FATAL_FMT("{}", result.value().msg.c_str());
-    //}
+    //     LOG_FATAL_FMT("{}", result.value().msg.c_str());
+    // }
 
-    //result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
-    //ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
+    // result = ble_gatts_reset(); // TODO MAKE AS A FUNC IN CGATT
+    // ASSERT(result == SUCCESS, "Error unable to reset CGatt due to existing connections or active GAP procedures!");
 
     nimble_port_freertos_deinit();
-    //result = nimble_port_deinit();
-    //ASSERT(result == SUCCESS, "Error unable to deinit nimble port!")
+    // result = nimble_port_deinit();
+    // ASSERT(result == SUCCESS, "Error unable to deinit nimble port!")
 
-    //syncPromise = std::promise<void>{};
-    //syncFuture = syncPromise.get_future();
+    // syncPromise = std::promise<void>{};
+    // syncFuture = syncPromise.get_future();
 
     /*   Notes
     Calling nimble_port_stop(); --> E (1092) FreeRTOS: FreeRTOS Task "nimble_host" should not return, Aborting now!
@@ -170,4 +182,4 @@ CNimble::~CNimble()
     I dont know what is causing the 530 error code.
     */
 }
-}   // namespace ble
+}    // namespace ble

@@ -3,8 +3,6 @@
 #include "CGattService.hpp"
 #include "profiles.hpp"
 #include <memory>
-
-
 namespace ble
 {
 class CWhoAmI
@@ -32,4 +30,4 @@ private:
     std::vector<CCharacteristic> m_Characteristics;
     CGattService m_Service;
 };
-}   // namespace ble
+}    // namespace ble

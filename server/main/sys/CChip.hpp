@@ -2,8 +2,6 @@
 // std
 #include <cstdint>
 #include <string>
-
-
 namespace sys
 {
 class CChip
@@ -30,4 +28,4 @@ private:
     uint16_t m_Model;
     uint8_t m_Cores;
 };
-}   // namespace sys
+}    // namespace sys

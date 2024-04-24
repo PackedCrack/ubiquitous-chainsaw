@@ -15,8 +15,6 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "host/ble_uuid.h"
 #include "host/util/util.h"
-
-
 namespace ble
 {
 class CGap
@@ -43,7 +41,7 @@ public:
         identityResolved = BLE_GAP_EVENT_IDENTITY_RESOLVED,
         repeatPairing = BLE_GAP_EVENT_REPEAT_PAIRING,
         physicalUpdateComplete = BLE_GAP_EVENT_PHY_UPDATE_COMPLETE,
-        extDisc = BLE_GAP_EVENT_EXT_DISC, // external disconnect?
+        extDisc = BLE_GAP_EVENT_EXT_DISC,    // external disconnect?
         periodicSync = BLE_GAP_EVENT_PERIODIC_SYNC,
         periodicSyncReport = BLE_GAP_EVENT_PERIODIC_REPORT,
         periodicSyncLost = BLE_GAP_EVENT_PERIODIC_SYNC_LOST,
@@ -55,8 +53,8 @@ public:
     };
     struct Error
     {
-    	NimbleErrorCode code;
-    	std::string msg;
+        NimbleErrorCode code;
+        std::string msg;
     };
 public:
     CGap();
@@ -81,4 +79,4 @@ private:
     CConnection m_ActiveConnection;
     std::function<void(ble_gap_event*)> m_EventCallback;
 };
-}   // namespace nimble
+}    // namespace ble
