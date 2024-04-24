@@ -225,18 +225,16 @@ template<typename sha_t>
         return std::to_underlying(ble::HashType::Sha2_224);
     else if constexpr (std::same_as<sha_t, security::Sha2_256>)
         return std::to_underlying(ble::HashType::Sha2_256);
-    else if constexpr (std::same_as<sha_t, security::Sha2_384>)
-        return std::to_underlying(ble::HashType::Sha2_384);
-    else if constexpr (std::same_as<sha_t, security::Sha2_512>)
-        return std::to_underlying(ble::HashType::Sha2_512);
     else if constexpr (std::same_as<sha_t, security::Sha3_224>)
         return std::to_underlying(ble::HashType::Sha3_224);
     else if constexpr (std::same_as<sha_t, security::Sha3_256>)
         return std::to_underlying(ble::HashType::Sha3_256);
     else if constexpr (std::same_as<sha_t, security::Sha3_384>)
         return std::to_underlying(ble::HashType::Sha3_384);
-    else
+    else if constexpr (std::same_as<sha_t, security::Sha3_512>)
         return std::to_underlying(ble::HashType::Sha3_512);
+    else
+        return std::to_underlying(ble::HashType::Sha2_224);
 }
 [[nodiscard]] std::vector<byte> generate_random_block(security::CRandom& rng)
 {
@@ -364,51 +362,21 @@ sys::fire_and_forget_t try_demand_rssi(
         }
     } while (attempt < MAX_ATTEMPS);
 }
-}   // namespace
-
-
 [[nodiscard]] std::optional<const ble::CCharacteristic*> find_characteristic_demand_rssi(const ble::CService* pService)
 {
     return pService->characteristic(ble::uuid_characteristic_whereami_demand_rssi());
 }
 [[nodiscard]] auto demand_rssi(gfx::CWindow& wnd, CAuthenticator& authenticator, security::CEccPrivateKey* pPrivateKey)
 {
-    return [&wnd, &authenticator, pPrivateKey](const ble::CCharacteristic* pCharacteristic) 
+    return [&wnd, &authenticator, pPrivateKey](const ble::CCharacteristic* pCharacteristic)
     {
         std::vector<byte> packet = make_packet_demand_rssi(pPrivateKey);
         try_demand_rssi(wnd, authenticator, *pCharacteristic, packet);
-
+        
         return std::optional<const ble::CCharacteristic*>{ pCharacteristic };
     };
 }
-sys::fire_and_forget_t try_connect_to_server(
-    gfx::CWindow& wnd, 
-    std::optional<ble::CDevice>& outDevice, 
-    uint64_t address,
-    std::atomic<bool>& attemptingConnection)
-{
-    {
-        bool expected = false;
-        while (!attemptingConnection.compare_exchange_strong(expected, true)) {};
-    }
-    LOG_INFO("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-
-    std::expected<ble::CDevice, ble::CDevice::Error> expected = co_await ble::CDevice::make(address);
-    if (expected)
-    {
-        outDevice.emplace(std::move(*expected));
-        int a = 10;
-    }
-    else
-    {
-        wnd.popup_warning("Connection Attempt Failed", "Could not connect to authenticated mac address.");
-    }
-
-    {
-        bool expected = true;
-        while (!attemptingConnection.compare_exchange_strong(expected, false)) {};
-    }
-}
+}   // namespace
 
 
 int main(int argc, char** argv)
@@ -431,8 +399,8 @@ int main(int argc, char** argv)
     gui::CGui gui{};
  
     CAuthenticator authenticator{ pServerKey.get() };
-    gui::CDeviceList& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    gui::CRSSIPlot& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
+    auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
 
     std::optional<ble::CDevice> device = std::nullopt;
     
@@ -494,100 +462,4 @@ int main(int argc, char** argv)
     }
     
     return EXIT_SUCCESS;
-    
-    
-    
-    
-    
-    
-    
-    
-    //test_ecc_sign();
-    
-    
-    
-    //auto result = security::CWolfCrypt::instance();
-    //sys::CSystem system{};
-    
-    //auto scanner = ble::make_scanner<ble::CScanner>();
-    //scanner.begin_scan();
-    //
-    //size_t numDevices = scanner.num_devices().load();
-    //scanner.num_devices().wait(numDevices);
-    //
-    //std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-    //if(!infos.empty())
-    //{
-    //    for(const auto& info : infos)
-    //    {
-    //        LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-    //                     ble::hex_addr_to_str(info.address.value()),
-    //                     ble::address_type_to_str(info.addressType));
-    //
-    //        query_device(info.address.value());
-    //    }
-    //}
-    //
-    //tf::Executor executor{};
-    
-    //executor.silent_async([&scanner]()
-    //{
-    //    while(true)
-    //    {
-    //        std::vector<ble::DeviceInfo> infos = scanner.found_devices();
-    //        if(!infos.empty())
-    //        {
-    //            for(const auto& info : infos)
-    //            {
-    //                LOG_INFO_FMT("DeviceInfo in cache.\nAddress: {}\nAddress Type: {}",
-    //                             ble::hex_addr_to_str(info.address.value()),
-    //                             ble::address_type_to_str(info.addressType));
-    //
-    //                query_device(info.address.value());
-    //            }
-    //            break;
-    //        }
-    //
-    //        std::this_thread::sleep_for(std::chrono::seconds(1));
-    //    }
-    //});
-    
-    
-    
-
-    //try
-    //{
-    //    process_cmd_line_args(argc, argv);
-    //
-//
-    //
-    //    gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
-    //    gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED };
-    //    gui::CGui gui{};
-    //
-    //
-    //
-    //
-    //    tf::Executor executor{};
-    //    executor.silent_async(time_limited_scan(scanner, std::chrono::seconds(10)));
-    //
-    //    bool exit = false;
-    //    while (!exit)
-    //    {
-    //        renderer.begin_frame();
-//
-    //        window.process_events(&exit);
-    //        gui.push();
-//
-    //        renderer.end_frame();
-    //    }
-    //
-    //
-    //    return EXIT_SUCCESS;
-    //}
-    //catch(const exception::fatal_error& err)
-    //{
-    //    LOG_ERROR_FMT("Fatal exception: {}", err.what());
-    //    return EXIT_FAILURE;
-    //}
 }

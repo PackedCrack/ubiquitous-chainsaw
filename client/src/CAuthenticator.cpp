@@ -215,25 +215,6 @@ sys::fire_and_forget_t CAuthenticator::process_queue()
 }
 sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice& device, uint64_t address) const
 {
-    //if (!info.address)
-    //    co_return false;
-    
-    //std::expected<ble::CDevice, ble::CDevice::Error> expected = co_await ble::make_device<ble::CDevice>(info.address.value());
-    //if (!expected)
-    //    co_return false;
-    //for (auto&& service : expected->m_Services)
-    //    service.second.m_pService->Close();
-
-    //std::expected<ble::CDevice, ble::CDevice::Error> expected2 = co_await ble::make_device<ble::CDevice>(info.address.value());
-    //for (auto&& service : expected2->m_Services)
-    //    service.second.m_pService->Close();
-    //std::expected<ble::CDevice, ble::CDevice::Error> expected3 = co_await ble::make_device<ble::CDevice>(info.address.value());
-    //for (auto&& service : expected3->m_Services)
-    //    service.second.m_pService->Close();
-    //std::expected<ble::CDevice, ble::CDevice::Error> expected4 = co_await ble::make_device<ble::CDevice>(info.address.value());
-    //if(!expected)
-    //    co_return false;
-    
     std::optional<const ble::CCharacteristic*> characteristic = co_await find_server_auth_characteristic(device);
     if (!characteristic)
         co_return false;

@@ -19,13 +19,9 @@ CService::~CService()
 {
     if (m_pService)
     {
-        LOG_INFO_FMT("Use count: {}", m_pService.use_count());
-
         if (m_pService.use_count() == 1)
             m_pService->Close();
     }
-        
-            
 }
 CService::CService(GattDeviceService service)
     : m_pService{ std::make_shared<GattDeviceService>(std::move(service)) }
