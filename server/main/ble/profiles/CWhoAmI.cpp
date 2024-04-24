@@ -8,10 +8,8 @@
 #include <cstdint>
 #include <stdexcept>
 #include <array>
-#include <cstring> 
+#include <cstring>
 #include <type_traits>
-
-
 namespace ble
 {
 CWhoAmI::CWhoAmI()
@@ -30,7 +28,7 @@ CWhoAmI::CWhoAmI(const CWhoAmI& other)
 }
 CWhoAmI& CWhoAmI::operator=(const CWhoAmI& other)
 {
-    if(this != &other)
+    if (this != &other)
     {
         copy(other);
     }
@@ -55,9 +53,9 @@ void CWhoAmI::sign_server_mac_address()
     {
         LOG_FATAL_FMT("UNABLE TO RETRIEVE A MAC ADDRESS! ERROR = {}", nimble_error_to_string(addressResult.error()));
     }
-   
+
     security::CRandom rng = security::CRandom::make_rng().value();
-    security::CHash<security::Sha2_256> hash{ std::move(addressResult.value())};
+    security::CHash<security::Sha2_256> hash{ std::move(addressResult.value()) };
     std::vector<security::byte> signature = m_pPrivateKey->sign_hash(rng, hash);
 
     size_t packetSize = sizeof(ServerAuthHeader) + hash.size() + signature.size();
@@ -69,11 +67,11 @@ void CWhoAmI::sign_server_mac_address()
     packetData.resize(packetSize);
     std::memcpy(packetData.data() + sizeof(ServerAuthHeader), hash.data(), hash.size());
     std::memcpy((packetData.data() + hash.size() + sizeof(ServerAuthHeader)), signature.data(), signature.size() * sizeof(security::byte));
-    
+
     m_SignedMacData = std::move(packetData);
     if (m_SignedMacData.empty())
     {
-    	LOG_FATAL("Failed to sign server MAC address!");
+        LOG_FATAL("Failed to sign server MAC address!");
     }
 }
 ble_gatt_svc_def CWhoAmI::as_nimble_service() const
@@ -88,58 +86,64 @@ std::vector<CCharacteristic> CWhoAmI::make_characteristics(const std::shared_ptr
 }
 auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfile)
 {
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wshadow"
-    return [wpProfile = std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle, uint16_t attributeHandle, ble_gatt_access_ctxt* pContext) -> int	// type deduction requires exact typematch
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+    return [wpProfile =
+                std::weak_ptr<Profile>{ pProfile }](uint16_t connectionHandle,
+                                                    uint16_t attributeHandle,
+                                                    ble_gatt_access_ctxt* pContext) -> int    // type deduction requires exact typematch
     {
         std::shared_ptr<Profile> pProfile = wpProfile.lock();
-        if(pProfile)
+        if (pProfile)
         {
             CWhoAmI* pSelf = std::get_if<CWhoAmI>(pProfile.get());
-            if(pSelf != nullptr)
+            if (pSelf != nullptr)
             {
                 auto operation = CharacteristicAccess{ pContext->op };
                 UNHANDLED_CASE_PROTECTION_ON
-                switch (operation) 
+                switch (operation)
                 {
-                    case CharacteristicAccess::read:
+                case CharacteristicAccess::read:
+                {
+                    if (pSelf->m_SignedMacData.empty())
                     {
-                        if(pSelf->m_SignedMacData.empty())
-                            pSelf->sign_server_mac_address();
-
-                        NimbleErrorCode code = append_read_data(pContext->om, pSelf->m_SignedMacData);
-                        if(code != NimbleErrorCode::success)
-                        {
-                            LOG_ERROR_FMT("Characteristic callback for Server Auth failed to append its data to the client: \"{}\"", 
-                                            nimble_error_to_string(code));
-                        }
-
-                        return static_cast<int32_t>(code);
+                        pSelf->sign_server_mac_address();
                     }
-                    case CharacteristicAccess::write:
+
+                    NimbleErrorCode code = append_read_data(pContext->om, pSelf->m_SignedMacData);
+                    if (code != NimbleErrorCode::success)
                     {
-                    	LOG_ERROR_FMT("Read only Characteristic \"Server Auth\" recieved a Write operation from connection handle: \"{}\"",
-                    					connectionHandle);
+                        LOG_ERROR_FMT("Characteristic callback for Server Auth failed to append its data to the client: \"{}\"",
+                                      nimble_error_to_string(code));
                     }
+
+                    return static_cast<int32_t>(code);
+                }
+                case CharacteristicAccess::write:
+                {
+                    LOG_ERROR_FMT("Read only Characteristic \"Server Auth\" recieved a Write operation from connection handle: \"{}\"",
+                                  connectionHandle);
+                }
                 }
                 UNHANDLED_CASE_PROTECTION_OFF
             }
             else
             {
-            	LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
+                LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
             }
         }
         else
         {
-        	LOG_WARN("Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
+            LOG_WARN(
+                "Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
         }
 
         return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);
     };
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 }
 CCharacteristic CWhoAmI::make_characteristic_authenticate(const std::shared_ptr<Profile>& pProfile)
 {
     return make_characteristic(ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE, make_callback_authenticate(pProfile), CharsPropertyFlag::read);
 }
-}   // namespace ble
+}    // namespace ble

@@ -13,11 +13,9 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "services/ans/ble_svc_ans.h"
 #include "host/ble_hs.h"
-
-
-namespace ble 
+namespace ble
 {
-class CNimble 
+class CNimble
 {
 public:
     CNimble();
@@ -34,4 +32,4 @@ private:
     std::unique_ptr<CGap> m_pGap = nullptr;
     std::unique_ptr<CProfileCache> m_pProfileCache = nullptr;
 };
-} // namespace ble
+}    // namespace ble

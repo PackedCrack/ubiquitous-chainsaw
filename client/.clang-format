@@ -4,12 +4,13 @@ AlignAfterOpenBracket: Align
 AlignConsecutiveMacros: "true"
 AlignConsecutiveAssignments: "false"
 AlignConsecutiveDeclarations: "false"
+AllowShortCompoundRequirementOnASingleLine: "true"
 AlignEscapedNewlines: Right
 AlignOperands: Align
 AlignTrailingComments: "true"
-AllowAllArgumentsOnNextLine: "true"
+AllowAllArgumentsOnNextLine: "false"
 AllowAllConstructorInitializersOnNextLine: "false"
-AllowAllParametersOfDeclarationOnNextLine: "true"
+AllowAllParametersOfDeclarationOnNextLine: "false"
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: "false"
 AllowShortFunctionsOnASingleLine: InlineOnly
@@ -24,20 +25,20 @@ BreakAfterJavaFieldAnnotations: "true"
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: "true"
-BreakConstructorInitializers: BeforeColon
+BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
 BreakStringLiterals: "true"
 ColumnLimit: "140"
 CompactNamespaces: "false"
 ConstructorInitializerAllOnOneLineOrOnePerLine: "true"
 ConstructorInitializerIndentWidth: "4"
-ContinuationIndentWidth: "0"
+ContinuationIndentWidth: "4"
 Cpp11BracedListStyle: "false"
 DerivePointerAlignment: "false"
 DisableFormat: "false"
 ExperimentalAutoDetectBinPacking: "false"
 FixNamespaceComments: "true"
-IncludeBlocks: Preserve
+IncludeBlocks: Merge
 IndentCaseLabels: "false"
 IndentPPDirectives: BeforeHash
 IndentWidth: "4"
@@ -47,7 +48,7 @@ Language: Cpp
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: Inner
 PointerAlignment: Left
-ReflowComments: "true"
+ReflowComments: "false"
 SortIncludes: Never
 SpaceAfterCStyleCast: "true"
 SpaceAfterLogicalNot: "false"
@@ -88,10 +89,10 @@ BraceWrapping:
   SplitEmptyNamespace: false
   BeforeWhile: false
 EmptyLineAfterAccessModifier: Never
-EmptyLineBeforeAccessModifier: Always
+EmptyLineBeforeAccessModifier: Never
 PackConstructorInitializers: Never
 BinPackParameters: false
-PPIndentWidth: 0
+PPIndentWidth: 4
 RemoveSemicolon: false
 RequiresClausePosition: OwnLine
 RequiresExpressionIndentation: OuterScope
@@ -114,7 +115,7 @@ SpacesInParens: Custom
 RemoveParentheses: MultipleParentheses
 RemoveBracesLLVM: false
 ReferenceAlignment: Pointer
-QualifierAlignment: Left
+QualifierAlignment: Custom
 LineEnding: DeriveLF
 LambdaBodyIndentation: Signature
 KeepEmptyLinesAtEOF: false
@@ -136,12 +137,9 @@ BreakBeforeInlineASMColon: Never
 BreakBeforeConceptDeclarations: Always
 BreakArrays: true
 BreakAfterAttributes: Never
-BreakAdjacentStringLiterals: true
 BracedInitializerIndentWidth: 4
 BitFieldColonSpacing: After
 AllowShortEnumsOnASingleLine: false
-AllowShortCompoundRequirementOnASingleLine: true
-AllowBreakBeforeNoexceptSpecifier: Never
 AlignConsecutiveShortCaseStatements:
   Enabled: true
   AlignCaseColons: false
@@ -150,3 +148,4 @@ AlignConsecutiveShortCaseStatements:
 AlignConsecutiveBitFields:
   Enabled: false
 AlignArrayOfStructures: Right
+QualifierOrder: ['friend','inline','constexpr','static', 'const', 'volatile', 'restrict', 'type']

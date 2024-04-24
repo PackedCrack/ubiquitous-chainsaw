@@ -2,49 +2,35 @@
 #include "../ble_common.hpp"
 // esp
 #include "host/ble_hs.h"
-
-
 namespace
 {
 [[nodiscard]] constexpr ble_gatt_svc_def end_of_array()
 {
-    return ble_gatt_svc_def {
-        .type = BLE_GATT_SVC_TYPE_END,
-        .uuid = nullptr,
-        .includes = nullptr,
-        .characteristics = nullptr
-    };
+    return ble_gatt_svc_def{ .type = BLE_GATT_SVC_TYPE_END, .uuid = nullptr, .includes = nullptr, .characteristics = nullptr };
 }
-}   // namespace
+}    // namespace
 namespace ble
 {
-Result<CProfileCache, CProfileCache::Error> CProfileCache::make_profile_cache(std::map<CProfileCache::KeyType, std::shared_ptr<Profile>>&& profiles)
+Result<CProfileCache, CProfileCache::Error>
+    CProfileCache::make_profile_cache(std::map<CProfileCache::KeyType, std::shared_ptr<Profile>>&& profiles)
 {
     try
     {
         CProfileCache cache{ std::move(profiles) };
-        return Result<CProfileCache, CProfileCache::Error>{
-            .value = std::make_optional<CProfileCache>(std::move(cache)),
-            .error = Error::none
-        };
+        return Result<CProfileCache, CProfileCache::Error>{ .value = std::make_optional<CProfileCache>(std::move(cache)),
+                                                            .error = Error::none };
     }
-    catch(const CProfileCache::Error& err)
+    catch (const CProfileCache::Error& err)
     {
         using ErrorCode = CProfileCache::Error;
 
-        if(err == ErrorCode::invalidResource)
+        if (err == ErrorCode::invalidResource)
         {
-            return Result<CProfileCache, CProfileCache::Error>{
-                .value = std::nullopt,
-                .error = Error::invalidResource
-            };
+            return Result<CProfileCache, CProfileCache::Error>{ .value = std::nullopt, .error = Error::invalidResource };
         }
-        else if(err == ErrorCode::outOfHeapMemory)
+        else if (err == ErrorCode::outOfHeapMemory)
         {
-            return Result<CProfileCache, CProfileCache::Error>{
-                .value = std::nullopt,
-                .error = Error::outOfHeapMemory
-            };
+            return Result<CProfileCache, CProfileCache::Error>{ .value = std::nullopt, .error = Error::outOfHeapMemory };
         }
         else
         {
@@ -57,35 +43,35 @@ Result<CProfileCache, CProfileCache::Error> CProfileCache::make_profile_cache(st
 CProfileCache::CProfileCache(std::map<CProfileCache::KeyType, std::shared_ptr<Profile>>&& profiles)
     : m_Profiles{ std::move(profiles) }
 {
-    for(auto&& kvPair : m_Profiles)
+    for (auto&& kvPair : m_Profiles)
     {
         Profile& p = *kvPair.second;
-        std::visit([this]<typename profile_t>(profile_t&& profile){ m_Services.emplace_back(profile.as_nimble_service()); }, p);
+        std::visit([this]<typename profile_t>(profile_t&& profile) { m_Services.emplace_back(profile.as_nimble_service()); }, p);
     }
     m_Services.emplace_back(end_of_array());
 
 
     // register m_Services
     NimbleErrorCode result = NimbleErrorCode{ ble_gatts_count_cfg(m_Services.data()) };
-    if(result == NimbleErrorCode::invalidArguments)
+    if (result == NimbleErrorCode::invalidArguments)
     {
         throw Error::invalidResource;
     }
-    else if(result != NimbleErrorCode::success)
+    else if (result != NimbleErrorCode::success)
     {
-        LOG_FATAL_FMT("Unknown error when calling ble_gatts_count_cfg inside CProfileCache's constructor: \"{}\"", 
-                        nimble_error_to_string(result));
+        LOG_FATAL_FMT("Unknown error when calling ble_gatts_count_cfg inside CProfileCache's constructor: \"{}\"",
+                      nimble_error_to_string(result));
     }
 
     result = NimbleErrorCode{ ble_gatts_add_svcs(m_Services.data()) };
-    if (result == NimbleErrorCode::resourceExhaustion) 
+    if (result == NimbleErrorCode::resourceExhaustion)
     {
         throw Error::outOfHeapMemory;
     }
-    else if(result != NimbleErrorCode::success)
+    else if (result != NimbleErrorCode::success)
     {
-        LOG_FATAL_FMT("Unknown error when calling ble_gatts_add_svcs inside CProfileCache's constructor: \"{}\"", 
-                        nimble_error_to_string(result));
+        LOG_FATAL_FMT("Unknown error when calling ble_gatts_add_svcs inside CProfileCache's constructor: \"{}\"",
+                      nimble_error_to_string(result));
     }
 }
-}   // namespace ble
+}    // namespace ble

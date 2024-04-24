@@ -1,8 +1,6 @@
 #include "CChip.hpp"
 // third_party
 #include "esp_chip_info.h"
-
-
 namespace sys
 {
 CChip::CChip()
@@ -47,10 +45,10 @@ std::string CChip::revision()
     uint32_t major = m_Revision / 100u;
     uint32_t minor = m_Revision % 100u;
     return std::format("v{}.{}", major, minor);
-    //return std::string{ "v" + std::to_string(major) + "." + std::to_string(minor) };
+    // return std::string{ "v" + std::to_string(major) + "." + std::to_string(minor) };
 }
 uint8_t CChip::cores()
 {
     return m_Cores;
 }
-}   // namespace sys
+}    // namespace sys
