@@ -1,30 +1,33 @@
 //
 // Created by qwerty on 2024-02-17.
 //
-
 #pragma once
 #include "../common/common.hpp"
 #include <cstring>
+// clang-format off
+
+
+// clang-format on
 namespace security
 {
 // recreating the typedef from wolfcrypt here is the easiest way to not leak WC headers
 typedef unsigned char byte;
 
 template<typename hash_t>
-concept Hash = requires(hash_t hash) {
+concept hash = requires(hash_t hash) {
     { hash.size() } -> std::convertible_to<typename decltype(hash)::size_type>;
     { hash.data() } -> std::convertible_to<typename decltype(hash)::const_pointer>;
     { hash.as_string() } -> std::convertible_to<std::string>;
 };
 
 template<typename algorithm_t>
-concept HashAlgorithm = requires(algorithm_t alg, std::array<uint8_t, 26>&& data, std::vector<byte>&& buffer) {
+concept hash_algorithm = requires(algorithm_t alg, std::array<uint8_t, 26>&& data, std::vector<byte>&& buffer) {
     { algorithm_t::HASH_NAME } -> std::convertible_to<const std::string_view>;
-    { algorithm_t::HASH_SIZE } -> std::convertible_to<size_t>;
+    { algorithm_t::HASH_SIZE } -> std::convertible_to<std::size_t>;
     //{ alg.hash(data, buffer) } -> std::convertible_to<decltype(buffer)>;
 };
 template<typename algorithm_t>
-requires HashAlgorithm<algorithm_t>
+requires hash_algorithm<algorithm_t>
 class CHash
 {
 public:
@@ -123,7 +126,7 @@ public:
         return str;
     }
     [[nodiscard]] const byte* data() const { return m_Hash.data(); }
-    [[nodiscard]] size_t size() const { return m_Hash.size(); }
+    [[nodiscard]] std::size_t size() const { return m_Hash.size(); }
 private:
     template<typename buffer_t>
     requires common::const_buffer<buffer_t>

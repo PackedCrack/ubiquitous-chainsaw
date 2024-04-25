@@ -10,6 +10,63 @@
 #include <array>
 #include <cstring>
 #include <type_traits>
+// clang-format off
+
+
+// clang-format on
+namespace
+{
+void copy_from_buffer(std::span<security::byte>& dst, std::span<const security::byte> src)
+{
+    ASSERT(dst.size() >= src.size(), "Destination buffer is too small to copy source buffer!");
+    std::size_t smallest = dst.size() < src.size() ? dst.size() : src.size();
+    std::memcpy(dst.data(), src.data(), smallest);
+}
+template<typename algorithm_t>
+[[nodiscard]] std::vector<security::byte>
+    copy_hash_and_signature(std::vector<security::byte>& packet, security::CHash<algorithm_t>& hash, const std::vector<byte>& signature)
+{
+    std::size_t neededSize = sizeof(ble::AuthenticateHeader) + hash.size();
+    ASSERT(packet.size() >= neededSize, "Packet buffer is too small to insert the hash data!");
+    std::span<security::byte> packetView{ std::begin(packet) + sizeof(ble::AuthenticateHeader), hash.size() };
+    copy_from_buffer(packetView, std::span<const security::byte>{ hash.data(), hash.size() });
+
+    neededSize = sizeof(ble::AuthenticateHeader) + hash.size() + signature.size();
+    ASSERT(packet.size() >= neededSize, "Packet buffer is too small to insert the hash data!");
+    packetView = std::span<security::byte>{ std::end(packetView), signature.size() };
+    copy_from_buffer(packetView, std::span<const security::byte>{ signature.data(), signature.size() });
+
+    return packet;
+}
+template<typename algorithm_t>
+[[nodiscard]] std::vector<security::byte>
+    fill_header(std::vector<security::byte>& packet, security::CHash<algorithm_t>& hash, const std::vector<byte>& signature)
+{
+    ASSERT(packet.size() > sizeof(ble::AuthenticateHeader), "Packet too small! Has it not been pre-allocated?");
+
+    static constexpr ble::AuthenticateHeader HEADER{};
+    packet[HEADER.hashType] = ble::hash_type_id(ble::sha_to_enum<algorithm_t>());
+    packet[HEADER.hashOffset] = common::assert_down_cast<uint8_t>(sizeof(ble::AuthenticateHeader));
+    packet[HEADER.hashSize] = common::assert_down_cast<uint8_t>(hash.size());
+    packet[HEADER.signatureOffset] = common::assert_down_cast<uint8_t>(sizeof(ble::AuthenticateHeader) + hash.size());
+    packet[HEADER.signatureSize] = common::assert_down_cast<uint8_t>(signature.size());
+
+    return packet;
+}
+template<typename algorithm_t>
+[[nodiscard]] std::vector<security::byte>
+    make_packet(std::vector<security::byte>& packet, security::CHash<algorithm_t>& hash, const std::vector<byte>& signature)
+{
+    std::size_t packetSize = sizeof(ble::AuthenticateHeader) + hash.size() + signature.size();
+    packet = std::vector<security::byte>(packetSize);
+    ASSERT(packet.size() == packetSize, "Expected constructor to resize the new vector");
+
+    packet = fill_header(packet, hash, signature);
+    packet = copy_hash_and_signature(packet, hash, signature);
+
+    return packet;
+}
+}    // namespace
 namespace ble
 {
 CWhoAmI::CWhoAmI()
@@ -58,23 +115,8 @@ void CWhoAmI::sign_server_mac_address()
     security::CHash<security::Sha2_256> hash{ std::move(addressResult.value()) };
     std::vector<security::byte> signature = m_pPrivateKey->sign_hash(rng, hash);
 
-    size_t packetSize = sizeof(AuthenticateHeader) + hash.size() + signature.size();
-    std::vector<security::byte> packetData{ common::assert_down_cast<uint8_t>(static_cast<uint8_t>(HashType::Sha2_256)),
-                                            common::assert_down_cast<uint8_t>(sizeof(AuthenticateHeader)),
-                                            common::assert_down_cast<uint8_t>(hash.size()),
-                                            common::assert_down_cast<uint8_t>(sizeof(AuthenticateHeader) + hash.size()),
-                                            common::assert_down_cast<uint8_t>(signature.size()) };
-    packetData.resize(packetSize);
-    std::memcpy(packetData.data() + sizeof(AuthenticateHeader), hash.data(), hash.size());
-    std::memcpy((packetData.data() + hash.size() + sizeof(AuthenticateHeader)),
-                signature.data(),
-                signature.size() * sizeof(security::byte));
-
-    m_SignedMacData = std::move(packetData);
-    if (m_SignedMacData.empty())
-    {
-        LOG_FATAL("Failed to sign server MAC address!");
-    }
+    m_SignedMacData = make_packet(m_SignedMacData, hash, signature);
+    ASSERT(!m_SignedMacData.empty(), "Failed to sign server MAC address!");
 }
 ble_gatt_svc_def CWhoAmI::as_nimble_service() const
 {
@@ -123,7 +165,7 @@ auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfil
                 }
                 case CharacteristicAccess::write:
                 {
-                    LOG_ERROR_FMT("Read only Characteristic \"Server Auth\" recieved a Write operation from connection handle: \"{}\"",
+                    ASSERT_FMT(false, "Read only Characteristic \"Authenticate\" recieved a Write operation from connection handle: \"{}\"",
                                   connectionHandle);
                 }
                 }
@@ -131,13 +173,13 @@ auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfil
             }
             else
             {
-                LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
+                LOG_WARN("Characteristic callback for \"Authenticate\" failed to retrieve pointer to self from shared_ptr to Profile.");
             }
         }
         else
         {
             LOG_WARN(
-                "Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
+                "Characteristic callback for \"Authenticate\" failed to take ownership of shared pointer to profile! It has been deleted.");
         }
 
         return static_cast<int32_t>(NimbleErrorCode::unexpectedCallbackBehavior);

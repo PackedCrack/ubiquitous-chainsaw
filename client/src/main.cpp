@@ -279,7 +279,7 @@ template<typename sha_t>
     return packet;
 }
 template<typename sha_t>
-requires security::HashAlgorithm<sha_t>
+requires security::hash_algorithm<sha_t>
 [[nodiscard]] std::vector<byte> insert_hash(std::vector<byte>& packet, const security::CHash<sha_t>& hash)
 {
     static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();

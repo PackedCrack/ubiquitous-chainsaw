@@ -9,6 +9,10 @@
 // third_party
 #include "wolfcrypt/ecc.h"
 #include "wolfcrypt/asn_public.h"
+// clang-format off
+
+
+// clang-format on
 namespace security
 {
 class CEccPublicKey;
@@ -105,7 +109,7 @@ public:
     CEccPublicKey& operator=(CEccPublicKey&& other) noexcept;
 public:
     template<typename buffer_t, typename hash_t>
-    requires common::buffer<std::remove_cvref_t<buffer_t>> && Hash<std::remove_cvref_t<hash_t>>
+    requires common::buffer<std::remove_cvref_t<buffer_t>> && hash<std::remove_cvref_t<hash_t>>
     bool verify_hash(buffer_t&& source, hash_t&& hash)
     {
         ASSERT(source.size() > 0u, "Tried to create verify signature on empty buffer!");
@@ -137,7 +141,7 @@ public:
     CEccPrivateKey& operator=(CEccPrivateKey&& other) noexcept;
 public:
     template<typename hash_t>
-    requires Hash<std::remove_cvref_t<hash_t>>
+    requires hash<std::remove_cvref_t<hash_t>>
     [[nodiscard]] std::vector<byte> sign_hash(CRandom& rng, hash_t&& hash)
     {
         ASSERT(hash.size() > 0u, "Tried to sign an empty hash!");

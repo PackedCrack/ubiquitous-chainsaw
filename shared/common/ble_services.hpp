@@ -1,7 +1,12 @@
 #pragma once
+#include "../security/sha.hpp"
 // std
 #include <cstdint>
 #include <concepts>
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 struct UUID
@@ -62,12 +67,48 @@ enum class HashType : uint8_t
     Sha3_512 = 5u,
     count
 };
+template<typename sha_t>
+[[nodiscard]] constexpr HashType sha_to_enum()
+{
+    // clang-format off
+    if constexpr(std::same_as<sha_t, security::Sha2_224>) { return HashType::Sha2_224; }
+    else if constexpr(std::same_as<sha_t, security::Sha2_256>) { return HashType::Sha2_256; }
+    else if constexpr(std::same_as<sha_t, security::Sha3_224>) { return HashType::Sha3_224; }
+    else if constexpr(std::same_as<sha_t, security::Sha3_256>) { return HashType::Sha3_256; }
+    else if constexpr(std::same_as<sha_t, security::Sha3_384>) { return HashType::Sha3_384; }
+    else
+    { static_assert(std::same_as<sha_t, security::Sha3_512>, "Type unsupported"); return HashType::Sha3_512; }
+    // clang-format on
+}
+[[nodiscard]] constexpr uint8_t hash_type_id(HashType type)
+{
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (type)
+    {
+        // clang-format off
+        case ble::HashType::Sha2_224: return std::to_underlying(ble::HashType::Sha2_224);
+        case ble::HashType::Sha2_256: return std::to_underlying(ble::HashType::Sha2_256);
+        case ble::HashType::Sha3_224: return std::to_underlying(ble::HashType::Sha3_224);
+        case ble::HashType::Sha3_256: return std::to_underlying(ble::HashType::Sha3_256);
+        case ble::HashType::Sha3_384: return std::to_underlying(ble::HashType::Sha3_384);
+        case ble::HashType::Sha3_512: return std::to_underlying(ble::HashType::Sha3_512);
+        case ble::HashType::count:
+            // cppcheck-suppress constStatement
+            ASSERT(false, "Value of \"count\" passed unexpectedly from ble::HashType"); // this should never happen so we want to break here..
+            return 0;
+        // clang-format on
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+
+    std::unreachable();
+}
 /**
  * @brief Represents the header for server authentication.
  *
- * This structure is designed to hold information about the authentication data
- * within a server packet or similar context. It includes details about both
- * hash and signature blocks contained within the packet.
+ * This structure holds information about the packet header for whoami's
+ * authentication characteristic. Each member hold the byte offset into
+ * the packet where the information should be stored. The type of the member
+ * indicate how many bytes should be reserved for that information.
  */
 struct AuthenticateHeader
 {

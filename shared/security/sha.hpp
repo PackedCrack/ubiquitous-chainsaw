@@ -6,6 +6,10 @@
 // third-party
 #include "wc_defines.hpp"
 #include "wolfssl/wolfcrypt/asn.h"
+// clang-format off
+
+
+// clang-format on
 namespace security
 {
 template<typename buffer_t, typename out_buffer_t, typename invokable_t>
@@ -20,7 +24,7 @@ decltype(auto) _hash(buffer_t&& data, out_buffer_t&& buffer, invokable_t sha)
 struct Sha
 {
     static constexpr std::string_view HASH_NAME = "SHA";
-    static constexpr size_t HASH_SIZE = WC_SHA_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -31,7 +35,7 @@ struct Sha
 struct Sha2_224
 {
     static constexpr std::string_view HASH_NAME = "SHA2-224";
-    static constexpr size_t HASH_SIZE = WC_SHA224_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA224_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -42,7 +46,7 @@ struct Sha2_224
 struct Sha2_256
 {
     static constexpr std::string_view HASH_NAME = "SHA2-256";
-    static constexpr size_t HASH_SIZE = WC_SHA256_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA256_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -53,7 +57,7 @@ struct Sha2_256
 struct Sha2_384
 {
     static constexpr std::string_view HASH_NAME = "SHA2-384";
-    static constexpr size_t HASH_SIZE = WC_SHA384_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA384_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -64,7 +68,7 @@ struct Sha2_384
 struct Sha2_512
 {
     static constexpr std::string_view HASH_NAME = "SHA2-512";
-    static constexpr size_t HASH_SIZE = WC_SHA512_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA512_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -75,7 +79,7 @@ struct Sha2_512
 struct Sha3_224
 {
     static constexpr std::string_view HASH_NAME = "SHA3-224";
-    static constexpr size_t HASH_SIZE = WC_SHA3_224_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA3_224_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -86,7 +90,7 @@ struct Sha3_224
 struct Sha3_256
 {
     static constexpr std::string_view HASH_NAME = "SHA3-256";
-    static constexpr size_t HASH_SIZE = WC_SHA3_256_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA3_256_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -97,7 +101,7 @@ struct Sha3_256
 struct Sha3_384
 {
     static constexpr std::string_view HASH_NAME = "SHA3-384";
-    static constexpr size_t HASH_SIZE = WC_SHA3_384_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA3_384_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
@@ -108,7 +112,7 @@ struct Sha3_384
 struct Sha3_512
 {
     static constexpr std::string_view HASH_NAME = "SHA3-512";
-    static constexpr size_t HASH_SIZE = WC_SHA3_512_DIGEST_SIZE;
+    static constexpr std::size_t HASH_SIZE = WC_SHA3_512_DIGEST_SIZE;
     template<typename buffer_t, typename out_buffer_t>
     requires common::const_buffer<buffer_t> && common::buffer<out_buffer_t>
     [[nodiscard]] static decltype(auto) hash(buffer_t&& data, out_buffer_t&& buffer)
