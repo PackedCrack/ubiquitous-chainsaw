@@ -9,95 +9,136 @@
 #include <iostream>
 
 #define TO_BOOL(expr) common::enum_to_bool(expr)
-
 namespace
 {
-[[nodiscard]] ble::CCharacteristic::Properties operator|(
-        ble::CCharacteristic::Properties lhs,
-        winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
+[[nodiscard]] ble::CCharacteristic::Properties
+    operator|(ble::CCharacteristic::Properties lhs,
+              winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
 {
     return ble::CCharacteristic::Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
 }
 [[nodiscard]] std::vector<std::string> properties_to_str(ble::CCharacteristic::Properties properties)
 {
     using Properties = ble::CCharacteristic::Properties;
-    
-    std::vector<std::string>  props{};
-    if(static_cast<bool>(properties & Properties::authenticatedSignedWrites))
+
+    std::vector<std::string> props{};
+    if (static_cast<bool>(properties & Properties::authenticatedSignedWrites))
+    {
         props.emplace_back("Authenticated Signed Writes");
-    if(TO_BOOL(properties & Properties::broadcast))
+    }
+    if (TO_BOOL(properties & Properties::broadcast))
+    {
         props.emplace_back("Broadcast");
-    if(TO_BOOL(properties & Properties::extendedProperties))
+    }
+    if (TO_BOOL(properties & Properties::extendedProperties))
+    {
         props.emplace_back("Extended Properties");
-    if(TO_BOOL(properties & Properties::indicate))
+    }
+    if (TO_BOOL(properties & Properties::indicate))
+    {
         props.emplace_back("Indicate");
-    if(TO_BOOL(properties & Properties::none))
+    }
+    if (TO_BOOL(properties & Properties::none))
+    {
         props.emplace_back("None");
-    if(TO_BOOL(properties & Properties::notify))
+    }
+    if (TO_BOOL(properties & Properties::notify))
+    {
         props.emplace_back("Notify");
-    if(TO_BOOL(properties & Properties::read))
+    }
+    if (TO_BOOL(properties & Properties::read))
+    {
         props.emplace_back("Read");
-    if(TO_BOOL(properties & Properties::reliableWrites))
+    }
+    if (TO_BOOL(properties & Properties::reliableWrites))
+    {
         props.emplace_back("Reliable Writes");
-    if(TO_BOOL(properties & Properties::writableAuxiliaries))
+    }
+    if (TO_BOOL(properties & Properties::writableAuxiliaries))
+    {
         props.emplace_back("Writable Auxiliaries");
-    if(TO_BOOL(properties & Properties::write))
+    }
+    if (TO_BOOL(properties & Properties::write))
+    {
         props.emplace_back("Write");
-    if(TO_BOOL(properties & Properties::writeWithoutResponse))
+    }
+    if (TO_BOOL(properties & Properties::writeWithoutResponse))
+    {
         props.emplace_back("Write Without Response");
-    
-    
+    }
+
+
     return props;
 }
-[[nodiscard]] ble::CCharacteristic::Properties to_props_from_winrt(
-        winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties properties)
+[[nodiscard]] ble::CCharacteristic::Properties
+    to_props_from_winrt(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties properties)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
     using Properties = ble::CCharacteristic::Properties;
-    
+
     Properties props{ 0 };
-    if(TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
+    if (TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
     {
         // cppcheck-suppress badBitmaskCheck
         props = props | GattCharacteristicProperties::AuthenticatedSignedWrites;
     }
-    if(TO_BOOL(properties & GattCharacteristicProperties::Broadcast))
+    if (TO_BOOL(properties & GattCharacteristicProperties::Broadcast))
+    {
         props = props | GattCharacteristicProperties::Broadcast;
-    if(TO_BOOL(properties & GattCharacteristicProperties::ExtendedProperties))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::ExtendedProperties))
+    {
         props = props | GattCharacteristicProperties::ExtendedProperties;
-    if(TO_BOOL(properties & GattCharacteristicProperties::Indicate))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::Indicate))
+    {
         props = props | GattCharacteristicProperties::Indicate;
-    if(TO_BOOL(properties & GattCharacteristicProperties::None))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::None))
+    {
         props = props | GattCharacteristicProperties::None;
-    if(TO_BOOL(properties & GattCharacteristicProperties::Notify))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::Notify))
+    {
         props = props | GattCharacteristicProperties::Notify;
-    if(TO_BOOL(properties & GattCharacteristicProperties::Read))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::Read))
+    {
         props = props | GattCharacteristicProperties::Read;
-    if(TO_BOOL(properties & GattCharacteristicProperties::ReliableWrites))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::ReliableWrites))
+    {
         props = props | GattCharacteristicProperties::ReliableWrites;
-    if(TO_BOOL(properties & GattCharacteristicProperties::WritableAuxiliaries))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::WritableAuxiliaries))
+    {
         props = props | GattCharacteristicProperties::WritableAuxiliaries;
-    if(TO_BOOL(properties & GattCharacteristicProperties::Write))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::Write))
+    {
         props = props | GattCharacteristicProperties::Write;
-    if(TO_BOOL(properties & GattCharacteristicProperties::WriteWithoutResponse))
+    }
+    if (TO_BOOL(properties & GattCharacteristicProperties::WriteWithoutResponse))
+    {
         props = props | GattCharacteristicProperties::WriteWithoutResponse;
-    
+    }
+
     return props;
 }
-}   // namespace
+}    // namespace
 namespace ble
 {
 CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& characteristic)
 {
     CCharacteristic charac{ characteristic };
-    
+
     // Storing this mostly for debug purposes for now..
     charac.m_Properties = to_props_from_winrt(charac.m_pCharacteristic->CharacteristicProperties());
     std::vector<std::string> properties = properties_to_str(charac.m_Properties);
     // TODO:: might not need this
     charac.m_ProtLevel = prot_level_from_winrt(charac.m_pCharacteristic->ProtectionLevel());
-    
-    #ifndef NDEBUG
+
+#ifndef NDEBUG
     std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
 
     std::printf("\nCharacteristic properties: ");
@@ -107,15 +148,15 @@ CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& cha
     }
 
     std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.m_ProtLevel)).c_str());
-    #endif
+#endif
 
     co_await charac.query_descriptors();
     co_return charac;
 }
 CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
-        : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
-        , m_ProtLevel{}
-        , m_Properties{}
+    : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
+    , m_ProtLevel{}
+    , m_Properties{}
 {}
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
@@ -128,19 +169,19 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
     using namespace Windows::Devices::Bluetooth;
     using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace Windows::Storage::Streams;
-    
+
     GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
-    
+
     CommunicationStatus status = winrt_status_to_communication_status(result.Status());
     if (status == CommunicationStatus::success)
     {
         IBuffer buffer = result.Value();
-        
+
         read_t data{};
         data->resize(buffer.Length());
         size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
         std::memcpy(data->data(), buffer.data(), smallestSize);
-        
+
         co_return data;
     }
     else
@@ -161,13 +202,13 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector
 {
     using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
     using Buffer = winrt::Windows::Storage::Streams::Buffer;
-    
-    
+
+
     Buffer buffer{ static_cast<uint32_t>(data.size()) };
     buffer.Length(buffer.Capacity());
     std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
-    
-    
+
+
     try
     {
         co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteValueAsync(buffer, option));
@@ -175,11 +216,11 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector
     catch (...)    // catch all because i have no clue what windows throws and when
     {
         winrt::guid guid = m_pCharacteristic->Uuid();
-        uint16_t uniqueValue = guid.Data1 & 0x0000'FF00;
-        uniqueValue = uniqueValue | (guid.Data1 & 0x0000'00FF);
+        uint16_t uniqueValue = guid.Data1 & 0x00'00'FF'00;
+        uniqueValue = uniqueValue | (guid.Data1 & 0x00'00'00'FF);
 
-        LOG_ERROR_FMT("Windows BLE driver exception when trying to Write to characteristic with UUID: \"{}\"", 
-            std::format("{:02X}", uniqueValue));
+        LOG_ERROR_FMT("Windows BLE driver exception when trying to Write to characteristic with UUID: \"{}\"",
+                      std::format("{:02X}", uniqueValue));
 
         co_return ble::CommunicationStatus::unreachable;
     }
@@ -188,21 +229,21 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace winrt::Windows::Foundation::Collections;
-    
-    
+
+
     m_Descriptors.clear();
-    
+
     GattDescriptorsResult result = co_await m_pCharacteristic->GetDescriptorsAsync();
-    if(result.Status() == GattCommunicationStatus::Success)
+    if (result.Status() == GattCommunicationStatus::Success)
     {
         IVectorView<GattDescriptor> descriptors = result.Descriptors();
         m_Descriptors.reserve(descriptors.Size());
-        
-        for(auto&& descriptor : descriptors)
+
+        for (auto&& descriptor : descriptors)
         {
-            auto[iter, emplaced] =
-                    m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), co_await make_descriptor<CDescriptor>(descriptor));
-            if(!emplaced)
+            auto [iter, emplaced] =
+                m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), co_await make_descriptor<CDescriptor>(descriptor));
+            if (!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
             }
@@ -215,4 +256,4 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
                       uuid_as_str());
     }
 }
-}   // namespace ble
+}    // namespace ble

@@ -8,14 +8,10 @@
     #error Only windows is implemented atm
 #endif
 #include "common/common.hpp"
-
-
 namespace ble
 {
 template<typename scanner_t, typename... ctor_args_t>
-concept Scanner =
-requires(scanner_t scanner, const scanner_t constScanner, scanner_t::pos_t pos)
-{
+concept scanner = requires(scanner_t scanner, const scanner_t constScanner, scanner_t::pos_t pos) {
     typename scanner_t::pos_t;
     common::constructible_with<scanner_t, ctor_args_t...>;
     { scanner.begin_scan() };
@@ -24,15 +20,13 @@ requires(scanner_t scanner, const scanner_t constScanner, scanner_t::pos_t pos)
     { constScanner.num_devices() } -> std::convertible_to<const std::atomic<size_t>&>;
     { constScanner.scanning() } -> std::convertible_to<bool>;
 };
-
 template<typename scanner_t, typename... ctor_args_t>
-requires Scanner<scanner_t, ctor_args_t...>
+requires scanner<scanner_t, ctor_args_t...>
 [[nodiscard]] scanner_t make_scanner(ctor_args_t&&... args)
 {
     return scanner_t{ std::forward<ctor_args_t>(args)... };
 }
-}   // namespace ble
-
+}    // namespace ble
 //namespace ble
 //{
 //template<typename implementation_t>

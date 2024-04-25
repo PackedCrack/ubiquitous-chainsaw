@@ -10,8 +10,6 @@
 #include <winrt/Windows.Devices.Bluetooth.h>
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include <winrt/Windows.Foundation.Collections.h>
-
-
 namespace ble
 {
 class CDevice
@@ -46,23 +44,28 @@ public:
     {
         m_ConnectionChanged = std::forward<invokable_t>(cb);
         m_pDevice->ConnectionStatusChanged(
-        [this](
-            const winrt::Windows::Devices::Bluetooth::BluetoothLEDevice& device, 
-            [[maybe_unused]] const winrt::Windows::Foundation::IInspectable& inspectable)
-        {
-            using Status = winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus;
+            [this](const winrt::Windows::Devices::Bluetooth::BluetoothLEDevice& device,
+                   [[maybe_unused]] const winrt::Windows::Foundation::IInspectable& inspectable)
+            {
+                using Status = winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus;
 
-            Status status = device.ConnectionStatus();
-            ConnectionStatus conStatus{};
-            if (status == Status::Connected)
-                conStatus = ConnectionStatus::connected;
-            else if (status == Status::Disconnected)
-                conStatus = ConnectionStatus::disconnected;
-            else
-                assert(false);
+                Status status = device.ConnectionStatus();
+                ConnectionStatus conStatus{};
+                if (status == Status::Connected)
+                {
+                    conStatus = ConnectionStatus::connected;
+                }
+                else if (status == Status::Disconnected)
+                {
+                    conStatus = ConnectionStatus::disconnected;
+                }
+                else
+                {
+                    assert(false);
+                }
 
-            this->m_ConnectionChanged(conStatus);
-        });
+                this->m_ConnectionChanged(conStatus);
+            });
     }
     [[nodiscard]] bool connected() const;
     [[nodiscard]] uint64_t address() const;
@@ -76,4 +79,4 @@ private:
     service_container_t m_Services;
     std::function<void(ConnectionStatus)> m_ConnectionChanged;
 };
-}   // namespace ble
+}    // namespace ble

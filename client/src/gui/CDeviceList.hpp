@@ -12,8 +12,6 @@
 #include "../common/CMutex.hpp"
 #include "../common/CStopWatch.hpp"
 #include "../system/System.hpp"
-
-
 namespace gui
 {
 class CDeviceList
@@ -47,4 +45,4 @@ private:
     std::unique_ptr<mutex_t> m_pMutex;
     common::CStopWatch<time_t> m_ScanTimer;
 };
-}   // namespace gui
+}    // namespace gui

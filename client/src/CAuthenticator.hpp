@@ -4,8 +4,7 @@
 #include "common/CThreadSafeQueue.hpp"
 #include "security/ecc_key.hpp"
 #include "bluetoothLE/Device.hpp"
-
-
+#include "bluetoothLE/ble_common.hpp"
 class CAuthenticator
 {
 private:
@@ -31,7 +30,7 @@ public:
     [[nodiscard]] std::string server_address_as_str() const;
 private:
     sys::fire_and_forget_t process_queue();
-[[nodiscard]] sys::awaitable_t<bool> verify_server_address(const ble::CDevice& device, uint64_t address) const;
+    [[nodiscard]] sys::awaitable_t<bool> verify_server_address(const ble::CDevice& device, uint64_t address) const;
 private:
     Pointer<security::CEccPublicKey> m_pServerKey = nullptr;
     CThreadSafeQueue<ble::DeviceInfo> m_Devices;

@@ -6,8 +6,6 @@
 #include "defines.hpp"
 #include <utility>
 #include <variant>
-
-
 /// Concepts
 namespace common
 {
@@ -17,28 +15,24 @@ template<typename T>
     return sizeof(T) == expected;
 }
 template<typename buffer_t>
-concept const_buffer = requires(buffer_t buffer)
-{
+concept const_buffer = requires(buffer_t buffer) {
     { buffer.size() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::size_type>;
     { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::const_pointer>;
 };
 template<typename buffer_t>
-concept buffer = requires(buffer_t buffer)
-{
+concept buffer = requires(buffer_t buffer) {
     //typename buffer_t::value_type;
     //requires type_size<typename buffer_t::value_type>(1);
     { buffer.data() } -> std::convertible_to<typename std::remove_reference_t<decltype(buffer)>::pointer>;
     //requires const_buffer<buffer_t>;
 };
 template<typename string_t>
-concept string = requires(string_t str)
-{
+concept string = requires(string_t str) {
     requires const_buffer<string_t>;
-	{ std::is_same_v<std::remove_cvref_t<string_t>, std::string> };
+    { std::is_same_v<std::remove_cvref_t<string_t>, std::string> };
 };
 template<typename class_t, typename... ctor_args_t>
 concept constructible_with = std::is_constructible_v<class_t, ctor_args_t...>;
-
 template<typename queried_t, typename variant_t, size_t index = 0>
 [[nodiscard]] consteval bool member_of_variant()
 {
@@ -46,18 +40,20 @@ template<typename queried_t, typename variant_t, size_t index = 0>
     {
         using variant_member_t = std::variant_alternative_t<index, variant_t>;
         if constexpr (std::same_as<queried_t, variant_member_t>)
+        {
             return true;
+        }
         else
+        {
             return false;
+        }
     }
     else
     {
         return false;
     }
 }
-}   // common
-
-
+}    // namespace common
 /// Helpers
 namespace common
 {
@@ -73,12 +69,10 @@ template<typename enum_t>
 requires std::is_enum_v<enum_t>
 [[nodiscard]] constexpr bool enum_to_bool(enum_t&& properties)
 {
-	#ifdef __cpp_lib_to_underlying
-	return static_cast<bool>(std::to_underlying(std::forward<enum_t>(properties)));
-	#else
-	return static_cast<bool>(static_cast<int64_t>(std::forward<enum_t>(properties)));
-	#endif
+#ifdef __cpp_lib_to_underlying
+    return static_cast<bool>(std::to_underlying(std::forward<enum_t>(properties)));
+#else
+    return static_cast<bool>(static_cast<int64_t>(std::forward<enum_t>(properties)));
+#endif
 }
-}   // common
-
-
+}    // namespace common

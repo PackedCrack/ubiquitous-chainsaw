@@ -27,7 +27,7 @@ private:
     [[nodiscard]] CCharacteristic make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile);
 private:
     int8_t m_Rssi;
-    uint16_t m_NotifyHandle;
+    std::optional<uint16_t> m_NotifyHandle;
     std::unique_ptr<security::CEccPrivateKey> m_pPrivateKey = nullptr;
     std::unique_ptr<security::CEccPublicKey> m_pClientPublicKey = nullptr;
     std::vector<CCharacteristic> m_Characteristics;

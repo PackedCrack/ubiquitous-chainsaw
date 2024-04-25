@@ -3,8 +3,6 @@
 //
 
 #include "CDescriptor.hpp"
-
-
 namespace ble
 {
 CDescriptor::awaitable_t CDescriptor::make(const GattDescriptor& descriptor)
@@ -27,4 +25,4 @@ ProtectionLevel CDescriptor::protection_level() const
 {
     return m_ProtLevel;
 }
-}   // namespace ble
+}    // namespace ble

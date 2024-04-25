@@ -4,16 +4,13 @@
 
 #pragma once
 #include "CMutex.hpp"
-
-
 template<typename hashable_key_t, typename element_t>
 class CThreadSafeHashMap
 {
 public:
     CThreadSafeHashMap()
         : m_Container{}
-        , m_Mutex{}
-    {};
+        , m_Mutex{} {};
     ~CThreadSafeHashMap() = default;
     CThreadSafeHashMap(const CThreadSafeHashMap& other) = default;
     CThreadSafeHashMap(CThreadSafeHashMap&& other) = default;
@@ -42,8 +39,8 @@ public:
     {
         std::unique_lock lock{ m_Mutex };
         // cppcheck-suppress redundantAssignment
-        auto[emplaced, iter] = m_Container.try_emplace(std::forward<key_t>(key), std::forward<ctor_args_t>(args)...);
-        
+        auto [emplaced, iter] = m_Container.try_emplace(std::forward<key_t>(key), std::forward<ctor_args_t>(args)...);
+
         return emplaced;
     }
     template<typename key_t>
@@ -59,9 +56,13 @@ public:
     {
         std::shared_lock lock{ m_Mutex };
         auto it = m_Container.find(std::forward<key_t>(key));
-        if(it == std::end(m_Container))
-            return std::unexpected{ Error{ .msg = "Unable to find element.", .code = ErrorCode::elementNotFound } };
-        
+        if (it == std::end(m_Container))
+        {
+            return std::unexpected{
+                Error{ .msg = "Unable to find element.", .code = ErrorCode::elementNotFound }
+            };
+        }
+
         return &(it->second);
     }
     template<typename key_t>
@@ -74,18 +75,14 @@ public:
     {
         // Instead of custom iterators and counting readers we'll just copy the data into a vector and return that..
         std::shared_lock lock{ m_Mutex };
-        
+
         std::vector<element_t> copies{};
         copies.reserve(m_Container.size());
-        std::transform(
-                std::begin(m_Container),
-                std::end(m_Container),
-                std::back_inserter(copies),
-                [](auto&& pair) { return pair.second; });
-        
+        std::transform(std::begin(m_Container), std::end(m_Container), std::back_inserter(copies), [](auto&& pair) { return pair.second; });
+
         //for (const auto& pair : m_Container)
         //    copies.push_back(pair.second);
-        
+
         return copies;
     }
     [[nodiscard]] size_t size()

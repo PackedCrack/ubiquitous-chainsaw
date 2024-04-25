@@ -4,31 +4,29 @@
 
 #pragma once
 #include "../client_defines.hpp"
-
-
 template<typename element_t>
 class CThreadSafeQueue
 {
 public:
     CThreadSafeQueue()
-            : m_List{}
-            , m_Lock{ std::make_unique<std::mutex>() }
+        : m_List{}
+        , m_Lock{ std::make_unique<std::mutex>() }
     {}
     ~CThreadSafeQueue() = default;
     CThreadSafeQueue(const CThreadSafeQueue& other)
-            : m_List{}
-            , m_Lock{}
+        : m_List{}
+        , m_Lock{}
     {
         copy(other);
     };
     CThreadSafeQueue(CThreadSafeQueue&& other) = default;
     CThreadSafeQueue& operator=(const CThreadSafeQueue& other)
     {
-        if(this != &other)
+        if (this != &other)
         {
             copy(other);
         }
-        
+
         return *this;
     };
     CThreadSafeQueue& operator=(CThreadSafeQueue&& other) = default;
@@ -44,7 +42,7 @@ public:
     void push(value_t&& val)
     {
         std::lock_guard<std::mutex> lock{ *m_Lock };
-        
+
         m_List.push_back(std::forward<value_t>(val));
     }
     template<typename value_t>
@@ -58,16 +56,15 @@ public:
     void emplace(ctor_args_t&&... arg)
     {
         std::lock_guard<std::mutex> lock{ *m_Lock };
-        
+
         m_List.emplace_back(std::forward<ctor_args_t>(arg)...);
     }
     template<typename out_t>
-    requires std::same_as<std::remove_reference_t<out_t>, element_t> &&
-             std::is_reference_v<out_t>
+    requires std::same_as<std::remove_reference_t<out_t>, element_t> && std::is_reference_v<out_t>
     void pop(out_t&& out)
     {
         std::lock_guard<std::mutex> lock{ *m_Lock };
-        
+
         out = std::move(m_List.front());
         m_List.pop_front();
     }

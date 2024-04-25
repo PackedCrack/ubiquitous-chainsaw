@@ -6,8 +6,6 @@
 // third_party
 #include "wolfcrypt/random.h"
 #include "wolfssl/error-ssl.h"
-
-
 namespace security
 {
 class CRandom
@@ -35,4 +33,4 @@ public:
 private:
     WC_RNG m_Rng;
 };
-}   // namespace security
+}    // namespace security

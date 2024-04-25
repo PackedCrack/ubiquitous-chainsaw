@@ -18,32 +18,31 @@
 #include "bluetoothLE/Scanner.hpp"
 #include "bluetoothLE/Device.hpp"
 #include "gui/CDeviceList.hpp"
-#include "common/ble_services.hpp"
-
-
 namespace
 {
 constexpr std::string_view CLIENT_PUBLIC_KEY_NAME = "client_public.der";
 constexpr std::string_view CLIENT_PRIVATE_KEY_NAME = "client_private.der";
 constexpr std::string_view SERVER_PUBLIC_KEY_NAME = "server_public.der";
 constexpr std::string_view SERVER_PRIVATE_KEY_NAME = "server_private.der";
-
-
 void validate_app_directory()
 {
     auto validate_app_directory = [](const std::filesystem::path& appDirectory)
     {
-        if(!std::filesystem::exists(appDirectory))
+        if (!std::filesystem::exists(appDirectory))
+        {
             std::filesystem::create_directory(appDirectory);
-        
+        }
+
         ASSERT_FMT(std::filesystem::is_directory(appDirectory), "Expected {} to be a directory.", appDirectory.string());
         return sys::key_directory();
     };
     auto validate_key_directory = [](const std::filesystem::path& keyLocation)
     {
-        if(!std::filesystem::exists(keyLocation))
+        if (!std::filesystem::exists(keyLocation))
+        {
             std::filesystem::create_directory(keyLocation);
-        
+        }
+
         ASSERT_FMT(std::filesystem::is_directory(keyLocation), "Expected {} to be a directory.", keyLocation.string());
         return std::expected<std::filesystem::path, std::string>{};
     };
@@ -52,21 +51,19 @@ void validate_app_directory()
         LOG_FATAL_FMT("Could not validate Application Directory because key location could not be retrieved. Reason: {}", err);
         return std::expected<std::filesystem::path, std::string>{};
     };
-    [[maybe_unused]] auto result = sys::application_directory()
-            .and_then(validate_app_directory)
-            .and_then(validate_key_directory)
-            .or_else(log_failure);
+    [[maybe_unused]] auto result =
+        sys::application_directory().and_then(validate_app_directory).and_then(validate_key_directory).or_else(log_failure);
 }
 [[nodiscard]] auto make_invokable_load_file(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, std::string>
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
-        if(expected)
+        if (expected)
         {
             std::filesystem::path filepath = expected->string() / filename;
             std::fstream file{ filepath, std::ios::in | std::ios::binary | std::ios::ate };
-            if(file.is_open())
+            if (file.is_open())
             {
                 try
                 {
@@ -74,10 +71,10 @@ void validate_app_directory()
                     std::streamsize size = file.tellg();
                     data->resize(size);
                     file.seekg(0);
-                    
+
                     static_assert(alignof(const char) == alignof(decltype(*(data->data()))));
                     file.read(reinterpret_cast<char*>(data->data()), size);
-                    
+
                     return data;
                 }
                 catch (const std::ios::failure& err)
@@ -101,13 +98,13 @@ requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, sec
 [[nodiscard]] std::unique_ptr<key_t> load_key(std::string_view keyName)
 {
     auto loadKey = make_invokable_load_file(keyName);
-    
+
     std::optional<key_t> key = security::make_ecc_key<key_t>(loadKey);
-    if(!key)
+    if (!key)
     {
         LOG_FATAL_FMT("Cannot continue because \"{}\" could not be loaded.", keyName);
     }
-    
+
     return std::make_unique<key_t>(std::move(*key));
 }
 [[nodiscard]] auto make_invokable_save_file(std::string_view filename)
@@ -115,11 +112,11 @@ requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, sec
     return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
-        if(expected)
+        if (expected)
         {
             std::filesystem::path filepath = expected->string() / filename;
             std::fstream file{ filepath, std::ios::out | std::ios::binary | std::ios::trunc };
-            
+
             static_assert(alignof(const char) == alignof(decltype(*(key.data()))));
             file.write(reinterpret_cast<const char*>(key.data()), key.size());
             return true;
@@ -135,63 +132,64 @@ std::tuple<security::CEccPublicKey, security::CEccPrivateKey> make_ecc_keys()
 {
     security::CRandom rng = security::CRandom::make_rng().value();
     security::CEccKeyPair keyPair{ rng };
-    
+
     return { keyPair.public_key(), keyPair.private_key() };
 }
 void save_ecc_keys(security::CEccPublicKey& pub, security::CEccPrivateKey& priv, std::string_view pubkey, std::string_view privkey)
 {
-    if(!pub.write_to_disk(make_invokable_save_file(pubkey)))
+    if (!pub.write_to_disk(make_invokable_save_file(pubkey)))
     {
         LOG_FATAL("Could not save public key to disk!");
     }
-    if(!priv.write_to_disk(make_invokable_save_file(privkey)))
+    if (!priv.write_to_disk(make_invokable_save_file(privkey)))
     {
         LOG_FATAL("Could not save private key to disk!");
     }
-    
+
     auto restrict_private_key = [privkey](const std::filesystem::path& keyLocation)
     {
         sys::restrict_file_permissions(keyLocation / std::filesystem::path{ privkey });
         return std::expected<std::filesystem::path, std::string>{};
     };
-    auto log_failure =[](const std::string& err)
+    auto log_failure = [](const std::string& err)
     {
         LOG_ERROR_FMT("Could not set private key to admin owned - "
-                      "because filepath to key location could not be retrieved: \"{}\"", err);
+                      "because filepath to key location could not be retrieved: \"{}\"",
+                      err);
         return std::expected<std::filesystem::path, std::string>{};
     };
-    
-    [[maybe_unused]] auto result = sys::key_directory()
-            .and_then(restrict_private_key)
-            .or_else(log_failure);
+
+    [[maybe_unused]] auto result = sys::key_directory().and_then(restrict_private_key).or_else(log_failure);
 }
 void process_cmd_line_args(int argc, char** argv)
 {
     if (argc < 1)
+    {
         return;
-    
+    }
+
     for (int32_t i = 1; i < argc; ++i)
     {
         std::string_view arg{ argv[i] };
-        if(arg == "--make-keys")
+        if (arg == "--make-keys")
         {
             {
-                auto[pubKey, privKey] = make_ecc_keys();
+                auto [pubKey, privKey] = make_ecc_keys();
                 save_ecc_keys(pubKey, privKey, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME);
             }
             {
-                auto[pubKey, privKey] = make_ecc_keys();
+                auto [pubKey, privKey] = make_ecc_keys();
                 save_ecc_keys(pubKey, privKey, CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME);
             }
         }
-        if(arg == "--print-keys")
+        if (arg == "--print-keys")
         {
             auto print_key = [](std::string_view keyName)
             {
                 return [keyName](const std::vector<byte>& key)
                 {
                     std::stringstream sstream{};
-                    for(auto&& byte : key)
+                    for (auto&& byte : key)
                     {
                         sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
                     }
@@ -202,18 +200,18 @@ void process_cmd_line_args(int argc, char** argv)
             auto log_failure = [](const std::string& err)
             {
                 LOG_ERROR_FMT("Could not print key contents. Reason: \"{}\"", err);
-                
+
                 return std::expected<std::vector<byte>, std::string>{};
             };
-            
-            static constexpr std::array<std::string_view, 4u> keyNames =
-                    { CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME };
-            for(auto&& keyName : keyNames)
+
+            static constexpr std::array<std::string_view, 4u> keyNames = { CLIENT_PUBLIC_KEY_NAME,
+                                                                           CLIENT_PRIVATE_KEY_NAME,
+                                                                           SERVER_PUBLIC_KEY_NAME,
+                                                                           SERVER_PRIVATE_KEY_NAME };
+            for (auto&& keyName : keyNames)
             {
                 auto load_key = make_invokable_load_file(keyName);
-                [[maybe_unused]] auto result = load_key()
-                        .and_then(print_key(keyName))
-                        .or_else(log_failure);
+                [[maybe_unused]] auto result = load_key().and_then(print_key(keyName)).or_else(log_failure);
             }
         }
     }
@@ -222,19 +220,33 @@ template<typename sha_t>
 [[nodiscard]] uint8_t get_sha_type_id()
 {
     if constexpr (std::same_as<sha_t, security::Sha2_224>)
+    {
         return std::to_underlying(ble::HashType::Sha2_224);
+    }
     else if constexpr (std::same_as<sha_t, security::Sha2_256>)
+    {
         return std::to_underlying(ble::HashType::Sha2_256);
+    }
     else if constexpr (std::same_as<sha_t, security::Sha3_224>)
+    {
         return std::to_underlying(ble::HashType::Sha3_224);
+    }
     else if constexpr (std::same_as<sha_t, security::Sha3_256>)
+    {
         return std::to_underlying(ble::HashType::Sha3_256);
+    }
     else if constexpr (std::same_as<sha_t, security::Sha3_384>)
+    {
         return std::to_underlying(ble::HashType::Sha3_384);
+    }
     else if constexpr (std::same_as<sha_t, security::Sha3_512>)
+    {
         return std::to_underlying(ble::HashType::Sha3_512);
+    }
     else
+    {
         return std::to_underlying(ble::HashType::Sha2_224);
+    }
 }
 [[nodiscard]] std::vector<byte> generate_random_block(security::CRandom& rng)
 {
@@ -267,7 +279,7 @@ template<typename sha_t>
     return packet;
 }
 template<typename sha_t>
-    requires security::HashAlgorithm<sha_t>
+requires security::HashAlgorithm<sha_t>
 [[nodiscard]] std::vector<byte> insert_hash(std::vector<byte>& packet, const security::CHash<sha_t>& hash)
 {
     static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();
@@ -323,11 +335,8 @@ template<typename sha_t>
 
     return packet;
 }
-sys::fire_and_forget_t try_demand_rssi(
-    gfx::CWindow& wnd, 
-    CAuthenticator& authenticator, 
-    const ble::CCharacteristic& characteristic,
-    std::vector<byte> packet)
+sys::fire_and_forget_t
+    try_demand_rssi(gfx::CWindow& wnd, CAuthenticator& authenticator, const ble::CCharacteristic& characteristic, std::vector<byte> packet)
 {
     static constexpr int32_t MAX_ATTEMPS = 3;
     int32_t attempt{};
@@ -372,13 +381,11 @@ sys::fire_and_forget_t try_demand_rssi(
     {
         std::vector<byte> packet = make_packet_demand_rssi(pPrivateKey);
         try_demand_rssi(wnd, authenticator, *pCharacteristic, packet);
-        
+
         return std::optional<const ble::CCharacteristic*>{ pCharacteristic };
     };
 }
-}   // namespace
-
-
+}    // namespace
 int main(int argc, char** argv)
 {
     sys::CSystem system{};
@@ -392,40 +399,40 @@ int main(int argc, char** argv)
     std::unique_ptr<security::CEccPublicKey> pServerKey = load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME);
 
     auto scanner = ble::make_scanner<ble::CScanner>();
-    
+
     // SDL window and input must be called on the same thread
-    gfx::CWindow window{ "Some title", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
+    gfx::CWindow window{ "Some title", 1'280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
- 
+
     CAuthenticator authenticator{ pServerKey.get() };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
     auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
 
     std::optional<ble::CDevice> device = std::nullopt;
-    
+
     bool exit = false;
     while (!exit)
     {
         static float val = 0.0f;
         static float b = 0.0f;
         static uint64_t frame = 0u;
-        if(frame++ % 60 == 0)
+        if (frame++ % 60 == 0)
         {
             b = b + 0.35f;
             val = std::sin(b);
             rssiPlot.add_rssi_value(val);
         }
-        
+
         static common::CStopWatch<std::chrono::seconds> demandRssiTimer{};
         if (demandRssiTimer.lap<float>() > static_cast<float>(std::chrono::seconds(5).count()))
         {
             if (device && device->connected())
             {
                 device->service(ble::uuid_service_whereami())
-                .and_then(find_characteristic_demand_rssi)
-                .and_then(demand_rssi(window, authenticator, pPrivateKey.get()));
-                
+                    .and_then(find_characteristic_demand_rssi)
+                    .and_then(demand_rssi(window, authenticator, pPrivateKey.get()));
+
                 demandRssiTimer.reset();
             }
             else
@@ -451,15 +458,15 @@ int main(int argc, char** argv)
                 }
             }
         }
-        
-        
+
+
         renderer.begin_frame();
-        
+
         window.process_events(&exit);
         gui.push();
-        
+
         renderer.end_frame();
     }
-    
+
     return EXIT_SUCCESS;
 }

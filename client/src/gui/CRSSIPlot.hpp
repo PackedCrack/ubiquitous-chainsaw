@@ -3,8 +3,6 @@
 //
 
 #pragma once
-
-
 namespace gui
 {
 class CRSSIPlot
@@ -27,4 +25,4 @@ private:
     size_t m_Index;
     std::vector<float> m_Values;
 };
-}   // namespace gui
+}    // namespace gui

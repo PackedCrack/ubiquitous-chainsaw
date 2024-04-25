@@ -3,11 +3,8 @@
 #include "../resource.hpp"
 // third_party
 #include "imgui/imgui_impl_sdl3.h"
-
-
 namespace
-{
-}
+{}
 namespace gfx
 {
 CWindow::CWindow(const std::string& title, int32_t width, int32_t height, uint32_t flags)
@@ -17,25 +14,27 @@ CWindow::CWindow(const std::string& title, int32_t width, int32_t height, uint32
     SDL_CHECK(SDL_Init(SDL_INIT_VIDEO), "initalization failed");
     m_pWindow = SDL_CreateWindow(title.c_str(), width, height, flags);
     ASSERT(m_pWindow != nullptr, "Window failed to create!");
-    
+
     {
         std::expected<HWND, std::string_view> expected = gfx::get_system_window_handle(*this);
-        if(!expected)
+        if (!expected)
         {
             ASSERT_FMT(m_pWindow != nullptr, "Failed to obtain Win32 window handle from SDL: {}", expected.error());
         }
     }
-    
+
     {
         // TODO: put this on its own thread because apparently shell command can time out..
-        for(int i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
         {
             std::expected<sys::CTrayIcon, sys::CTrayIcon::Error> expected = sys::CTrayIcon::make(*this);
-            if(!expected)
+            if (!expected)
+            {
                 continue;
-            
+            }
+
             ASSERT(expected.has_value(), "Failed to construct System Tray Icon");
-            
+
             m_SystemTray.emplace(std::move(*expected));
             break;
         }
@@ -44,9 +43,11 @@ CWindow::CWindow(const std::string& title, int32_t width, int32_t height, uint32
 CWindow::~CWindow()
 {
     m_SystemTray = std::nullopt;
-    
+
     if (!m_pWindow)
+    {
         return;
+    }
 
     SDL_DestroyWindow(m_pWindow);
 }
@@ -89,7 +90,7 @@ void CWindow::process_events(bool* pExit) const
 void CWindow::popup_warning(std::string_view title, std::string_view msg)
 {
     using BalloonIcon = sys::CTrayIcon::BalloonIcon;
-    if(m_SystemTray)
+    if (m_SystemTray)
     {
         m_SystemTray->send_balloon_info(title, msg, BalloonIcon::warning);
     }
@@ -115,4 +116,4 @@ SDL_Window* CWindow::handle()
 
     return m_pWindow;
 }
-}	// namespace gfx
+}    // namespace gfx

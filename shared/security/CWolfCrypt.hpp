@@ -3,8 +3,6 @@
 //
 #pragma once
 #include <expected>
-
-
 namespace security
 {
 class CWolfCrypt
@@ -24,4 +22,4 @@ public:
 private:
     CWolfCrypt();
 };
-}   // namespace security
+}    // namespace security

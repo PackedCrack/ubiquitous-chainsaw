@@ -4,7 +4,6 @@
 
 #pragma once
 #include "../../win32.hpp"
-
 namespace sys
 {
 class CErrorMessage
@@ -29,4 +28,4 @@ private:
     PSTR m_pMsg;
     size_t m_Size;
 };
-}   // namespace sys
+}    // namespace sys

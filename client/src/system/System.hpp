@@ -6,7 +6,7 @@
 #include "common/defines.hpp"
 // Taskflow must be included BEFORE windows.h
 // cppcheck-suppress unknownMacro
-IGNORE_WARNING_PUSH(4456)
+IGNORE_WARNING_PUSH(4'456)
 #include "taskflow/taskflow.hpp"
 IGNORE_WARNING_POP
 
@@ -15,9 +15,6 @@ IGNORE_WARNING_POP
 #else
     #error Only windows is implemented
 #endif
-
-
-
 namespace sys
 {
 using fire_and_forget_t = os_fire_and_forget_t;
@@ -29,5 +26,9 @@ void auto_wakeup_timer(std::chrono::seconds&& delay);
 void restrict_file_permissions(const std::filesystem::path& file);
 [[nodiscard]] std::expected<std::filesystem::path, std::string> application_directory();
 [[nodiscard]] std::expected<std::filesystem::path, std::string> key_directory();
-[[nodiscard]] inline tf::Executor& executor() { static tf::Executor executor{}; return executor; }
+[[nodiscard]] inline tf::Executor& executor()
+{
+    static tf::Executor executor{};
+    return executor;
 }
+}    // namespace sys

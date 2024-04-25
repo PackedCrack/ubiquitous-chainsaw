@@ -10,7 +10,6 @@
 #include <chrono>
 namespace
 {
-
 // std::chrono::steady_clock::time_point startTime;
 //
 // std::chrono::steady_clock::time_point start_timer() {
@@ -21,13 +20,21 @@ namespace
 //     std::chrono::duration<double> elapsedTime = endTime - start;
 //     return elapsedTime.count();
 // }
+[[nodiscard]] uint16_t handle_of(uint16_t characteristicID)
+{
+    std::expected<uint16_t, ble::NimbleErrorCode> expected = ble::chr_attri_handle(ble::ID_SERVICE_WHEREAMI, characteristicID);
+    ASSERT_FMT(expected,
+               "Retreiving the characteristic handle must succeed for WhereAmI. Failed with {}",
+               ble::nimble_error_to_string(expected.error()));
 
+    return *expected;
+}
 }    // namespace
 namespace ble
 {
 CWhereAmI::CWhereAmI()
     : m_Rssi{}
-    , m_NotifyHandle{ INVALID_ATTR_HANDLE }
+    , m_NotifyHandle{ std::nullopt }
     , m_pPrivateKey{ load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE) }
     , m_pClientPublicKey{ load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC) }
     , m_Characteristics{}
@@ -35,7 +42,7 @@ CWhereAmI::CWhereAmI()
 {}
 CWhereAmI::CWhereAmI(const CWhereAmI& other)
     : m_Rssi{}
-    , m_NotifyHandle{ INVALID_ATTR_HANDLE }
+    , m_NotifyHandle{ std::nullopt }
     , m_pPrivateKey{ nullptr }
     , m_pClientPublicKey{ nullptr }
     , m_Characteristics{}
@@ -58,8 +65,8 @@ void CWhereAmI::copy(const CWhereAmI& other)
     m_NotifyHandle = other.m_NotifyHandle;
     m_pPrivateKey = load_key<security::CEccPrivateKey>(NVS_KEY_SERVER_PRIVATE);
     m_pClientPublicKey = load_key<security::CEccPublicKey>(NVS_KEY_CLIENT_PUBLIC);
-    m_Characteristics = std::vector<CCharacteristic>{};
-    m_Service = CGattService{};
+    m_Characteristics = other.m_Characteristics;
+    m_Service = other.m_Service;
 }
 void CWhereAmI::register_with_nimble(const std::shared_ptr<Profile>& pProfile)
 {
@@ -136,20 +143,12 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
                     std::printf("Rssi: %i\n", pSelf->m_Rssi);
 
 
-                    if (pSelf->m_NotifyHandle == INVALID_ATTR_HANDLE)
+                    if (pSelf->m_NotifyHandle == std::nullopt)
                     {
-                        auto result = chr_attri_handle(ID_SERVICE_WHEREAMI, ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI);
-                        if (!result)
-                        {
-                            LOG_FATAL("Failed to retrieve a valid chr attribute handle!");
-                        }
-                        else
-                        {
-                            pSelf->m_NotifyHandle = result.value();
-                        }
+                        pSelf->m_NotifyHandle.emplace(handle_of(ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI));
                     }
 
-                    std::printf("Handle: %u\n", pSelf->m_NotifyHandle);
+                    std::printf("Handle: %u\n", pSelf->m_NotifyHandle.value());
 
                     // int result = ble_gatts_notify_custom(connectionHandle, pSelf->m_NotifyHandle, NULL);
 

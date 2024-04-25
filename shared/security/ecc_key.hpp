@@ -9,13 +9,10 @@
 // third_party
 #include "wolfcrypt/ecc.h"
 #include "wolfcrypt/asn_public.h"
-
-
 namespace security
 {
 class CEccPublicKey;
 class CEccPrivateKey;
-
 template<typename derived_t>
 requires std::same_as<derived_t, CEccPublicKey> || std::same_as<derived_t, CEccPrivateKey>
 class IEccKey
@@ -30,35 +27,37 @@ protected:
     {
         // cppcheck-suppress ignoredReturnValue
         ASSERT(!derData.empty(), "Tried to create EccKey without data!");
-        
+
         // https://www.wolfssl.com/documentation/manuals/wolfssl/ecc_8h.html#function-wc_ecc_init
         WC_CHECK(wc_ecc_init(&m_Key));
-        
+
         decode(derData);
     }
     ~IEccKey()
     {
-        if(has_been_moved())
+        if (has_been_moved())
+        {
             return;
-        
+        }
+
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_free
         WC_CHECK(wc_ecc_free(&m_Key));
     };
     IEccKey(IEccKey&& other) noexcept
-            : m_Key{ other.m_Key }
+        : m_Key{ other.m_Key }
     {
         static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
         other.invalidate();
     }
     IEccKey& operator=(IEccKey&& other) noexcept
     {
-        if(this != &other)
+        if (this != &other)
         {
             static_assert(std::is_trivially_copy_constructible_v<decltype(m_Key)>);
             m_Key = other.m_Key;
             other.invalidate();
         }
-        
+
         return *this;
     }
 public:
@@ -88,10 +87,7 @@ private:
         m_Key.heap = nullptr;
         m_Key.dp = nullptr;
     }
-    [[nodiscard]] bool has_been_moved()
-    {
-        return m_Key.heap == nullptr && m_Key.dp == nullptr;
-    }
+    [[nodiscard]] bool has_been_moved() { return m_Key.heap == nullptr && m_Key.dp == nullptr; }
 protected:
     ecc_key m_Key;
 };
@@ -114,16 +110,15 @@ public:
     {
         ASSERT(source.size() > 0u, "Tried to create verify signature on empty buffer!");
         static constexpr int32_t VALID = 1;
-    
+
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_verify_hash
         int result{};
-        WC_CHECK(wc_ecc_verify_hash(
-                source.data(),
-                common::assert_down_cast<word32>(source.size()),
-                hash.data(),
-                common::assert_down_cast<word32>(hash.size()),
-                &result,
-                &m_Key));
+        WC_CHECK(wc_ecc_verify_hash(source.data(),
+                                    common::assert_down_cast<word32>(source.size()),
+                                    hash.data(),
+                                    common::assert_down_cast<word32>(hash.size()),
+                                    &result,
+                                    &m_Key));
         return result == VALID;
     }
     [[nodiscard]] std::vector<byte> to_der();
@@ -141,25 +136,24 @@ public:
     CEccPrivateKey& operator=(const CEccPrivateKey& other) = delete;
     CEccPrivateKey& operator=(CEccPrivateKey&& other) noexcept;
 public:
-    template<typename hash_t> 
+    template<typename hash_t>
     requires Hash<std::remove_cvref_t<hash_t>>
     [[nodiscard]] std::vector<byte> sign_hash(CRandom& rng, hash_t&& hash)
     {
         ASSERT(hash.size() > 0u, "Tried to sign an empty hash!");
-        
+
         std::vector<byte> signature{};
         signature.resize(128u);
         auto bytesWritten = common::assert_down_cast<word32>(signature.size());
         // https://www.wolfssl.com/documentation/manuals/wolfssl/group__ECC.html#function-wc_ecc_sign_hash
-        WC_CHECK(wc_ecc_sign_hash(
-                hash.data(),
-                common::assert_down_cast<word32>(hash.size()),
-                signature.data(),
-                &bytesWritten,
-                rng.wc_struct_p(),
-                &m_Key));
+        WC_CHECK(wc_ecc_sign_hash(hash.data(),
+                                  common::assert_down_cast<word32>(hash.size()),
+                                  signature.data(),
+                                  &bytesWritten,
+                                  rng.wc_struct_p(),
+                                  &m_Key));
         signature.resize(bytesWritten);
-        
+
         return signature;
     }
     [[nodiscard]] std::vector<byte> to_der();
@@ -182,13 +176,12 @@ public:
 private:
     ecc_key m_Key;
 };
-
 template<typename key_t, typename invokable_t>
 requires std::is_invocable_r_v<std::expected<std::vector<byte>, std::string>, invokable_t>
 [[nodiscard]] std::optional<key_t> make_ecc_key(invokable_t&& load)
 {
     auto expected = load();
-    if(expected)
+    if (expected)
     {
         return std::optional<key_t>{ *expected };
     }
@@ -198,4 +191,4 @@ requires std::is_invocable_r_v<std::expected<std::vector<byte>, std::string>, in
         return std::nullopt;
     }
 }
-}   // namespace security
+}    // namespace security

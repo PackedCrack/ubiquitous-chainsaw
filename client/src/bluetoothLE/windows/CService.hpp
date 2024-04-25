@@ -4,8 +4,6 @@
 
 #pragma once
 #include "../Characteristic.hpp"
-
-
 namespace ble
 {
 class CService
@@ -33,4 +31,4 @@ private:
     std::shared_ptr<GattDeviceService> m_pService;
     std::unordered_map<ble::UUID, CCharacteristic, ble::UUID::Hasher> m_Characteristics;
 };
-}   // namespace ble
+}    // namespace ble

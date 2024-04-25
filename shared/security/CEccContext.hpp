@@ -8,8 +8,6 @@
 // #define HAVE_ECC_ENCRYPT - required option for encrytion. But simple encrytion with public key does not seem to exist
 #include "wolfssl/options.h"
 #include "wolfcrypt/ecc.h"
-
-
 namespace security
 {
 enum class EcEncAlg
@@ -21,19 +19,18 @@ enum class EcEncAlg
 };
 enum class EcKdfAlg
 {
-    HKDF_SHA256      = 1,
-    HKDF_SHA1        = 2,
-    KDF_X963_SHA1    = 3,
-    KDF_X963_SHA256  = 4,
-    KDF_SHA1         = 5,
-    KDF_SHA256       = 6
+    HKDF_SHA256 = 1,
+    HKDF_SHA1 = 2,
+    KDF_X963_SHA1 = 3,
+    KDF_X963_SHA256 = 4,
+    KDF_SHA1 = 5,
+    KDF_SHA256 = 6
 };
 enum class EcMacAlg
 {
     HMAC_SHA256 = 1,
-    HMAC_SHA1   = 2
+    HMAC_SHA1 = 2
 };
-
 class CEccContext
 {
 public:
@@ -99,4 +96,4 @@ private:
     EcKdfAlg m_KdfAlg;
     EcMacAlg m_MacAlg;
 };
-}   // security
+}    // namespace security

@@ -30,9 +30,9 @@ public:
         outOfHeapMemory,
         invalidResource
     };
-    constexpr static KeyType KEY_WHOAMI = "whoami";
-    constexpr static KeyType KEY_WHEREAMI = "whereami";
-    constexpr static KeyType KEY_RANGE = "range";
+    static constexpr KeyType KEY_WHOAMI = "whoami";
+    static constexpr KeyType KEY_WHEREAMI = "whereami";
+    static constexpr KeyType KEY_RANGE = "range";
 public:
     [[nodiscard]] static Result<CProfileCache, CProfileCache::Error>
         make_profile_cache(std::map<KeyType, std::shared_ptr<Profile>>&& profiles);

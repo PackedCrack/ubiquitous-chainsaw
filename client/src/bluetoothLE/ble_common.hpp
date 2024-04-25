@@ -6,21 +6,17 @@
 #include "../client_defines.hpp"
 #include "common/ble_services.hpp"
 #include "common/common.hpp"
-
-
 namespace ble
 {
 template<typename int_t>
 concept unsigned_integral = std::integral<int_t> && std::is_unsigned_v<int_t>;
 template<typename async_t, typename... make_args_t>
-concept awaitable_make = requires
-{
+concept awaitable_make = requires {
     typename async_t::awaitable_t;
     requires std::is_invocable_r_v<typename async_t::awaitable_t, decltype(&async_t::make), make_args_t...>;
 };
 template<typename T>
-concept string_uuid = requires(const T type)
-{
+concept string_uuid = requires(const T type) {
     { type.uuid_as_str() } -> std::convertible_to<std::string>;
 };
 template<typename int_t>
@@ -33,16 +29,16 @@ template<typename uuid_t>
 [[nodiscard]] ble::UUID make_uuid(uuid_t&& guid)
 {
     ble::UUID uuid{};
-    uuid.data[0] = (guid.Data1 & 0xFF00'0000) >> 24;
-    uuid.data[1] = common::assert_down_cast<uint8_t>((guid.Data1 & 0x00FF'0000) >> 16);
-    uuid.data[2] = (guid.Data1 & 0x0000'FF00) >> 8;
-    uuid.data[3] = (guid.Data1 & 0x0000'00FF);
+    uuid.data[0] = (guid.Data1 & 0xFF'00'00'00) >> 24;
+    uuid.data[1] = common::assert_down_cast<uint8_t>((guid.Data1 & 0x00'FF'00'00) >> 16);
+    uuid.data[2] = (guid.Data1 & 0x00'00'FF'00) >> 8;
+    uuid.data[3] = (guid.Data1 & 0x00'00'00'FF);
 
-    uuid.data[4] = (guid.Data2 & 0x0000'FF00) >> 8;
-    uuid.data[5] = (guid.Data2 & 0x0000'00FF);
+    uuid.data[4] = (guid.Data2 & 0x00'00'FF'00) >> 8;
+    uuid.data[5] = (guid.Data2 & 0x00'00'00'FF);
 
-    uuid.data[6] = (guid.Data3 & 0x0000'FF00) >> 8;
-    uuid.data[7] = (guid.Data3 & 0x0000'00FF);
+    uuid.data[6] = (guid.Data3 & 0x00'00'FF'00) >> 8;
+    uuid.data[7] = (guid.Data3 & 0x00'00'00'FF);
 
     uuid.data[8] = guid.Data4[0];
     uuid.data[9] = guid.Data4[1];
@@ -55,8 +51,8 @@ template<typename uuid_t>
 
 #ifndef NDEBUG
     ASSERT((uuid == uuid_service_whoami()) || (uuid == uuid_characteristic_whoami_authenticate()) || (uuid == uuid_service_whereami()) ||
-           (uuid == uuid_characteristic_whereami_send_rssi()) || (uuid == uuid_characteristic_whereami_demand_rssi()) ||
-           (uuid == client_characteristic_configuration_descriptor()),
+               (uuid == uuid_characteristic_whereami_send_rssi()) || (uuid == uuid_characteristic_whereami_demand_rssi()) ||
+               (uuid == client_characteristic_configuration_descriptor()),
            "Unknown uuid!");
 #endif
 
@@ -123,7 +119,6 @@ struct DeviceInfo
 {
     std::optional<uint64_t> address;
     AddressType addressType = AddressType::none;
-
     [[nodiscard]] static std::string address_as_str(uint64_t address) { return hex_addr_to_str(address); }
 };
 enum class ConnectionStatus
@@ -137,8 +132,10 @@ enum class ConnectionStatus
     switch (status)
     // cppcheck-suppress missingReturn
     {
-    case ConnectionStatus::connected: return "Connected";
-    case ConnectionStatus::disconnected: return "Disconnected";
+    case ConnectionStatus::connected:
+        return "Connected";
+    case ConnectionStatus::disconnected:
+        return "Disconnected";
     }
     UNHANDLED_CASE_PROTECTION_OFF
 
@@ -157,13 +154,17 @@ enum class CommunicationStatus
     switch (status)
     // cppcheck-suppress missingReturn
     {
-    case CommunicationStatus::unreachable: return "Unreachable";
-    case CommunicationStatus::protocolError: return "Protocol Error";
-    case CommunicationStatus::accessDenied: return "Access Denied";
-    case CommunicationStatus::success: return "Success";
+    case CommunicationStatus::unreachable:
+        return "Unreachable";
+    case CommunicationStatus::protocolError:
+        return "Protocol Error";
+    case CommunicationStatus::accessDenied:
+        return "Access Denied";
+    case CommunicationStatus::success:
+        return "Success";
     }
     UNHANDLED_CASE_PROTECTION_OFF
 
     std::unreachable();
 }
-}   // namespace ble
+}    // namespace ble

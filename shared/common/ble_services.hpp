@@ -2,44 +2,37 @@
 // std
 #include <cstdint>
 #include <concepts>
-
-
 namespace ble
 {
 struct UUID
 {
     std::array<uint8_t, 16u> data{};
-    
     static constexpr void apply_custom_id(UUID& uuid, uint16_t id)
     {
-        uuid.data[2] = static_cast<uint8_t>((id & 0xFF00) >> 8);
-        uuid.data[3] = static_cast<uint8_t>(id & 0x00FF);
+        uuid.data[2] = static_cast<uint8_t>((id & 0xFF'00) >> 8);
+        uuid.data[3] = static_cast<uint8_t>(id & 0x00'FF);
     }
-    [[nodiscard]] friend bool operator==(const UUID& lhs, const UUID& rhs)
-    {
-        return lhs.data == rhs.data;
-    }
-    [[nodiscard]] friend bool operator!=(const UUID& lhs, const UUID& rhs)
-    {
-        return lhs.data != rhs.data;
-    }
+    [[nodiscard]] friend bool operator==(const UUID& lhs, const UUID& rhs) { return lhs.data == rhs.data; }
+    [[nodiscard]] friend bool operator!=(const UUID& lhs, const UUID& rhs) { return lhs.data != rhs.data; }
     struct Hasher
     {
         [[nodiscard]] std::size_t operator()(const UUID& uuid) const
         {
             static constexpr std::size_t prime = 31u;
             std::hash<uint8_t> hasher{};
-            
+
             size_t hash{};
-            for(auto&& byte : uuid.data)
+            for (auto&& byte : uuid.data)
+            {
                 hash = (hash + hasher(byte)) * prime;
-            
+            }
+
             return hash;
         }
     };
 };
-static constexpr UUID BaseUUID
-{
+static constexpr UUID BaseUUID{
+    // clang-format off
         .data = { 0x00, 0x00,
                   0x00, 0x00,
                   0x00, 0x00,
@@ -48,16 +41,17 @@ static constexpr UUID BaseUUID
                   0x00, 0x80,
                   0x5F, 0x9b,
                   0x34, 0xFB }
+    // clang-format on
 };
 [[nodiscard]] consteval UUID client_characteristic_configuration_descriptor()
 {
     UUID uuid = BaseUUID;
-    UUID::apply_custom_id(uuid, 0x2902);
-    
+    UUID::apply_custom_id(uuid, 0x29'02);
+
     return uuid;
 }
-static constexpr uint16_t ID_SERVICE_WHOAMI = 0xBABE;
-static constexpr uint16_t ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE = 0xB00B;
+static constexpr uint16_t ID_SERVICE_WHOAMI = 0xBA'BE;
+static constexpr uint16_t ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE = 0xB0'0B;
 enum class HashType : uint8_t
 {
     Sha2_224 = 0u,
@@ -77,11 +71,11 @@ enum class HashType : uint8_t
  */
 struct AuthenticateHeader
 {
-    uint8_t hashType = 0;         ///< Enum value for the type of hash used.
-    uint8_t hashOffset = 1u;      ///< Offset where the hash data begins.
-    uint8_t hashSize = 2u;        ///< Size of the hash data in bytes.
-    uint8_t signatureOffset = 3u; ///< Offset where the signature data begins.
-    uint8_t signatureSize = 4u;   ///< Size of the signature data in bytes.
+    uint8_t hashType = 0;            ///< Enum value for the type of hash used.
+    uint8_t hashOffset = 1u;         ///< Offset where the hash data begins.
+    uint8_t hashSize = 2u;           ///< Size of the hash data in bytes.
+    uint8_t signatureOffset = 3u;    ///< Offset where the signature data begins.
+    uint8_t signatureSize = 4u;      ///< Size of the signature data in bytes.
 };
 [[nodiscard]] consteval AuthenticateHeader header_whoami_authenticate()
 {
@@ -99,9 +93,9 @@ struct AuthenticateHeader
     UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE);
     return uuid;
 }
-static constexpr uint16_t ID_SERVICE_WHEREAMI = 0xFEED;
-static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI = 0xBEEF;
-static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI = 0xCAFE;
+static constexpr uint16_t ID_SERVICE_WHEREAMI = 0xFE'ED;
+static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI = 0xBE'EF;
+static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI = 0xCA'FE;
 struct DemandRSSIHeader
 {
     uint8_t randomDataOffset = 0;
@@ -134,4 +128,4 @@ struct DemandRSSIHeader
     UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI);
     return uuid;
 }
-}   // namespace ble
+}    // namespace ble

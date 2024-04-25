@@ -18,7 +18,6 @@ namespace ble
 {
 constexpr uint8_t INVALID_ADDRESS_TYPE = 255u;
 constexpr int SUCCESS = 0;
-constexpr uint16_t INVALID_ATTR_HANDLE = 0u;
 
 enum class AddressType : uint8_t
 {

@@ -148,4 +148,4 @@ AlignConsecutiveShortCaseStatements:
 AlignConsecutiveBitFields:
   Enabled: false
 AlignArrayOfStructures: Right
-QualifierOrder: ['friend','inline','constexpr','static', 'const', 'volatile', 'restrict', 'type']
+QualifierOrder: ['friend', 'inline', 'static', 'constexpr', 'const', 'volatile', 'restrict', 'type']

@@ -68,8 +68,8 @@ namespace
 [[nodiscard]] ble_hs_adv_fields make_advertise_fields(const std::string& deviceName)    // Nodiscard directive ignored for deviecName??
 {
     ASSERT(deviceName.size() <= UINT8_MAX, "Nimble expects devices name to be smaller than 2^8 bytes.");
-    constexpr static int32_t FIELD_TX_PWR_PRESENT = 1u;
-    constexpr static int32_t FIELD_NAME_COMPLETE = 1u;
+    static constexpr int32_t FIELD_TX_PWR_PRESENT = 1u;
+    static constexpr int32_t FIELD_NAME_COMPLETE = 1u;
 
 
     ble_hs_adv_fields fields{};
@@ -152,8 +152,8 @@ void print_ble_address()
 }
 [[nodiscard]] ble::AddressType generate_random_device_address()
 {
-    constexpr static bool PREFER_RANDOM = true;
-    constexpr static bool USE_PRIVATE_ADDR = false;
+    static constexpr bool PREFER_RANDOM = true;
+    static constexpr bool USE_PRIVATE_ADDR = false;
 
     uint8_t expectedAddrType = ble::INVALID_ADDRESS_TYPE;
     auto result = ble::NimbleErrorCode{ ble_hs_util_ensure_addr(PREFER_RANDOM) };

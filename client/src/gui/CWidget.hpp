@@ -1,21 +1,12 @@
 #pragma once
-
-
 namespace gui
 {
 template<typename gui_t>
-concept imgui_widget = requires(gui_t widget)
-{
-    widget.push();
-};
-
+concept imgui_widget = requires(gui_t widget) { widget.push(); };
 class CWidget
 {
 private:
-    friend void push_widget(CWidget& widget)
-    {
-        widget.m_pWidget->exec_push();
-    }
+    friend void push_widget(CWidget& widget) { widget.m_pWidget->exec_push(); }
     class IBase
     {
     public:
@@ -43,14 +34,8 @@ private:
         Concrete& operator=(const Concrete& other) = default;
         Concrete& operator=(Concrete&& other) = default;
     public:
-        void exec_push() override
-        {
-            m_Gui.push();
-        }
-        [[nodiscard]] std::unique_ptr<IBase> copy() const override
-        {
-            return std::make_unique<Concrete>(*this);
-        }
+        void exec_push() override { m_Gui.push(); }
+        [[nodiscard]] std::unique_ptr<IBase> copy() const override { return std::make_unique<Concrete>(*this); }
     private:
         gui_t m_Gui;
     };
@@ -63,8 +48,7 @@ public:
     {}
     ~CWidget() = default;
     CWidget(const CWidget& other)
-        : m_pWidget{ other.m_pWidget->copy() }
-    {};
+        : m_pWidget{ other.m_pWidget->copy() } {};
     CWidget(CWidget&& other) = default;
     CWidget& operator=(const CWidget& other)
     {
@@ -74,18 +58,14 @@ public:
     };
     CWidget& operator=(CWidget&& other) = default;
 public:
-    void push()
-    {
-        m_pWidget->exec_push();
-    }
+    void push() { m_pWidget->exec_push(); }
 private:
     std::unique_ptr<IBase> m_pWidget;
 };
-
 template<typename widget_t, typename... args>
 requires imgui_widget<widget_t>
 [[nodiscard]] CWidget make_widget(args&&... constrArgs)
 {
     return CWidget{ widget_t{ std::forward<args>(constrArgs)... } };
 };
-}	// namespace gui
+}    // namespace gui

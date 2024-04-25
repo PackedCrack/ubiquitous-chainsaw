@@ -15,8 +15,6 @@
 #pragma comment(lib, "PowrProf.lib")
 // winrt
 #include <winrt/windows.foundation.h>
-
-
 namespace sys
 {
 CSystem::CSystem()
@@ -41,8 +39,8 @@ void auto_wakeup_timer(std::chrono::seconds&& delay)
     HANDLE timer = nullptr;
     // cppcheck-suppress unknownMacro
     WIN_CHECK(timer = CreateWaitableTimerW(nullptr, true, nullptr); timer != nullptr);
-    
-    
+
+
     LARGE_INTEGER time{};
     // Negative values are used for relative time (i think)
     // Time is 100 nano second intervals
@@ -57,11 +55,11 @@ void restrict_file_permissions(const std::filesystem::path& file)
     PSECURITY_DESCRIPTOR pDescriptor = nullptr;
     // https://learn.microsoft.com/en-us/windows/win32/api/sddl/nf-sddl-convertstringsecuritydescriptortosecuritydescriptorw
     WIN_CHECK(ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:P(A;OICI;FA;;;BA)", SDDL_REVISION_1, &pDescriptor, nullptr));
-    if(pDescriptor != nullptr)
+    if (pDescriptor != nullptr)
     {
         // https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-setfilesecurityw
         WIN_CHECK(SetFileSecurityW(file.wstring().c_str(), DACL_SECURITY_INFORMATION, pDescriptor));
-        
+
         // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree
         WIN_CHECK(LocalFree(pDescriptor) == nullptr);
     }
@@ -71,28 +69,34 @@ std::expected<std::filesystem::path, std::string> application_directory()
     std::array<WCHAR, MAX_PATH> location{ 0 };
     // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
     WIN_CHECK_HRESULT(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, NO_FLAGS, location.data()));
-    
+
     // https://learn.microsoft.com/en-us/windows/win32/api/pathcch/nf-pathcch-pathcchappendex
     HRESULT result = PathCchAppendEx(location.data(), location.size(), L"Ubiquitous-Chainsaw", NO_FLAGS);
-    if(result != S_OK)
+    if (result != S_OK)
     {
-        if(result == E_OUTOFMEMORY)
+        if (result == E_OUTOFMEMORY)
+        {
             return std::unexpected{ "Failed to append key directory to appdata path because there was not enough free memory!" };
-        if(result == E_INVALIDARG)
+        }
+        if (result == E_INVALIDARG)
+        {
             return std::unexpected{ "Failed to append key directory to appdata path!" };
+        }
         // This error exists according to the documentation but it is an undefined symbol.. ?
         //if(result == PATHCCH_E_FILENAME_TOO_LONG)
         //    return std::unexpected{ Error{ .msg = "Failed to append key directory to appdata path because the final filename was too long!" } };
     }
-    
+
     return std::expected<std::filesystem::path, std::string>{ location.data() };
 }
 std::expected<std::filesystem::path, std::string> key_directory()
 {
     std::expected<std::filesystem::path, std::string> expected = application_directory();
-    if(expected)
+    if (expected)
+    {
         *expected /= "Keys";
-    
+    }
+
     return expected;
 }
-}   // namespace sys
+}    // namespace sys

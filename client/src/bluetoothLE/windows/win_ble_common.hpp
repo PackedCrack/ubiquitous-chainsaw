@@ -6,12 +6,10 @@
 #include "../ble_common.hpp"
 // third party
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
-
-
 namespace ble
 {
-[[nodiscard]] constexpr ble::CommunicationStatus winrt_status_to_communication_status(
-    winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
+[[nodiscard]] constexpr ble::CommunicationStatus
+    winrt_status_to_communication_status(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus status)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 
@@ -32,4 +30,4 @@ namespace ble
 
     std::unreachable();
 }
-}   // namespace
+}    // namespace ble
