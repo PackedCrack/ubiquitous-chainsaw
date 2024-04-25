@@ -3,6 +3,10 @@
 #include "CGattService.hpp"
 #include "profiles.hpp"
 #include <memory>
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 class CWhoAmI

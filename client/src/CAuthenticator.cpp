@@ -2,60 +2,12 @@
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
 #include "bluetoothLE/Device.hpp"
+// clang-format off
+
+
+// clang-format on
 namespace
 {
-using namespace security;
-using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, CHash<Sha3_256>, CHash<Sha3_384>, CHash<Sha3_512>>;
-[[nodiscard]] ShaHash make_hash(ble::HashType type, std::span<uint8_t> hashData)
-{
-    UNHANDLED_CASE_PROTECTION_ON
-    switch (type)
-    {
-    case ble::HashType::Sha2_224:
-        return CHash<Sha2_224>{ std::cbegin(hashData), std::cend(hashData) };
-    case ble::HashType::Sha2_256:
-        return CHash<Sha2_256>{ std::cbegin(hashData), std::cend(hashData) };
-    case ble::HashType::Sha3_224:
-        return CHash<Sha3_224>{ std::cbegin(hashData), std::cend(hashData) };
-    case ble::HashType::Sha3_256:
-        return CHash<Sha3_256>{ std::cbegin(hashData), std::cend(hashData) };
-    case ble::HashType::Sha3_384:
-        return CHash<Sha3_384>{ std::cbegin(hashData), std::cend(hashData) };
-    case ble::HashType::Sha3_512:
-        return CHash<Sha3_512>{ std::cbegin(hashData), std::cend(hashData) };
-    case ble::HashType::count:
-        LOG_ERROR("Value of \"count\" passed unexpectedly from ble::HashType");
-        return CHash<Sha2_224>{ std::string_view{ "0000000000" } };
-    }
-    UNHANDLED_CASE_PROTECTION_OFF
-
-    std::unreachable();
-}
-[[nodiscard]] size_t size_of_hash_type(ble::HashType type)
-{
-    UNHANDLED_CASE_PROTECTION_ON
-    switch (type)
-    {
-    case ble::HashType::Sha2_224:
-        return Sha2_224::HASH_SIZE;
-    case ble::HashType::Sha2_256:
-        return Sha2_256::HASH_SIZE;
-    case ble::HashType::Sha3_224:
-        return Sha3_224::HASH_SIZE;
-    case ble::HashType::Sha3_256:
-        return Sha3_256::HASH_SIZE;
-    case ble::HashType::Sha3_384:
-        return Sha3_384::HASH_SIZE;
-    case ble::HashType::Sha3_512:
-        return Sha3_512::HASH_SIZE;
-    case ble::HashType::count:
-        LOG_ERROR("Value of \"count\" passed unexpectedly from ble::HashType");
-        return 0;
-    }
-    UNHANDLED_CASE_PROTECTION_OFF
-
-    std::unreachable();
-}
 [[nodiscard]] sys::awaitable_t<std::optional<const ble::CCharacteristic*>> find_server_auth_characteristic(const ble::CDevice& device)
 {
     std::optional<const ble::CService*> service = device.service(ble::uuid_service_whoami());
@@ -77,7 +29,7 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
 {
     static constexpr ble::AuthenticateHeader HEADER = ble::header_whoami_authenticate();
     const size_t EXPECTED_BUFFER_SIZE =
-        sizeof(HEADER) + size_of_hash_type(ble::HashType{ buffer[HEADER.hashType] }) + buffer[HEADER.signatureSize];
+        sizeof(HEADER) + ble::size_of_hash_type(ble::ShaVersion{ buffer[HEADER.shaVersion] }) + buffer[HEADER.signatureSize];
     if (EXPECTED_BUFFER_SIZE != buffer.size())
     {
         LOG_ERROR_FMT("Buffer size mismatch. Expected {} bytes, but buffer was {}", EXPECTED_BUFFER_SIZE, buffer.size());
@@ -89,18 +41,18 @@ using ShaHash = std::variant<CHash<Sha2_224>, CHash<Sha2_256>, CHash<Sha3_224>, 
 [[nodiscard]] bool valid_hash_type(auto&& buffer)
 {
     static constexpr ble::AuthenticateHeader HEADER = ble::header_whoami_authenticate();
-    uint8_t hashType = buffer[HEADER.hashType];
-    if (hashType < std::to_underlying(ble::HashType::count))
+    uint8_t shaVersion = buffer[HEADER.shaVersion];
+    if (shaVersion < std::to_underlying(ble::ShaVersion::count))
     {
         return true;
     }
 
-    LOG_ERROR_FMT("Unknown hashtype value in packet's server auth header: \"{}\"", hashType);
+    LOG_ERROR_FMT("Unknown sha version value in packet's server auth header: \"{}\"", shaVersion);
     return false;
 }
 [[nodiscard]] sys::awaitable_t<bool> verify_hash_and_signature(std::string_view macAddress,
                                                                Pointer<security::CEccPublicKey> key,
-                                                               ShaHash& hash,
+                                                               ble::ShaHash& hash,
                                                                std::span<uint8_t> signature)
 {
     bool result{};
@@ -255,11 +207,11 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice&
             }
 
             static constexpr ble::AuthenticateHeader HEADER = ble::header_whoami_authenticate();
-            auto hashType = ble::HashType{ buffer[HEADER.hashType] };
+            auto shaVersion = ble::ShaVersion{ buffer[HEADER.shaVersion] };
 
             const uint8_t HASH_OFFSET = buffer[HEADER.hashOffset];
             const uint8_t HASH_SIZE = buffer[HEADER.hashSize];
-            ShaHash hash = make_hash(hashType, std::span<uint8_t>{ std::begin(buffer) + HASH_OFFSET, HASH_SIZE });
+            ble::ShaHash hash = make_sha_hash(shaVersion, std::span<uint8_t>{ std::begin(buffer) + HASH_OFFSET, HASH_SIZE });
 
             const uint8_t SIGNATURE_OFFSET = buffer[HEADER.signatureOffset];
             const uint8_t SIGNATURE_SIZE = buffer[HEADER.signatureSize];

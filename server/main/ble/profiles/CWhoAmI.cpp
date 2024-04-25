@@ -45,7 +45,7 @@ template<typename algorithm_t>
     ASSERT(packet.size() > sizeof(ble::AuthenticateHeader), "Packet too small! Has it not been pre-allocated?");
 
     static constexpr ble::AuthenticateHeader HEADER{};
-    packet[HEADER.hashType] = ble::hash_type_id(ble::sha_to_enum<algorithm_t>());
+    packet[HEADER.shaVersion] = ble::sha_version_id(ble::sha_to_enum<algorithm_t>());
     packet[HEADER.hashOffset] = common::assert_down_cast<uint8_t>(sizeof(ble::AuthenticateHeader));
     packet[HEADER.hashSize] = common::assert_down_cast<uint8_t>(hash.size());
     packet[HEADER.signatureOffset] = common::assert_down_cast<uint8_t>(sizeof(ble::AuthenticateHeader) + hash.size());
@@ -165,8 +165,9 @@ auto CWhoAmI::make_callback_authenticate(const std::shared_ptr<Profile>& pProfil
                 }
                 case CharacteristicAccess::write:
                 {
-                    ASSERT_FMT(false, "Read only Characteristic \"Authenticate\" recieved a Write operation from connection handle: \"{}\"",
-                                  connectionHandle);
+                    ASSERT_FMT(false,
+                               "Read only Characteristic \"Authenticate\" recieved a Write operation from connection handle: \"{}\"",
+                               connectionHandle);
                 }
                 }
                 UNHANDLED_CASE_PROTECTION_OFF

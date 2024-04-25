@@ -216,38 +216,6 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
-template<typename sha_t>
-[[nodiscard]] uint8_t get_sha_type_id()
-{
-    if constexpr (std::same_as<sha_t, security::Sha2_224>)
-    {
-        return std::to_underlying(ble::HashType::Sha2_224);
-    }
-    else if constexpr (std::same_as<sha_t, security::Sha2_256>)
-    {
-        return std::to_underlying(ble::HashType::Sha2_256);
-    }
-    else if constexpr (std::same_as<sha_t, security::Sha3_224>)
-    {
-        return std::to_underlying(ble::HashType::Sha3_224);
-    }
-    else if constexpr (std::same_as<sha_t, security::Sha3_256>)
-    {
-        return std::to_underlying(ble::HashType::Sha3_256);
-    }
-    else if constexpr (std::same_as<sha_t, security::Sha3_384>)
-    {
-        return std::to_underlying(ble::HashType::Sha3_384);
-    }
-    else if constexpr (std::same_as<sha_t, security::Sha3_512>)
-    {
-        return std::to_underlying(ble::HashType::Sha3_512);
-    }
-    else
-    {
-        return std::to_underlying(ble::HashType::Sha2_224);
-    }
-}
 [[nodiscard]] std::vector<byte> generate_random_block(security::CRandom& rng)
 {
     static std::random_device rd{};
@@ -328,7 +296,7 @@ requires security::hash_algorithm<sha_t>
 
     std::vector<byte> packet{};
     packet.resize(PACKET_SIZE);
-    packet[HEADER.hashType] = get_sha_type_id<typename decltype(hash)::hash_type>();
+    packet[HEADER.shaVersion] = ble::sha_version_id<typename decltype(hash)::hash_type>();
     packet = insert_random_data_block(packet, randomBlock);
     packet = insert_hash(packet, hash);
     packet = insert_signature(packet, signature);
@@ -410,7 +378,7 @@ int main(int argc, char** argv)
     auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u);
 
     std::optional<ble::CDevice> device = std::nullopt;
-
+    std::optional<uint16_t> a{};
     bool exit = false;
     while (!exit)
     {

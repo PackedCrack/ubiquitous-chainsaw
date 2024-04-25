@@ -3,6 +3,10 @@
 #include "CGattService.hpp"
 #include "profiles.hpp"
 #include <memory>
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 class CWhereAmI
@@ -20,6 +24,7 @@ public:
     void register_with_nimble(const std::shared_ptr<Profile>& pProfile);
     [[nodiscard]] ble_gatt_svc_def as_nimble_service() const;
 private:
+    [[nodiscard]] bool valid_signature(ShaHash& hash, std::span<uint8_t> signature);
     [[nodiscard]] std::vector<CCharacteristic> make_characteristics(const std::shared_ptr<Profile>& pProfile);
     [[nodiscard]] auto make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile);
     [[nodiscard]] CCharacteristic make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile);
