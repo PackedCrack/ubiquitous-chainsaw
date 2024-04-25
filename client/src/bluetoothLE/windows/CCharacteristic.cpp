@@ -1,12 +1,11 @@
 //
 // Created by qwerty on 2024-03-01.
 //
-
 #include "CCharacteristic.hpp"
 #include "win_ble_common.hpp"
-
+// winrt
 #include <winrt/Windows.Storage.Streams.h>
-#include <iostream>
+
 
 #define TO_BOOL(expr) common::enum_to_bool(expr)
 namespace
@@ -157,7 +156,56 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
     : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
     , m_ProtLevel{}
     , m_Properties{}
+    , m_Cookie{}
+    , m_NotifyEventHandler{}
 {}
+CCharacteristic::~CCharacteristic()
+{
+    deregister_current_value_changed_event();
+}
+CCharacteristic::CCharacteristic(const CCharacteristic& other)
+    : m_pCharacteristic{ other.m_pCharacteristic }
+    , m_ProtLevel{ other.m_ProtLevel }
+    , m_Properties{ other.m_Properties }
+    , m_Cookie{ other.m_Cookie }
+    , m_NotifyEventHandler{ other.m_NotifyEventHandler }
+{
+    update_value_changed_event();
+}
+CCharacteristic::CCharacteristic(CCharacteristic&& other) noexcept
+    : m_pCharacteristic{ std::move(other.m_pCharacteristic) }
+    , m_ProtLevel{ std::move(other.m_ProtLevel) }
+    , m_Properties{ std::move(other.m_Properties) }
+    , m_Cookie{ std::move(other.m_Cookie) }
+    , m_NotifyEventHandler{ std::move(other.m_NotifyEventHandler) }
+{
+    update_value_changed_event();
+};
+CCharacteristic& CCharacteristic::operator=(const CCharacteristic& other)
+{
+    if (this != &other)
+    {
+        m_pCharacteristic = other.m_pCharacteristic;
+        m_ProtLevel = other.m_ProtLevel;
+        m_Properties = other.m_Properties;
+        m_Cookie = other.m_Cookie;
+        m_NotifyEventHandler = other.m_NotifyEventHandler;
+        update_value_changed_event();
+    }
+
+    return *this;
+}
+CCharacteristic& CCharacteristic::operator=(CCharacteristic&& other) noexcept
+{
+    m_pCharacteristic = std::move(other.m_pCharacteristic);
+    m_ProtLevel = std::move(other.m_ProtLevel);
+    m_Properties = std::move(other.m_Properties);
+    m_Cookie = std::move(other.m_Cookie);
+    m_NotifyEventHandler = std::move(other.m_NotifyEventHandler);
+    update_value_changed_event();
+
+    return *this;
+}
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
@@ -197,6 +245,38 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector
 CCharacteristic::awaitable_write_t CCharacteristic::write_data_with_response(const std::vector<uint8_t>& data) const
 {
     co_return co_await write_data(data, GattWriteOption::WriteWithResponse);
+}
+CCharacteristic::awaitable_subscribe_t CCharacteristic::subscribe_to_notify() const
+{
+    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+    co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
+        GattClientCharacteristicConfigurationDescriptorValue::Notify));
+}
+void CCharacteristic::update_value_changed_event()
+{
+    if (m_NotifyEventHandler)
+    {
+        deregister_current_value_changed_event();
+        m_Cookie.emplace(m_pCharacteristic->ValueChanged(
+            [this](GattCharacteristic characteristic, const GattValueChangedEventArgs& args)
+            {
+                winrt::Windows::Storage::Streams::IBuffer buffer = args.CharacteristicValue();
+                std::vector<uint8_t> vec{};
+                vec.resize(buffer.Length());
+
+                ASSERT(vec.size() == buffer.Length(), "Expected sizes to match!");
+                std::memcpy(vec.data(), buffer.data(), vec.size());
+
+                this->m_NotifyEventHandler(std::move(vec));
+            }));
+    }
+}
+void CCharacteristic::deregister_current_value_changed_event()
+{
+    if (m_Cookie && m_pCharacteristic)
+    {
+        m_pCharacteristic->ValueChanged(*m_Cookie);
+    }
 }
 CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data, GattWriteOption option) const
 {

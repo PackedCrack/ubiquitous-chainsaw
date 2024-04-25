@@ -23,9 +23,9 @@ if(MSVC)
     # https://learn.microsoft.com/en-us/cpp/build/reference/analyze-code-analysis?view=msvc-170
     target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
     target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:anglebrackets>")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_BINARY_DIR}/dependencies>")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_SOURCE_DIR}/../external>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:anglebrackets>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_BINARY_DIR}/dependencies>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_SOURCE_DIR}/../external>")
     # https://learn.microsoft.com/en-us/cpp/build/reference/sdl-enable-additional-security-checks?view=msvc-170
     target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/sdl>")
     # https://learn.microsoft.com/en-us/cpp/build/reference/gs-buffer-security-check?view=msvc-170

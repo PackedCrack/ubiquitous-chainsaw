@@ -9,6 +9,10 @@
     #error Only windows is implemented atm
 #endif
 #include "ble_common.hpp"
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 template<typename descriptor_t, typename... make_args_t>

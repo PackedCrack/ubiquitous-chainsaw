@@ -25,19 +25,27 @@ concept expected_like = requires(expected_t expected) {
     { expected.operator*() } -> std::convertible_to<typename expected_t::value_type&>;
 };
 template<typename characteristic_t, typename... make_args_t>
-concept characteristic = requires(const characteristic_t constCharacteristic, const std::vector<uint8_t>& data) {
-    awaitable_make<characteristic_t, make_args_t...>;
-    string_uuid<characteristic_t>;
-    // Required type alias
-    typename characteristic_t::read_t;
-    requires expected_like<typename characteristic_t::read_t>;
-    requires common::buffer<typename characteristic_t::read_t::value_type>;
-    typename characteristic_t::awaitable_read_t;
-    // Required public const function
-    { constCharacteristic.read_value() } -> std::convertible_to<typename characteristic_t::awaitable_read_t>;
-    { constCharacteristic.write_data(data) } -> std::convertible_to<typename characteristic_t::awaitable_write_t>;
-    { constCharacteristic.write_data_with_response(data) } -> std::convertible_to<typename characteristic_t::awaitable_write_t>;
-};
+concept characteristic =
+    requires(characteristic_t characteristic, const characteristic_t constCharacteristic, const std::vector<uint8_t>& data) {
+        awaitable_make<characteristic_t, make_args_t...>;
+        string_uuid<characteristic_t>;
+        // Required type alias
+        typename characteristic_t::read_t;
+        requires expected_like<typename characteristic_t::read_t>;
+        requires common::buffer<typename characteristic_t::read_t::value_type>;
+        typename characteristic_t::awaitable_read_t;
+        typename characteristic_t::awaitable_subscribe_t;
+
+        // clang-format off
+        { characteristic.register_notify_event_handler([](std::vector<uint8_t>&& vec) {}) };
+        // clang-format on
+        // Required public const function
+        { constCharacteristic.uuid_as_str() } -> std::same_as<std::string>;
+        { constCharacteristic.read_value() } -> std::same_as<typename characteristic_t::awaitable_read_t>;
+        { constCharacteristic.write_data(data) } -> std::same_as<typename characteristic_t::awaitable_write_t>;
+        { constCharacteristic.write_data_with_response(data) } -> std::same_as<typename characteristic_t::awaitable_write_t>;
+        { constCharacteristic.subscribe_to_notify() } -> std::same_as<typename characteristic_t::awaitable_subscribe_t>;
+    };
 template<typename characteristic_t, typename... ctor_args_t>
 requires characteristic<characteristic_t, ctor_args_t...>
 [[nodiscard]] typename characteristic_t::awaitable_t make_characteristic(ctor_args_t&&... args)

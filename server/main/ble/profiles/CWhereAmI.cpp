@@ -231,8 +231,8 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
                         pSelf->m_Rssi = *expected;
                         std::printf("Rssi: %i\n", pSelf->m_Rssi);
 
-                        // int result = ble_gatts_notify_custom(connectionHandle, pSelf->m_NotifyHandle, NULL);
-
+                        int result = ble_gatts_notify_custom(connectionHandle, pSelf->m_NotifyHandle.value(), nullptr);
+                        LOG_INFO_FMT("notify result: {}", result);
 
                         return std::to_underlying(ble::NimbleErrorCode::success);
                     }

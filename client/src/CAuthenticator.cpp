@@ -165,7 +165,7 @@ sys::fire_and_forget_t CAuthenticator::process_queue()
                             switch (status)
                             {
                             case ble::ConnectionStatus::connected:
-                                LOG_INFO("Connection status changed to connected ???????????????????????????????");
+                                LOG_INFO("Connection status changed to connected?");
                                 break;
                             case ble::ConnectionStatus::disconnected:
                                 std::lock_guard lock{ *m_pSharedMutex };

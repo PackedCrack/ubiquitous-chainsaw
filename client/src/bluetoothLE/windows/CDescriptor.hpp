@@ -3,12 +3,19 @@
 //
 #pragma once
 #include "../../client_defines.hpp"
-
+// winrt
+#pragma warning(push)
+#pragma warning(disable: 4'265)    // missing virtual destructor - wtf microsfot?
 #include <winrt/Windows.Foundation.h>
+#pragma warning(pop)
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include <pplawait.h>
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 enum class ProtectionLevel : int32_t
