@@ -24,62 +24,62 @@ public:
     };
 public:
     using make_t = std::expected<CDevice, Error>;
-    using awaitable_t = concurrency::task<make_t>;
+    using awaitable_make_t = concurrency::task<make_t>;
     using service_container_t = std::unordered_map<UUID, CService, UUID::Hasher>;
 private:
     using BluetoothLEDevice = winrt::Windows::Devices::Bluetooth::BluetoothLEDevice;
     using IAsyncAction = winrt::Windows::Foundation::IAsyncAction;
+    using IInspectable = winrt::Windows::Foundation::IInspectable;
 public:
-    [[nodiscard]] static awaitable_t make(uint64_t address);
+    //[[nodiscard]] static awaitable_t make(uint64_t address);
+    template<typename invokable_t>
+    requires std::invocable<invokable_t, ConnectionStatus>
+    [[nodiscard]] static awaitable_make_t make(uint64_t address, invokable_t&& cb)
+    {
+        using namespace winrt::Windows::Devices::Bluetooth;
+
+        std::expected<CDevice, CDevice::Error> expected{};
+        expected->m_pDevice = std::make_shared<BluetoothLEDevice>(co_await BluetoothLEDevice::FromBluetoothAddressAsync(address));
+        /*
+        * The returned BluetoothLEDevice is set to null if
+        * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
+        * */
+        if (*(expected->m_pDevice))
+        {
+            expected->m_ConnectionChanged = std::forward<invokable_t>(cb);
+            co_await expected->query_services();
+        }
+        else
+        {
+            LOG_WARN_FMT("Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
+            co_return std::unexpected(Error::invalidAddress);
+        }
+
+        co_return expected;
+    }
     CDevice() = default;
     ~CDevice() = default;
     CDevice(const CDevice& other);
     CDevice(CDevice&& other) noexcept;
     CDevice& operator=(const CDevice& other);
     CDevice& operator=(CDevice&& other) noexcept;
-private:
-    void copy(const CDevice& other);
-    void move(CDevice& other);
 public:
-    template<typename invokable_t>
-    requires std::invocable<invokable_t, ConnectionStatus>
-    void set_connection_changed_cb(invokable_t&& cb)
-    {
-        m_ConnectionChanged = std::forward<invokable_t>(cb);
-        m_pDevice->ConnectionStatusChanged(
-            [this](const winrt::Windows::Devices::Bluetooth::BluetoothLEDevice& device,
-                   [[maybe_unused]] const winrt::Windows::Foundation::IInspectable& inspectable)
-            {
-                using Status = winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus;
-
-                Status status = device.ConnectionStatus();
-                ConnectionStatus conStatus{};
-                if (status == Status::Connected)
-                {
-                    conStatus = ConnectionStatus::connected;
-                }
-                else if (status == Status::Disconnected)
-                {
-                    conStatus = ConnectionStatus::disconnected;
-                }
-                else
-                {
-                    assert(false);
-                }
-
-                this->m_ConnectionChanged(conStatus);
-            });
-    }
     [[nodiscard]] bool connected() const;
     [[nodiscard]] uint64_t address() const;
     [[nodiscard]] std::string address_as_str() const;
     [[nodiscard]] const service_container_t& services() const;
     [[nodiscard]] std::optional<const CService*> service(const UUID& uuid) const;
 private:
+    void revoke_connection_changed_handler();
+    void register_connection_changed_handler();
+    void refresh_connection_changed_handler();
+    [[nodiscard]] std::function<void(const BluetoothLEDevice& device, [[maybe_unused]] const IInspectable& inspectable)>
+        connection_changed_handler();
     IAsyncAction query_services();
 private:
     std::shared_ptr<BluetoothLEDevice> m_pDevice;
     service_container_t m_Services;
     std::function<void(ConnectionStatus)> m_ConnectionChanged;
+    BluetoothLEDevice::ConnectionStatusChanged_revoker m_Revoker;
 };
 }    // namespace ble
