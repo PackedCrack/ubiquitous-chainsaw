@@ -160,6 +160,10 @@ bool CWhereAmI::valid_signature(ShaHash& hash, std::span<uint8_t> signature)
             {
                 LOG_INFO("AAAAAAAAAAAAAAAAA VERIFIED AAAAAAAAAAAAAAAAAAAAA");
             }
+            else
+            {
+                LOG_INFO("BBBBBBBBBBBBBBBBB NOT VERIFIED BBBBBBBBBBBBBBBB");
+            }
         },
         hash);
 
