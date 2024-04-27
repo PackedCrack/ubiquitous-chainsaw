@@ -68,7 +68,7 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Characteristics from Service with UUID: \"{}\"",
-                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
+                      gatt_communication_status_to_str(communication_status_from_winrt(result.Status())),
                       uuid_as_str());
     }
 }

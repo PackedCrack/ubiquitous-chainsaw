@@ -2,7 +2,6 @@
 // Created by qwerty on 2024-03-01.
 //
 #include "CCharacteristic.hpp"
-#include "win_ble_common.hpp"
 // winrt
 #include <winrt/Windows.Storage.Streams.h>
 
@@ -10,70 +9,70 @@
 #define TO_BOOL(expr) common::enum_to_bool(expr)
 namespace
 {
-[[nodiscard]] ble::CCharacteristic::Properties
-    operator|(ble::CCharacteristic::Properties lhs,
+[[nodiscard]] ble::CharacteristicProperties
+    operator|(ble::CharacteristicProperties lhs,
               winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
 {
-    return ble::CCharacteristic::Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
+    return ble::CharacteristicProperties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
 }
-[[nodiscard]] std::vector<std::string> properties_to_str(ble::CCharacteristic::Properties properties)
+[[nodiscard]] std::vector<std::string> properties_to_str(ble::CharacteristicProperties properties)
 {
-    using Properties = ble::CCharacteristic::Properties;
+    using Properties = ble::CharacteristicProperties;
 
     std::vector<std::string> props{};
     if (static_cast<bool>(properties & Properties::authenticatedSignedWrites))
     {
-        props.emplace_back("Authenticated Signed Writes");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::broadcast))
     {
-        props.emplace_back("Broadcast");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::extendedProperties))
     {
-        props.emplace_back("Extended Properties");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::indicate))
     {
-        props.emplace_back("Indicate");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::none))
     {
-        props.emplace_back("None");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::notify))
     {
-        props.emplace_back("Notify");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::read))
     {
-        props.emplace_back("Read");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::reliableWrites))
     {
-        props.emplace_back("Reliable Writes");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::writableAuxiliaries))
     {
-        props.emplace_back("Writable Auxiliaries");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::write))
     {
-        props.emplace_back("Write");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
     if (TO_BOOL(properties & Properties::writeWithoutResponse))
     {
-        props.emplace_back("Write Without Response");
+        props.emplace_back(ble::characteristic_properties_to_str(properties));
     }
 
 
     return props;
 }
-[[nodiscard]] ble::CCharacteristic::Properties
+[[nodiscard]] ble::CharacteristicProperties
     to_props_from_winrt(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties properties)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    using Properties = ble::CCharacteristic::Properties;
+    using Properties = ble::CharacteristicProperties;
 
     Properties props{ 0 };
     if (TO_BOOL(properties & GattCharacteristicProperties::AuthenticatedSignedWrites))
@@ -131,22 +130,15 @@ CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& cha
 {
     CCharacteristic charac{ characteristic };
 
-    // Storing this mostly for debug purposes for now..
-    charac.m_Properties = to_props_from_winrt(charac.m_pCharacteristic->CharacteristicProperties());
-    std::vector<std::string> properties = properties_to_str(charac.m_Properties);
-    // TODO:: might not need this
-    charac.m_ProtLevel = prot_level_from_winrt(charac.m_pCharacteristic->ProtectionLevel());
-
 #ifndef NDEBUG
+    std::vector<std::string> allProperties = charac.properties_as_str();
     std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
-
     std::printf("\nCharacteristic properties: ");
-    for (auto&& property : properties)
+    for (auto&& property : allProperties)
     {
         std::printf("%s, ", property.c_str());
     }
-
-    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.m_ProtLevel)).c_str());
+    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.protection_level())).c_str());
 #endif
 
     co_await charac.query_descriptors();
@@ -154,43 +146,35 @@ CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& cha
 }
 CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
     : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
-    , m_ProtLevel{}
-    , m_Properties{}
-    , m_Cookie{}
     , m_NotifyEventHandler{}
+    , m_Revoker{}
 {}
 CCharacteristic::~CCharacteristic()
 {
-    deregister_current_value_changed_event();
+    revoke_value_changed_handler();
 }
 CCharacteristic::CCharacteristic(const CCharacteristic& other)
     : m_pCharacteristic{ other.m_pCharacteristic }
-    , m_ProtLevel{ other.m_ProtLevel }
-    , m_Properties{ other.m_Properties }
-    , m_Cookie{ other.m_Cookie }
     , m_NotifyEventHandler{ other.m_NotifyEventHandler }
+    , m_Revoker{}
 {
-    update_value_changed_event();
+    refresh_value_changed_handler();
 }
 CCharacteristic::CCharacteristic(CCharacteristic&& other) noexcept
     : m_pCharacteristic{ std::move(other.m_pCharacteristic) }
-    , m_ProtLevel{ std::move(other.m_ProtLevel) }
-    , m_Properties{ std::move(other.m_Properties) }
-    , m_Cookie{ std::move(other.m_Cookie) }
     , m_NotifyEventHandler{ std::move(other.m_NotifyEventHandler) }
+    , m_Revoker{ std::move(other.m_Revoker) }
 {
-    update_value_changed_event();
+    refresh_value_changed_handler();
 };
 CCharacteristic& CCharacteristic::operator=(const CCharacteristic& other)
 {
     if (this != &other)
     {
         m_pCharacteristic = other.m_pCharacteristic;
-        m_ProtLevel = other.m_ProtLevel;
-        m_Properties = other.m_Properties;
-        m_Cookie = other.m_Cookie;
         m_NotifyEventHandler = other.m_NotifyEventHandler;
-        update_value_changed_event();
+        m_Revoker = GattCharacteristic::ValueChanged_revoker{};
+        refresh_value_changed_handler();
     }
 
     return *this;
@@ -198,11 +182,9 @@ CCharacteristic& CCharacteristic::operator=(const CCharacteristic& other)
 CCharacteristic& CCharacteristic::operator=(CCharacteristic&& other) noexcept
 {
     m_pCharacteristic = std::move(other.m_pCharacteristic);
-    m_ProtLevel = std::move(other.m_ProtLevel);
-    m_Properties = std::move(other.m_Properties);
-    m_Cookie = std::move(other.m_Cookie);
     m_NotifyEventHandler = std::move(other.m_NotifyEventHandler);
-    update_value_changed_event();
+    m_Revoker = std::move(other.m_Revoker);
+    refresh_value_changed_handler();
 
     return *this;
 }
@@ -220,7 +202,7 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
 
     GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
 
-    CommunicationStatus status = winrt_status_to_communication_status(result.Status());
+    CommunicationStatus status = communication_status_from_winrt(result.Status());
     if (status == CommunicationStatus::success)
     {
         IBuffer buffer = result.Value();
@@ -246,41 +228,48 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data_with_response(con
 {
     co_return co_await write_data(data, GattWriteOption::WriteWithResponse);
 }
-CCharacteristic::awaitable_subscribe_t CCharacteristic::subscribe_to_notify() const
+CharacteristicProperties CCharacteristic::properties() const
 {
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
-        GattClientCharacteristicConfigurationDescriptorValue::Notify));
+    ASSERT(m_pCharacteristic, "Expected a valid characteristic.");
+    return to_props_from_winrt(m_pCharacteristic->CharacteristicProperties());
 }
-void CCharacteristic::update_value_changed_event()
+std::vector<std::string> CCharacteristic::properties_as_str() const
 {
-    if (m_NotifyEventHandler)
+    return properties_to_str(properties());
+}
+ProtectionLevel CCharacteristic::protection_level() const
+{
+    ASSERT(m_pCharacteristic, "Expected a valid characteristic.");
+    return protection_level_from_winrt(m_pCharacteristic->ProtectionLevel());
+}
+void CCharacteristic::revoke_value_changed_handler()
+{
+    if (m_Revoker)
     {
-        deregister_current_value_changed_event();
-        m_Cookie.emplace(m_pCharacteristic->ValueChanged(
-            [this](GattCharacteristic characteristic, const GattValueChangedEventArgs& args)
-            {
-                winrt::Windows::Storage::Streams::IBuffer buffer = args.CharacteristicValue();
-                std::vector<uint8_t> vec{};
-                vec.resize(buffer.Length());
-
-                ASSERT(vec.size() == buffer.Length(), "Expected sizes to match!");
-                std::memcpy(vec.data(), buffer.data(), vec.size());
-
-                this->m_NotifyEventHandler(std::move(vec));
-            }));
+        m_Revoker.revoke();
     }
 }
-void CCharacteristic::deregister_current_value_changed_event()
+void CCharacteristic::register_value_changed_handler()
 {
-    if (m_Cookie && m_pCharacteristic)
+    m_Revoker = m_pCharacteristic->ValueChanged(winrt::auto_revoke, value_changed_handler());
+}
+void CCharacteristic::refresh_value_changed_handler()
+{
+    revoke_value_changed_handler();
+    register_value_changed_handler();
+}
+std::function<void(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic,
+                   const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs& args)>
+    CCharacteristic::value_changed_handler()
+{
+    return [this](GattCharacteristic characteristic, const GattValueChangedEventArgs& args)
     {
-        m_pCharacteristic->ValueChanged(*m_Cookie);
-    }
+        winrt::Windows::Storage::Streams::IBuffer buffer = args.CharacteristicValue();
+        this->m_NotifyEventHandler(std::span<uint8_t>{ buffer.data(), buffer.Length() });
+    };
 }
 CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data, GattWriteOption option) const
 {
-    using GattCommunicationStatus = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCommunicationStatus;
     using Buffer = winrt::Windows::Storage::Streams::Buffer;
 
 
@@ -288,10 +277,9 @@ CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector
     buffer.Length(buffer.Capacity());
     std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
 
-
     try
     {
-        co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteValueAsync(buffer, option));
+        co_return communication_status_from_winrt(co_await m_pCharacteristic->WriteValueAsync(buffer, option));
     }
     catch (...)    // catch all because i have no clue what windows throws and when
     {
@@ -332,7 +320,7 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
-                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
+                      gatt_communication_status_to_str(communication_status_from_winrt(result.Status())),
                       uuid_as_str());
     }
 }

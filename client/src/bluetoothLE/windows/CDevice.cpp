@@ -9,6 +9,10 @@
 // clang-format on
 namespace ble
 {
+CDevice::~CDevice()
+{
+    revoke_connection_changed_handler();
+}
 CDevice::CDevice(const CDevice& other)
     : m_pDevice{ other.m_pDevice }
     , m_Services{ other.m_Services }
@@ -78,7 +82,10 @@ std::optional<const CService*> CDevice::service(const UUID& uuid) const
 }
 void CDevice::revoke_connection_changed_handler()
 {
-    m_Revoker.revoke();
+    if (m_Revoker)
+    {
+        m_Revoker.revoke();
+    }
 }
 void CDevice::register_connection_changed_handler()
 {
@@ -87,10 +94,7 @@ void CDevice::register_connection_changed_handler()
 }
 void CDevice::refresh_connection_changed_handler()
 {
-    if (m_Revoker)
-    {
-        revoke_connection_changed_handler();
-    }
+    revoke_connection_changed_handler();
     register_connection_changed_handler();
 }
 std::function<void(const winrt::Windows::Devices::Bluetooth::BluetoothLEDevice& device,
@@ -152,7 +156,7 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Services from device with address: \"{}\"",
-                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
+                      gatt_communication_status_to_str(communication_status_from_winrt(result.Status())),
                       hex_addr_to_str(m_pDevice->BluetoothAddress()));
     }
 }

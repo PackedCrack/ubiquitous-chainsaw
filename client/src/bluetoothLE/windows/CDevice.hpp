@@ -58,7 +58,7 @@ public:
         co_return expected;
     }
     CDevice() = default;
-    ~CDevice() = default;
+    ~CDevice();
     CDevice(const CDevice& other);
     CDevice(CDevice&& other) noexcept;
     CDevice& operator=(const CDevice& other);

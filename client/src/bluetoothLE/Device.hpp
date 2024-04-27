@@ -23,7 +23,7 @@ concept device = requires(device_t device, const device_t constDevice, const UUI
     {
         device_t::make(uint64_t{}, [](ConnectionStatus) {})
     } -> std::same_as<typename device_t::awaitable_make_t>;
-    
+
     { constDevice.connected() } -> std::same_as<bool>;
     { constDevice.address() } -> std::same_as<uint64_t>;
     { constDevice.address_as_str() } -> std::convertible_to<std::string>;

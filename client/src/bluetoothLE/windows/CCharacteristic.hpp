@@ -5,6 +5,7 @@
 #include "common/ble_services.hpp"
 #include "../../client_defines.hpp"
 #include "../Descriptor.hpp"
+#include "win_ble_common.hpp"
 // winrt
 #pragma warning(push)
 #pragma warning(disable: 4'265)    // missing virtual destructor - wtf microsfot?
@@ -27,33 +28,6 @@ public:
     using awaitable_read_t = concurrency::task<read_t>;
     using awaitable_write_t = concurrency::task<CommunicationStatus>;
     using awaitable_subscribe_t = concurrency::task<CommunicationStatus>;
-    enum class Properties : uint32_t
-    {
-        none = 0,
-        broadcast = 0x1,
-        read = 0x2,
-        writeWithoutResponse = 0x4,
-        write = 0x8,
-        notify = 0x10,
-        indicate = 0x20,
-        authenticatedSignedWrites = 0x40,
-        extendedProperties = 0x80,
-        reliableWrites = 0x1'00,
-        writableAuxiliaries = 0x2'00,
-    };
-    [[nodiscard]] friend constexpr Properties operator&(Properties lhs, Properties rhs)
-    {
-        return Properties{ std::to_underlying(lhs) & std::to_underlying(rhs) };
-    }
-    [[nodiscard]] friend constexpr Properties operator|(Properties lhs, Properties rhs)
-    {
-        return Properties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
-    }
-    [[nodiscard]] friend constexpr Properties operator^(Properties lhs, Properties rhs)
-    {
-        return Properties{ std::to_underlying(lhs) ^ std::to_underlying(rhs) };
-    }
-    [[nodiscard]] friend constexpr Properties operator~(Properties prop) { return Properties{ std::to_underlying(prop) }; }
 private:
     using GattCharacteristic = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic;
     using GattWriteOption = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattWriteOption;
@@ -61,7 +35,7 @@ private:
 public:
     [[nodiscard]] static awaitable_t make(const GattCharacteristic& characteristic);
     CCharacteristic() = default;
-    virtual ~CCharacteristic();
+    ~CCharacteristic();
     CCharacteristic(const CCharacteristic& other);
     CCharacteristic(CCharacteristic&& other) noexcept;
     CCharacteristic& operator=(const CCharacteristic& other);
@@ -70,28 +44,36 @@ private:
     explicit CCharacteristic(GattCharacteristic characteristic);
 public:
     template<typename invokable_t>
-    requires std::invocable<invokable_t, std::vector<uint8_t>&&>
-    void register_notify_event_handler(invokable_t&& invokable)
+    requires std::invocable<invokable_t, std::span<const uint8_t>>
+    [[nodiscard]] awaitable_subscribe_t subscribe_to_notify(invokable_t&& cb)
     {
-        m_NotifyEventHandler = std::forward<invokable_t>(invokable);
-        update_value_changed_event();
+        using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+
+        m_NotifyEventHandler = std::forward<invokable_t>(cb);
+        ASSERT(m_pCharacteristic, "Expected a valid characteristic");
+        m_Revoker = m_pCharacteristic->ValueChanged(winrt::auto_revoke, value_changed_handler());
+
+        co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
+            GattClientCharacteristicConfigurationDescriptorValue::Notify));
     }
     [[nodiscard]] std::string uuid_as_str() const;
     [[nodiscard]] awaitable_read_t read_value() const;
     [[nodiscard]] awaitable_write_t write_data(const std::vector<uint8_t>& data) const;
     [[nodiscard]] awaitable_write_t write_data_with_response(const std::vector<uint8_t>& data) const;
-    [[nodiscard]] awaitable_subscribe_t subscribe_to_notify() const;
+    [[nodiscard]] CharacteristicProperties properties() const;
+    [[nodiscard]] std::vector<std::string> properties_as_str() const;
+    [[nodiscard]] ProtectionLevel protection_level() const;
 private:
-    void update_value_changed_event();
-    void deregister_current_value_changed_event();
+    void revoke_value_changed_handler();
+    void register_value_changed_handler();
+    void refresh_value_changed_handler();
+    [[nodiscard]] std::function<void(GattCharacteristic characteristic, const GattValueChangedEventArgs& args)> value_changed_handler();
     [[nodiscard]] awaitable_write_t write_data(const std::vector<uint8_t>& data, GattWriteOption option) const;
     winrt::Windows::Foundation::IAsyncAction query_descriptors();
 private:
     std::shared_ptr<GattCharacteristic> m_pCharacteristic;
     std::unordered_map<ble::UUID, CDescriptor, ble::UUID::Hasher> m_Descriptors;
-    ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
-    Properties m_Properties = Properties::none;
-    std::optional<winrt::event_token> m_Cookie;
-    std::function<void(std::vector<uint8_t>&& buffer)> m_NotifyEventHandler;
+    std::function<void(std::span<const uint8_t> packetView)> m_NotifyEventHandler;
+    GattCharacteristic::ValueChanged_revoker m_Revoker;
 };
 }    // namespace ble

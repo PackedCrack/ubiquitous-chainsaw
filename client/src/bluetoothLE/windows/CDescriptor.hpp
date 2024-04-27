@@ -3,6 +3,7 @@
 //
 #pragma once
 #include "../../client_defines.hpp"
+#include "../ble_common.hpp"
 // winrt
 #pragma warning(push)
 #pragma warning(disable: 4'265)    // missing virtual destructor - wtf microsfot?
@@ -18,13 +19,6 @@
 // clang-format on
 namespace ble
 {
-enum class ProtectionLevel : int32_t
-{
-    plain = 0,
-    authenticationRequired = 1,
-    encryptionRequired = 2,
-    encryptionAndAuthenticationRequired = 3,
-};
 class CDescriptor
 {
 public:
@@ -46,49 +40,5 @@ public:
     [[nodiscard]] ProtectionLevel protection_level() const;
 private:
     std::shared_ptr<GattDescriptor> m_pDescriptor;
-    ProtectionLevel m_ProtLevel = ProtectionLevel::plain;
 };
-[[nodiscard]] constexpr ProtectionLevel
-    prot_level_from_winrt(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattProtectionLevel level)
-{
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-
-    UNHANDLED_CASE_PROTECTION_ON
-    switch (level)
-    // cppcheck-suppress missingReturn
-    {
-    case GattProtectionLevel::AuthenticationRequired:
-        return ProtectionLevel::authenticationRequired;
-    case GattProtectionLevel::EncryptionAndAuthenticationRequired:
-        return ProtectionLevel::encryptionAndAuthenticationRequired;
-    case GattProtectionLevel::EncryptionRequired:
-        return ProtectionLevel::encryptionRequired;
-    case GattProtectionLevel::Plain:
-        return ProtectionLevel::plain;
-    }
-    UNHANDLED_CASE_PROTECTION_OFF
-
-    std::unreachable();
-}
-[[nodiscard]] constexpr const char* prot_level_to_str(ProtectionLevel level)
-{
-    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-
-    UNHANDLED_CASE_PROTECTION_ON
-    switch (level)
-    // cppcheck-suppress missingReturn
-    {
-    case ProtectionLevel::authenticationRequired:
-        return "Authentication Required";
-    case ProtectionLevel::encryptionAndAuthenticationRequired:
-        return "Encryption and Authentication Required";
-    case ProtectionLevel::encryptionRequired:
-        return "Encryption Required";
-    case ProtectionLevel::plain:
-        return "Plain";
-    }
-    UNHANDLED_CASE_PROTECTION_OFF
-
-    std::unreachable();
-}
 }    // namespace ble

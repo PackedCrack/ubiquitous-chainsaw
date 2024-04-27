@@ -6,6 +6,10 @@
 #include "../../common/CThreadSafeHashMap.hpp"
 // windows
 #include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 class CScanner

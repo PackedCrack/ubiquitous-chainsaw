@@ -1,11 +1,14 @@
 //
 // Created by qwerty on 2024-01-26.
 //
-
 #pragma once
 #include "../client_defines.hpp"
 #include "common/ble_services.hpp"
 #include "common/common.hpp"
+// clang-format off
+
+
+// clang-format on
 namespace ble
 {
 template<typename int_t>
@@ -95,23 +98,16 @@ enum class AddressType
 };
 [[nodiscard]] constexpr std::string_view address_type_to_str(AddressType type)
 {
+    // clang-format off
     UNHANDLED_CASE_PROTECTION_ON
     switch (type)
     {
-    case AddressType::real:
-    {
-        return "Real";
-    }
-    case AddressType::random:
-    {
-        return "Random";
-    }
-    case AddressType::none:
-    {
-        return "None";
-    }
+    case AddressType::real: { return "Real"; }
+    case AddressType::random: { return "Random"; }
+    case AddressType::none: { return "None"; }
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
 
     std::unreachable();
 }
@@ -128,16 +124,16 @@ enum class ConnectionStatus
 };
 [[nodiscard]] constexpr std::string_view connnection_status_to_str(ConnectionStatus status)
 {
+    // clang-format off
     UNHANDLED_CASE_PROTECTION_ON
     switch (status)
     // cppcheck-suppress missingReturn
     {
-    case ConnectionStatus::connected:
-        return "Connected";
-    case ConnectionStatus::disconnected:
-        return "Disconnected";
+    case ConnectionStatus::connected: return "Connected";
+    case ConnectionStatus::disconnected: return "Disconnected";
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
 
     std::unreachable();
 }
@@ -150,21 +146,97 @@ enum class CommunicationStatus
 };
 [[nodiscard]] constexpr std::string_view gatt_communication_status_to_str(CommunicationStatus status)
 {
+    // clang-format off
     UNHANDLED_CASE_PROTECTION_ON
     switch (status)
     // cppcheck-suppress missingReturn
     {
-    case CommunicationStatus::unreachable:
-        return "Unreachable";
-    case CommunicationStatus::protocolError:
-        return "Protocol Error";
-    case CommunicationStatus::accessDenied:
-        return "Access Denied";
-    case CommunicationStatus::success:
-        return "Success";
+    case CommunicationStatus::unreachable: return "Unreachable";
+    case CommunicationStatus::protocolError: return "Protocol Error";
+    case CommunicationStatus::accessDenied: return "Access Denied";
+    case CommunicationStatus::success: return "Success";
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
 
+    std::unreachable();
+}
+enum class CharacteristicProperties : uint32_t
+{
+    none = 0,
+    broadcast = 0x1,
+    read = 0x2,
+    writeWithoutResponse = 0x4,
+    write = 0x8,
+    notify = 0x10,
+    indicate = 0x20,
+    authenticatedSignedWrites = 0x40,
+    extendedProperties = 0x80,
+    reliableWrites = 0x1'00,
+    writableAuxiliaries = 0x2'00,
+};
+[[nodiscard]] constexpr CharacteristicProperties operator&(CharacteristicProperties lhs, CharacteristicProperties rhs)
+{
+    return CharacteristicProperties{ std::to_underlying(lhs) & std::to_underlying(rhs) };
+}
+[[nodiscard]] constexpr CharacteristicProperties operator|(CharacteristicProperties lhs, CharacteristicProperties rhs)
+{
+    return CharacteristicProperties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
+}
+[[nodiscard]] constexpr CharacteristicProperties operator^(CharacteristicProperties lhs, CharacteristicProperties rhs)
+{
+    return CharacteristicProperties{ std::to_underlying(lhs) ^ std::to_underlying(rhs) };
+}
+[[nodiscard]] constexpr CharacteristicProperties operator~(CharacteristicProperties prop)
+{
+    return CharacteristicProperties{ std::to_underlying(prop) };
+}
+[[nodiscard]] constexpr std::string_view characteristic_properties_to_str(CharacteristicProperties properties)
+{
+    // clang-format off
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (properties)
+    // cppcheck-suppress missingReturn
+    {
+    case CharacteristicProperties::none: return "None";
+    case CharacteristicProperties::broadcast: return "Broadcast";
+    case CharacteristicProperties::read: return "Read";
+    case CharacteristicProperties::writeWithoutResponse: return "Write Without Response";
+    case CharacteristicProperties::write: return "Write";
+    case CharacteristicProperties::notify: return "Notify";
+    case CharacteristicProperties::indicate: return "Indicate";
+    case CharacteristicProperties::authenticatedSignedWrites: return "Authenticated Signed Writes";
+    case CharacteristicProperties::extendedProperties: return "Extended Properties";
+    case CharacteristicProperties::reliableWrites: return "Reliable Writes";
+    case CharacteristicProperties::writableAuxiliaries: return "Writable Auxiliaries";
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
+
+    std::unreachable();
+}
+enum class ProtectionLevel : int32_t
+{
+    plain = 0,
+    authenticationRequired = 1,
+    encryptionRequired = 2,
+    encryptionAndAuthenticationRequired = 3,
+};
+[[nodiscard]] constexpr std::string_view prot_level_to_str(ProtectionLevel level)
+{
+    // clang-format off
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (level)
+    // cppcheck-suppress missingReturn
+    {
+    case ProtectionLevel::authenticationRequired: return "Authentication Required";
+    case ProtectionLevel::encryptionAndAuthenticationRequired: return "Encryption and Authentication Required";
+    case ProtectionLevel::encryptionRequired: return "Encryption Required";
+    case ProtectionLevel::plain: return "Plain";
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format off
+    
     std::unreachable();
 }
 }    // namespace ble

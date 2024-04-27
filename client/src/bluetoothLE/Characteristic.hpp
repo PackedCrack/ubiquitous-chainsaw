@@ -36,15 +36,22 @@ concept characteristic =
         typename characteristic_t::awaitable_read_t;
         typename characteristic_t::awaitable_subscribe_t;
 
-        // clang-format off
-        { characteristic.register_notify_event_handler([](std::vector<uint8_t>&& vec) {}) };
-        // clang-format on
-        // Required public const function
+        // Required public functions
+        {
+            characteristic.subscribe_to_notify([](std::span<const uint8_t>) {})
+        } -> std::same_as<typename characteristic_t::awaitable_subscribe_t>;
+        {
+            characteristic.subscribe_to_notify(std::function<void(std::span<const uint8_t>)>{})
+        } -> std::same_as<typename characteristic_t::awaitable_subscribe_t>;
+
+        // Required public const functions
         { constCharacteristic.uuid_as_str() } -> std::same_as<std::string>;
         { constCharacteristic.read_value() } -> std::same_as<typename characteristic_t::awaitable_read_t>;
         { constCharacteristic.write_data(data) } -> std::same_as<typename characteristic_t::awaitable_write_t>;
         { constCharacteristic.write_data_with_response(data) } -> std::same_as<typename characteristic_t::awaitable_write_t>;
-        { constCharacteristic.subscribe_to_notify() } -> std::same_as<typename characteristic_t::awaitable_subscribe_t>;
+        { constCharacteristic.properties() } -> std::same_as<CharacteristicProperties>;
+        { constCharacteristic.properties_as_str() } -> std::same_as<std::vector<std::string>>;
+        { constCharacteristic.protection_level() } -> std::same_as<ProtectionLevel>;
     };
 template<typename characteristic_t, typename... ctor_args_t>
 requires characteristic<characteristic_t, ctor_args_t...>
