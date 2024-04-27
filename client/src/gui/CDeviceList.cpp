@@ -9,6 +9,10 @@
 #include "../bluetoothLE/Device.hpp"
 // third-party
 #include "imgui/imgui.h"
+// clang-format off
+
+
+// clang-format on
 namespace gui
 {
 CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
@@ -18,13 +22,20 @@ CDeviceList::CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator)
     , m_pMutex{ std::make_unique<std::mutex>() }
     , m_ScanTimer{}
 {
-    recreate_list();
+    spawn_time_limited_scan();
 }
 CDeviceList::~CDeviceList()
 {
     if (m_pScanner->scanning())
     {
-        m_ScanTimer.stop();
+        {
+            std::lock_guard lock{ *m_pMutex };
+            if (m_ScanTimer.active())
+            {
+                m_ScanTimer.stop();
+            }
+        }
+
         // spin until the thread has stopped
         while (m_pScanner->scanning())
         {};
@@ -111,12 +122,17 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
     return [this, seconds]()
     {
         size_t prevFound = 0;
-        m_ScanTimer.reset();
+        {
+            std::lock_guard<mutex_t> lock{ *m_pMutex };
+            m_ScanTimer = common::CStopWatch<std::chrono::seconds>{};
+        }
         m_pScanner->begin_scan();
         while (m_ScanTimer.active())
         {
             if (m_ScanTimer.lap<float>() > static_cast<float>(seconds.count()) || m_pAuthenticator->server_identified())
             {
+                m_ScanTimer.stop();
+                m_pScanner->end_scan();
                 break;
             }
 
@@ -139,7 +155,6 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
                 prevFound = m_Devices.size();
             }
         }
-        m_pScanner->end_scan();
     };
 }
 void CDeviceList::recreate_list()
@@ -147,7 +162,16 @@ void CDeviceList::recreate_list()
     ASSERT(!m_pScanner->scanning(), "Already scanning!");
 
     std::lock_guard<mutex_t> lock{ *m_pMutex };
+    if (m_ScanTimer.active())
+    {
+        return;
+    }
+
     m_Devices.clear();
+    spawn_time_limited_scan();
+}
+void CDeviceList::spawn_time_limited_scan()
+{
     tf::Executor& executor = sys::executor();
     executor.silent_async(time_limited_scan(SCAN_TIME));
 }

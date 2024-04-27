@@ -36,6 +36,7 @@ public:
     [[nodiscard]] std::vector<ble::DeviceInfo> device_infos() const;
 private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
+    void spawn_time_limited_scan();
     void authentication_status();
     void device_list();
 private:
