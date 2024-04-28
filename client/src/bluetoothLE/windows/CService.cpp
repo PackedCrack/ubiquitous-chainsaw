@@ -5,7 +5,7 @@
 #include "win_ble_common.hpp"
 namespace ble
 {
-CService::awaitable_t CService::make(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
+CService::awaitable_make_t CService::make(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
 {
     CService sv{ service };
     std::printf("\nService UUID: %ws", to_hstring(sv.m_pService->Uuid()).data());
@@ -27,7 +27,7 @@ CService::CService(GattDeviceService service)
     : m_pService{ std::make_shared<GattDeviceService>(std::move(service)) }
     , m_Characteristics{}
 {}
-std::optional<const CCharacteristic*> CService::characteristic(const UUID& uuid) const
+std::optional<std::weak_ptr<CCharacteristic>> CService::characteristic(const UUID& uuid) const
 {
     auto iter = m_Characteristics.find(uuid);
     if (iter == std::end(m_Characteristics))
@@ -35,11 +35,20 @@ std::optional<const CCharacteristic*> CService::characteristic(const UUID& uuid)
         return std::nullopt;
     }
 
-    return std::make_optional<const CCharacteristic*>(&(iter->second));
+    return std::make_optional<std::weak_ptr<CCharacteristic>>(iter->second);
 }
 std::string CService::uuid_as_str() const
 {
     return winrt::to_string(winrt::to_hstring(m_pService->Uuid()));
+}
+sys::fire_and_forget_t CService::unsubscribe_from_characteristic(const UUID& characteristic)
+{
+    auto iter = m_Characteristics.find(characteristic);
+    ASSERT(iter != std::end(m_Characteristics), "Tried to unsubscribe from a non existing characteristic..");
+    CommunicationStatus status = co_await iter->second->unsubscribe();
+    ASSERT_FMT(status == CommunicationStatus::success,
+               "Expected success when unsubscribing.. Error: \"{}\"",
+               communication_status_to_str(status));
 }
 winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
 {
@@ -58,7 +67,8 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
         for (auto&& chr : characteristics)
         {
             auto [iter, emplaced] =
-                m_Characteristics.try_emplace(make_uuid(chr.Uuid()), co_await make_characteristic<CCharacteristic>(chr));
+                m_Characteristics.try_emplace(make_uuid(chr.Uuid()),
+                                              std::make_shared<CCharacteristic>(co_await make_characteristic<CCharacteristic>(chr)));
             if (!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace characteristic with UUID: \"{}\"", uuid_as_str());
@@ -68,7 +78,7 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Characteristics from Service with UUID: \"{}\"",
-                      gatt_communication_status_to_str(communication_status_from_winrt(result.Status())),
+                      communication_status_to_str(communication_status_from_winrt(result.Status())),
                       uuid_as_str());
     }
 }

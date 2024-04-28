@@ -146,6 +146,7 @@ CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& cha
 }
 CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
     : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
+    , m_Descriptors{}
     , m_NotifyEventHandler{}
     , m_Revoker{}
 {}
@@ -155,6 +156,7 @@ CCharacteristic::~CCharacteristic()
 }
 CCharacteristic::CCharacteristic(const CCharacteristic& other)
     : m_pCharacteristic{ other.m_pCharacteristic }
+    , m_Descriptors{ other.m_Descriptors }
     , m_NotifyEventHandler{ other.m_NotifyEventHandler }
     , m_Revoker{}
 {
@@ -162,6 +164,7 @@ CCharacteristic::CCharacteristic(const CCharacteristic& other)
 }
 CCharacteristic::CCharacteristic(CCharacteristic&& other) noexcept
     : m_pCharacteristic{ std::move(other.m_pCharacteristic) }
+    , m_Descriptors{ std::move(other.m_Descriptors) }
     , m_NotifyEventHandler{ std::move(other.m_NotifyEventHandler) }
     , m_Revoker{ std::move(other.m_Revoker) }
 {
@@ -172,6 +175,7 @@ CCharacteristic& CCharacteristic::operator=(const CCharacteristic& other)
     if (this != &other)
     {
         m_pCharacteristic = other.m_pCharacteristic;
+        m_Descriptors = other.m_Descriptors;
         m_NotifyEventHandler = other.m_NotifyEventHandler;
         m_Revoker = GattCharacteristic::ValueChanged_revoker{};
         refresh_value_changed_handler();
@@ -182,11 +186,53 @@ CCharacteristic& CCharacteristic::operator=(const CCharacteristic& other)
 CCharacteristic& CCharacteristic::operator=(CCharacteristic&& other) noexcept
 {
     m_pCharacteristic = std::move(other.m_pCharacteristic);
+    m_Descriptors = std::move(other.m_Descriptors);
     m_NotifyEventHandler = std::move(other.m_NotifyEventHandler);
     m_Revoker = std::move(other.m_Revoker);
     refresh_value_changed_handler();
 
     return *this;
+}
+CCharacteristic::awaitable_bool_t CCharacteristic::has_subscribed() const
+{
+    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+
+    auto iter = m_Descriptors.find(uuid_descriptor_client_characteristic_configuration_descriptor());
+    ASSERT(iter != std::end(m_Descriptors), "has_subscribed called on unsubscribable characteristic!");
+
+    std::expected<std::vector<uint8_t>, CommunicationStatus> expectedValue = co_await iter->second->read_value();
+    if (expectedValue)
+    {
+        ASSERT_FMT(expectedValue->size() > 1, "Expected at least a uint16 in the Client Configuration Descriptor..");
+
+        const std::vector<uint8_t>& data = *expectedValue;
+        uint16_t value = data[0];
+        value = value | data[1];
+
+        if (value & std::to_underlying(GattClientCharacteristicConfigurationDescriptorValue::Notify))
+        {
+            co_return true;
+        }
+        if (value & std::to_underlying(GattClientCharacteristicConfigurationDescriptorValue::Indicate))
+        {
+            co_return true;
+        }
+    }
+    else
+    {
+        LOG_ERROR_FMT("Could not read Client Configuration Descriptor. Reason: \"{}\"", communication_status_to_str(expectedValue.error()));
+    }
+
+    co_return false;
+}
+CCharacteristic::awaitable_unsubscribe_t CCharacteristic::unsubscribe()
+{
+    using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+    ASSERT(m_pCharacteristic, "Expected a valid characteristic");
+
+    revoke_value_changed_handler();
+    co_return communication_status_from_winrt(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
+        GattClientCharacteristicConfigurationDescriptorValue::None));
 }
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
@@ -216,7 +262,7 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
     }
     else
     {
-        LOG_ERROR_FMT("Read failed with: \"{}\"", gatt_communication_status_to_str(status));
+        LOG_ERROR_FMT("Read failed with: \"{}\"", communication_status_to_str(status));
         co_return std::unexpected(status);
     }
 }
@@ -310,7 +356,8 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
         for (auto&& descriptor : descriptors)
         {
             auto [iter, emplaced] =
-                m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), co_await make_descriptor<CDescriptor>(descriptor));
+                m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()),
+                                          std::make_shared<CDescriptor>(co_await make_descriptor<CDescriptor>(descriptor)));
             if (!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
@@ -320,7 +367,7 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
-                      gatt_communication_status_to_str(communication_status_from_winrt(result.Status())),
+                      communication_status_to_str(communication_status_from_winrt(result.Status())),
                       uuid_as_str());
     }
 }

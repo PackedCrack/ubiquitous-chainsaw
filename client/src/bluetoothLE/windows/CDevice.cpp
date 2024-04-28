@@ -70,7 +70,7 @@ const CDevice::service_container_t& CDevice::services() const
 {
     return m_Services;
 }
-std::optional<const CService*> CDevice::service(const UUID& uuid) const
+std::optional<std::weak_ptr<CService>> CDevice::service(const UUID& uuid) const
 {
     auto iter = m_Services.find(uuid);
     if (iter == std::end(m_Services))
@@ -78,7 +78,13 @@ std::optional<const CService*> CDevice::service(const UUID& uuid) const
         return std::nullopt;
     }
 
-    return std::make_optional<const CService*>(&(iter->second));
+    return std::make_optional<std::weak_ptr<CService>>(iter->second);
+}
+void CDevice::unsubscribe_from_characteristic(const ble::UUID& service, const ble::UUID& characteristic)
+{
+    auto iter = m_Services.find(service);
+    ASSERT(iter != std::end(m_Services), "Tried to unsubscribe from a non existing service..");
+    iter->second->unsubscribe_from_characteristic(characteristic);
 }
 void CDevice::revoke_connection_changed_handler()
 {
@@ -146,7 +152,8 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
 
         for (auto&& svc : svcs)
         {
-            auto [iter, emplaced] = m_Services.try_emplace(make_uuid(svc.Uuid()), co_await make_service<CService>(svc));
+            auto [iter, emplaced] =
+                m_Services.try_emplace(make_uuid(svc.Uuid()), std::make_shared<CService>(co_await make_service<CService>(svc)));
             if (!emplaced)
             {
                 LOG_ERROR_FMT("Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(svc.Uuid())));
@@ -156,7 +163,7 @@ winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
     else
     {
         LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Services from device with address: \"{}\"",
-                      gatt_communication_status_to_str(communication_status_from_winrt(result.Status())),
+                      communication_status_to_str(communication_status_from_winrt(result.Status())),
                       hex_addr_to_str(m_pDevice->BluetoothAddress()));
     }
 }

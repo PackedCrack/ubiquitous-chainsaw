@@ -2,28 +2,33 @@
 #include "security/CHash.hpp"
 #include "security/sha.hpp"
 #include "bluetoothLE/Device.hpp"
+#include "client_common.hpp"
 // clang-format off
 
 
 // clang-format on
 namespace
 {
-[[nodiscard]] sys::awaitable_t<std::optional<const ble::CCharacteristic*>> find_server_auth_characteristic(const ble::CDevice& device)
+[[nodiscard]] sys::awaitable_t<std::optional<std::weak_ptr<ble::CCharacteristic>>>
+    find_server_auth_characteristic(const ble::CDevice& device)
 {
-    std::optional<const ble::CService*> service = device.service(ble::uuid_service_whoami());
-    if (!service)
+    std::optional<std::weak_ptr<ble::CService>> service = device.service(ble::uuid_service_whoami());
+    if (service)
+    {
+        std::shared_ptr<ble::CService> pService = service->lock();
+        std::optional<std::weak_ptr<ble::CCharacteristic>> characteristic =
+            pService->characteristic(ble::uuid_characteristic_whoami_authenticate());
+        if (!characteristic)
+        {
+            co_return std::nullopt;
+        }
+
+        co_return characteristic;
+    }
+    else
     {
         co_return std::nullopt;
     }
-
-    std::optional<const ble::CCharacteristic*> characteristic =
-        service.value()->characteristic(ble::uuid_characteristic_whoami_authenticate());
-    if (!characteristic)
-    {
-        co_return std::nullopt;
-    }
-
-    co_return characteristic;
 }
 [[nodiscard]] bool buffer_size_mismatch(auto&& buffer)
 {
@@ -50,14 +55,12 @@ namespace
     LOG_ERROR_FMT("Unknown sha version value in packet's server auth header: \"{}\"", shaVersion);
     return false;
 }
-[[nodiscard]] sys::awaitable_t<bool> verify_hash_and_signature(std::string_view macAddress,
-                                                               Pointer<security::CEccPublicKey> key,
-                                                               ble::ShaHash& hash,
-                                                               std::span<uint8_t> signature)
+[[nodiscard]] sys::awaitable_t<bool>
+    verify_hash_and_signature(std::string_view macAddress, security::CEccPublicKey* pKey, ble::ShaHash& hash, std::span<uint8_t> signature)
 {
     bool result{};
     std::visit(
-        [&result, &signature, macAddress, key](auto&& hash)
+        [&result, &signature, macAddress, pKey](auto&& hash)
         {
             using sha_type = typename std::remove_cvref_t<decltype(hash)>::hash_type;
             security::CHash<sha_type> macHash{ macAddress };
@@ -75,7 +78,7 @@ namespace
             }
             else
             {
-                result = key->verify_hash(signature, hash);
+                result = pKey->verify_hash(signature, hash);
             }
         },
         hash);
@@ -83,14 +86,14 @@ namespace
     co_return result;
 }
 }    // namespace
-CAuthenticator::CAuthenticator(CServer& server, security::CEccPublicKey* pServerKey)
-    : m_pServerKey{ pServerKey }
+CAuthenticator::CAuthenticator(CServer& server)
+    : m_pServerKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }
     , m_pServer{ &server }
     , m_Devices{}
     , m_pSharedMutex{ std::make_unique<std::shared_mutex>() }
 {}
 CAuthenticator::CAuthenticator(const CAuthenticator& other)
-    : m_pServerKey{ other.m_pServerKey }
+    : m_pServerKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }
     , m_pServer{ other.m_pServer }
     , m_Devices{ other.m_Devices }
     , m_pSharedMutex{ std::make_unique<std::shared_mutex>() }
@@ -99,7 +102,7 @@ CAuthenticator& CAuthenticator::operator=(const CAuthenticator& other)
 {
     if (this != &other)
     {
-        m_pServerKey = other.m_pServerKey;
+        m_pServerKey = load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME);
         m_pServer = other.m_pServer;
         m_Devices = other.m_Devices;
         m_pSharedMutex = std::make_unique<std::shared_mutex>();
@@ -170,14 +173,14 @@ sys::fire_and_forget_t CAuthenticator::process_queue()
 }
 sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice& device, uint64_t address) const
 {
-    std::optional<const ble::CCharacteristic*> characteristic = co_await find_server_auth_characteristic(device);
+    std::optional<std::weak_ptr<ble::CCharacteristic>> characteristic = co_await find_server_auth_characteristic(device);
     if (!characteristic)
     {
         co_return false;
     }
 
 
-    const ble::CCharacteristic* pCharacteristic = characteristic.value();
+    std::shared_ptr<ble::CCharacteristic> pCharacteristic = characteristic->lock();
     static constexpr int32_t MAX_ATTEMPTS = 3u;
     int32_t attempt{ 0 };
     do
@@ -207,7 +210,7 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice&
             std::span<uint8_t> signature{ std::begin(buffer) + SIGNATURE_OFFSET, SIGNATURE_SIZE };
 
             std::string macAddress = ble::DeviceInfo::address_as_str(address);
-            co_return co_await verify_hash_and_signature(macAddress, m_pServerKey, hash, signature);
+            co_return co_await verify_hash_and_signature(macAddress, m_pServerKey.get(), hash, signature);
         }
         else
         {
@@ -215,7 +218,7 @@ sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice&
                          attempt,
                          MAX_ATTEMPTS,
                          ble::ID_CHARACTERISTIC_WHOAMI_AUTHENTICATE,
-                         ble::gatt_communication_status_to_str(result.error()));
+                         ble::communication_status_to_str(result.error()));
             ++attempt;
         }
 

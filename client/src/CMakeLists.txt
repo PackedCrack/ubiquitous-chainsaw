@@ -4,6 +4,10 @@ SET(MAIN_SRCS
 		CAuthenticator.hpp
 		CServer.cpp
 		CServer.hpp
+		CRssiDemander.cpp
+		CRssiDemander.hpp
+		client_common.cpp
+		client_common.hpp
         resource.hpp
         win32.hpp
         client_defines.hpp

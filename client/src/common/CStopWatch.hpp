@@ -1,4 +1,8 @@
 #pragma once
+// clang-format off
+
+
+// clang-format on
 namespace common
 {
 template<typename clock_t>

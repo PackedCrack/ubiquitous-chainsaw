@@ -23,6 +23,8 @@ class CDescriptor
 {
 public:
     using awaitable_t = concurrency::task<CDescriptor>;
+    using read_t = std::expected<std::vector<uint8_t>, CommunicationStatus>;
+    using awaitable_read_t = concurrency::task<read_t>;
 private:
     using GattDescriptor = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
 public:
@@ -36,6 +38,7 @@ public:
 private:
     explicit CDescriptor(GattDescriptor descriptor);
 public:
+    [[nodiscard]] awaitable_read_t read_value() const;
     [[nodiscard]] std::string uuid_as_str() const;
     [[nodiscard]] ProtectionLevel protection_level() const;
 private:

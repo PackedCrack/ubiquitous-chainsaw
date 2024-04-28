@@ -49,7 +49,7 @@ static constexpr UUID BaseUUID{
                   0x34, 0xFB }
     // clang-format on
 };
-[[nodiscard]] consteval UUID client_characteristic_configuration_descriptor()
+[[nodiscard]] consteval UUID uuid_descriptor_client_characteristic_configuration_descriptor()
 {
     UUID uuid = BaseUUID;
     UUID::apply_custom_id(uuid, 0x29'02);
@@ -154,7 +154,7 @@ using ShaHash = std::variant<security::CHash<security::Sha2_224>,
                              security::CHash<security::Sha3_256>,
                              security::CHash<security::Sha3_384>,
                              security::CHash<security::Sha3_512>>;
-[[nodiscard]] constexpr ShaHash make_sha_hash(ble::ShaVersion version, const std::span<uint8_t> hashData)
+[[nodiscard]] constexpr ShaHash make_sha_hash(ble::ShaVersion version, std::span<uint8_t> hashData)
 {
     using namespace security;
 
@@ -202,7 +202,7 @@ using ShaHash = std::variant<security::CHash<security::Sha2_224>,
 }
 static constexpr uint16_t ID_SERVICE_WHEREAMI = 0xFE'ED;
 static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI = 0xBE'EF;
-static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI = 0xCA'FE;
+static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_RSSI_NOTIFICATION = 0xCA'FE;
 [[nodiscard]] consteval UUID uuid_service_whereami()
 {
     UUID uuid = BaseUUID;
@@ -215,10 +215,10 @@ static constexpr uint16_t ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI = 0xCA'FE;
     UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI);
     return uuid;
 }
-[[nodiscard]] consteval UUID uuid_characteristic_whereami_send_rssi()
+[[nodiscard]] consteval UUID uuid_characteristic_whereami_rssi_notification()
 {
     UUID uuid = BaseUUID;
-    UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI);
+    UUID::apply_custom_id(uuid, ID_CHARACTERISTIC_WHEREAMI_RSSI_NOTIFICATION);
     return uuid;
 }
 struct DemandRSSIHeader

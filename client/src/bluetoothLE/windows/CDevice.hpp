@@ -25,7 +25,8 @@ public:
 public:
     using make_t = std::expected<CDevice, Error>;
     using awaitable_make_t = concurrency::task<make_t>;
-    using service_container_t = std::unordered_map<UUID, CService, UUID::Hasher>;
+    using awaitable_subscribe_t = concurrency::task<bool>;
+    using service_container_t = std::unordered_map<UUID, std::shared_ptr<CService>, UUID::Hasher>;
 private:
     using BluetoothLEDevice = winrt::Windows::Devices::Bluetooth::BluetoothLEDevice;
     using IAsyncAction = winrt::Windows::Foundation::IAsyncAction;
@@ -68,7 +69,21 @@ public:
     [[nodiscard]] uint64_t address() const;
     [[nodiscard]] std::string address_as_str() const;
     [[nodiscard]] const service_container_t& services() const;
-    [[nodiscard]] std::optional<const CService*> service(const UUID& uuid) const;
+    [[nodiscard]] std::optional<std::weak_ptr<CService>> service(const UUID& uuid) const;
+    template<typename invokable_t>
+    requires std::invocable<invokable_t, std::span<const uint8_t>>
+    [[nodiscard]] awaitable_subscribe_t
+        subscribe_to_characteristic(const ble::UUID& service, const ble::UUID& characteristic, invokable_t&& cb)
+    {
+        auto iter = m_Services.find(service);
+        if (iter == std::end(m_Services))
+        {
+            co_return false;
+        }
+
+        co_return co_await iter->second->subscribe_to_characteristic(characteristic, std::forward<invokable_t>(cb));
+    }
+    void unsubscribe_from_characteristic(const ble::UUID& service, const ble::UUID& characteristic);
 private:
     void revoke_connection_changed_handler();
     void register_connection_changed_handler();

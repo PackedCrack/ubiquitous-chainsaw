@@ -28,6 +28,8 @@ public:
     using awaitable_read_t = concurrency::task<read_t>;
     using awaitable_write_t = concurrency::task<CommunicationStatus>;
     using awaitable_subscribe_t = concurrency::task<CommunicationStatus>;
+    using awaitable_unsubscribe_t = concurrency::task<CommunicationStatus>;
+    using awaitable_bool_t = concurrency::task<bool>;
 private:
     using GattCharacteristic = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic;
     using GattWriteOption = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattWriteOption;
@@ -43,17 +45,19 @@ public:
 private:
     explicit CCharacteristic(GattCharacteristic characteristic);
 public:
+    [[nodiscard]] awaitable_bool_t has_subscribed() const;
+    [[nodiscard]] awaitable_unsubscribe_t unsubscribe();
     template<typename invokable_t>
     requires std::invocable<invokable_t, std::span<const uint8_t>>
     [[nodiscard]] awaitable_subscribe_t subscribe_to_notify(invokable_t&& cb)
     {
         using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
+        ASSERT(m_pCharacteristic, "Expected a valid characteristic");
 
         m_NotifyEventHandler = std::forward<invokable_t>(cb);
-        ASSERT(m_pCharacteristic, "Expected a valid characteristic");
         m_Revoker = m_pCharacteristic->ValueChanged(winrt::auto_revoke, value_changed_handler());
 
-        co_return winrt_status_to_communication_status(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
+        co_return communication_status_from_winrt(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
             GattClientCharacteristicConfigurationDescriptorValue::Notify));
     }
     [[nodiscard]] std::string uuid_as_str() const;
@@ -72,8 +76,8 @@ private:
     winrt::Windows::Foundation::IAsyncAction query_descriptors();
 private:
     std::shared_ptr<GattCharacteristic> m_pCharacteristic;
-    std::unordered_map<ble::UUID, CDescriptor, ble::UUID::Hasher> m_Descriptors;
-    std::function<void(std::span<const uint8_t> packetView)> m_NotifyEventHandler;
+    std::unordered_map<ble::UUID, std::shared_ptr<CDescriptor>, ble::UUID::Hasher> m_Descriptors;
+    std::function<void(std::span<const uint8_t>)> m_NotifyEventHandler;
     GattCharacteristic::ValueChanged_revoker m_Revoker;
 };
 }    // namespace ble

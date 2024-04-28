@@ -15,20 +15,22 @@ concept device = requires(device_t device, const device_t constDevice, const UUI
     typename device_t::Error;
     typename device_t::make_t;
     requires std::same_as<typename device_t::make_t, std::expected<device_t, typename device_t::Error>>;
-    typename device_t::awaitable_make_t;
     typename device_t::service_container_t;    // todo add constraints to the container
+    typename device_t::awaitable_subscribe_t;
 
-
-    { device_t::make(uint64_t{}, std::function<void(ConnectionStatus)>{}) } -> std::same_as<typename device_t::awaitable_make_t>;
     {
-        device_t::make(uint64_t{}, [](ConnectionStatus) {})
-    } -> std::same_as<typename device_t::awaitable_make_t>;
+        device.subscribe_to_characteristic(UUID{}, UUID{}, [](std::span<const uint8_t>) {})
+    } -> std::same_as<typename device_t::awaitable_subscribe_t>;
+    {
+        device.subscribe_to_characteristic(UUID{}, UUID{}, std::function<void(std::span<const uint8_t>)>{})
+    } -> std::same_as<typename device_t::awaitable_subscribe_t>;
+    { device.unsubscribe_from_characteristic(UUID{}, UUID{}) };
 
     { constDevice.connected() } -> std::same_as<bool>;
     { constDevice.address() } -> std::same_as<uint64_t>;
-    { constDevice.address_as_str() } -> std::convertible_to<std::string>;
-    { constDevice.services() } -> std::convertible_to<const typename device_t::service_container_t&>;
-    { constDevice.service(uuid) } -> std::convertible_to<std::optional<const CService*>>;
+    { constDevice.address_as_str() } -> std::same_as<std::string>;
+    { constDevice.services() } -> std::same_as<const typename device_t::service_container_t&>;
+    { constDevice.service(uuid) } -> std::same_as<std::optional<std::weak_ptr<CService>>>;
 };
 template<typename device_t, typename... ctor_args_t>
 requires device<device_t, ctor_args_t...>

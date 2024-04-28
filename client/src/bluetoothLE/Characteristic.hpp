@@ -35,6 +35,8 @@ concept characteristic =
         requires common::buffer<typename characteristic_t::read_t::value_type>;
         typename characteristic_t::awaitable_read_t;
         typename characteristic_t::awaitable_subscribe_t;
+        typename characteristic_t::awaitable_unsubscribe_t;
+        typename characteristic_t::awaitable_bool_t;
 
         // Required public functions
         {
@@ -43,6 +45,7 @@ concept characteristic =
         {
             characteristic.subscribe_to_notify(std::function<void(std::span<const uint8_t>)>{})
         } -> std::same_as<typename characteristic_t::awaitable_subscribe_t>;
+        { characteristic.unsubscribe() } -> std::same_as<typename characteristic_t::awaitable_unsubscribe_t>;
 
         // Required public const functions
         { constCharacteristic.uuid_as_str() } -> std::same_as<std::string>;

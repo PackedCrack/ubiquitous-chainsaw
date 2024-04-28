@@ -32,12 +32,23 @@ public:
 public:
     void grant_authentication(AuthenticatedDevice&& device);
     void revoke_authentication();
-    void demand_rssi(gfx::CWindow& window, /*CAuthenticator& authenticator,*/ security::CEccPrivateKey* pKey) const;
+    sys::fire_and_forget_t subscribe(std::function<void(std::span<const uint8_t>)> cb);
+    sys::fire_and_forget_t unsubscribe();
+    sys::fire_and_forget_t
+        try_demand_rssi(gfx::CWindow& window, const std::weak_ptr<ble::CCharacteristic>& characteristic, const std::vector<byte>& packet);
+    sys::fire_and_forget_t demand_rssi(gfx::CWindow& window);
     [[nodiscard]] bool connected() const;
     [[nodiscard]] bool is_authenticated() const;
+    [[nodiscard]] sys::awaitable_t<bool> has_subscribed() const;
     [[nodiscard]] uint64_t server_address() const;
     [[nodiscard]] std::string server_address_as_str() const;
 private:
+    [[nodiscard]] std::shared_ptr<ble::CService> get_service_whereami(std::string_view errorMsg) const;
+    //[[nodiscard]] auto make_rssi_receiver();
+    //sys::fire_and_forget_t subscribe_to_rssi_notification();
+private:
     std::unique_ptr<mutex_type> m_pMutex;
+    std::unique_ptr<security::CEccPrivateKey> m_pClientPrivateKey = nullptr;
     std::optional<AuthenticatedDevice> m_Server;
+    std::function<void(std::span<const uint8_t>)> m_RssiReceiver;
 };
