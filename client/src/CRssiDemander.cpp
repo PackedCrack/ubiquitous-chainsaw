@@ -2,6 +2,7 @@
 // Created by qwerty on 2024-04-27.
 //
 #include "CRssiDemander.hpp"
+#include "common/CCoroutineManager.hpp"
 // clang-format off
 
 
@@ -21,8 +22,10 @@ CRssiDemander::~CRssiDemander()
 {
     //if (m_pServer)
     //{
+    //    LOG_INFO("~CRssiDemander calling unsubscribe");
     //    m_pServer->unsubscribe();
     //}
+    LOG_INFO("EXITING ~CRssiDemander");
     //if (m_pServer && m_pMutex)
     //{
     //    //    join_rssi_demander();
@@ -75,19 +78,47 @@ auto CRssiDemander::make_rssi_receiver() const
 {
     return [this](std::span<const uint8_t>) { LOG_INFO("DE E NAJS"); };
 }
-sys::fire_and_forget_t CRssiDemander::send_demand()
+void CRssiDemander::send_demand()
 {
-    if (m_Timer.lap<float>() >= static_cast<float>(m_DemandInterval.count()))
-    {
-        if (!co_await m_pServer->has_subscribed())
+    //if (m_Timer.lap<float>() >= static_cast<float>(m_DemandInterval.count()))
+    //{
+    //    if (!co_await m_pServer->has_subscribed())
+    //    {
+    //        m_pServer->subscribe(make_rssi_receiver());
+    //    }
+    //
+    //    m_pServer->demand_rssi(*m_pWindow);
+    //
+    //    m_Timer.reset();
+    //}
+
+    auto& coroutineManager = common::coroutine_manager_instance();
+    coroutineManager.fire_and_forget(
+        [](std::weak_ptr<CRssiDemander> wpSelf) -> sys::awaitable_t<void>
         {
-            m_pServer->subscribe(make_rssi_receiver());
-        }
+            std::shared_ptr<CRssiDemander> pSelf = wpSelf.lock();
 
-        m_pServer->demand_rssi(*m_pWindow);
+            if (pSelf)
+            {
+                if (pSelf->m_Timer.lap<float>() >= static_cast<float>(pSelf->m_DemandInterval.count()))
+                {
+                    if (!co_await pSelf->m_pServer->has_subscribed())
+                    {
+                        LOG_INFO("NOT SUBSCRIBED");
+                        pSelf->m_pServer->subscribe(pSelf->make_rssi_receiver());
+                    }
+                    else
+                    {
+                        LOG_INFO("SUBSCRIBED");
+                    }
 
-        m_Timer.reset();
-    }
+                    pSelf->m_pServer->demand_rssi(*(pSelf->m_pWindow));
+
+                    pSelf->m_Timer.reset();
+                }
+            }
+        },
+        weak_from_this());
 }
 //std::function<void()> CRssiDemander::make_rssi_demander() const
 //{

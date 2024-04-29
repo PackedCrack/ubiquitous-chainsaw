@@ -21,6 +21,8 @@
 #include "gui/CDeviceList.hpp"
 #include "CRssiDemander.hpp"
 #include "client_common.hpp"
+
+#include "common/CCoroutineManager.hpp"
 // clang-format off
 
 
@@ -130,14 +132,14 @@ int main(int argc, char** argv)
     // SDL window and input must be called on the same thread
     gfx::CWindow window{ "Some title", 1'280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
-    std::optional<gui::CGui> gui{ {} };
+    gui::CGui gui{};
 
-    CServer server{};
-    CAuthenticator authenticator{ server };
-    auto& deviceList = gui->emplace<gui::CDeviceList>(scanner, authenticator);
-    auto& rssiPlot = gui->emplace<gui::CRSSIPlot>(30u, CRssiDemander{ server, window, std::chrono::seconds(2) });
+    auto pServer = std::make_shared<CServer>();
+    CAuthenticator authenticator{ pServer };
+    auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u, std::make_shared<CRssiDemander>(*pServer, window, std::chrono::seconds(2)));
 
-    //CRssiDemander demander{ server, window, std::chrono::seconds{ 2 } };
+
     bool exit = false;
     while (!exit)
     {
@@ -153,7 +155,7 @@ int main(int argc, char** argv)
         //    rssiPlot.add_rssi_value(val);
         //}
 
-        if (server.connected())
+        if (pServer->connected())
         {
             // int missedAnswers = rssiPlot.missed();
             // if (missedAnswers > 5)
@@ -171,17 +173,14 @@ int main(int argc, char** argv)
         }
         else
         {
-            if (!server.is_authenticated())
+            if (!pServer->is_authenticated())
             {
                 // TODO::
                 if (!scanner.scanning())
                 {
                     LOG_INFO("RE CREATING RSSI DEMANDER");
                     deviceList.recreate_list();
-                    rssiPlot = gui::CRSSIPlot{
-                        30u,
-                        CRssiDemander{ server, window, std::chrono::seconds(2) }
-                    };
+                    rssiPlot = gui::CRSSIPlot{ 30u, std::make_shared<CRssiDemander>(*pServer, window, std::chrono::seconds(2)) };
                 }
 
                 static uint32_t ab = 0;
@@ -198,7 +197,7 @@ int main(int argc, char** argv)
 
         window.process_events(&exit);
 
-        gui->push();
+        gui.push();
 
         renderer.end_frame();
 
@@ -210,6 +209,8 @@ int main(int argc, char** argv)
             std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
         }
     }
+
+    common::coroutine_manager_instance().wait_for_all();
 
     return EXIT_SUCCESS;
 }

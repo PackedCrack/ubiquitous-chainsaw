@@ -11,7 +11,7 @@
 
 
 // clang-format on
-class CRssiDemander
+class CRssiDemander : public std::enable_shared_from_this<CRssiDemander>
 {
 public:
     CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono::seconds demandInterval);
@@ -24,7 +24,7 @@ private:
     void move(CRssiDemander& other);
 public:
     [[nodiscard]] std::optional<std::vector<int8_t>> rssi();
-    sys::fire_and_forget_t send_demand();
+    void send_demand();
 private:
     [[nodiscard]] auto make_rssi_receiver() const;
     //[[nodiscard]] std::function<void()> make_rssi_demander() const;

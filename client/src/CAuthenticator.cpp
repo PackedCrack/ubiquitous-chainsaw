@@ -3,6 +3,7 @@
 #include "security/sha.hpp"
 #include "bluetoothLE/Device.hpp"
 #include "client_common.hpp"
+#include "common/CCoroutineManager.hpp"
 // clang-format off
 
 
@@ -86,17 +87,15 @@ namespace
     co_return result;
 }
 }    // namespace
-CAuthenticator::CAuthenticator(CServer& server)
+CAuthenticator::CAuthenticator(std::shared_ptr<CServer> pServer)
     : m_pServerKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }
-    , m_pServer{ &server }
+    , m_pServer{ std::move(pServer) }
     , m_Devices{}
-    , m_pSharedMutex{ std::make_unique<std::shared_mutex>() }
 {}
 CAuthenticator::CAuthenticator(const CAuthenticator& other)
     : m_pServerKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }
     , m_pServer{ other.m_pServer }
     , m_Devices{ other.m_Devices }
-    , m_pSharedMutex{ std::make_unique<std::shared_mutex>() }
 {}
 CAuthenticator& CAuthenticator::operator=(const CAuthenticator& other)
 {
@@ -105,7 +104,6 @@ CAuthenticator& CAuthenticator::operator=(const CAuthenticator& other)
         m_pServerKey = load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME);
         m_pServer = other.m_pServer;
         m_Devices = other.m_Devices;
-        m_pSharedMutex = std::make_unique<std::shared_mutex>();
     }
 
     return *this;
@@ -117,58 +115,144 @@ void CAuthenticator::enqueue_devices(const std::vector<ble::DeviceInfo>& infos)
 }
 void CAuthenticator::deauth()
 {
-    std::lock_guard lock{ *m_pSharedMutex };
     m_pServer->revoke_authentication();
 }
 bool CAuthenticator::server_identified() const
 {
-    std::lock_guard lock{ *m_pSharedMutex };
     return m_pServer->is_authenticated();
 }
 uint64_t CAuthenticator::server_address() const
 {
-    std::lock_guard lock{ *m_pSharedMutex };
     return m_pServer->server_address();
 }
 std::string CAuthenticator::server_address_as_str() const
 {
-    std::lock_guard lock{ *m_pSharedMutex };
     return m_pServer->server_address_as_str();
 }
-sys::fire_and_forget_t CAuthenticator::process_queue()
+//sys::fire_and_forget_t CAuthenticator::process_queue()
+//{
+//    while (!m_Devices.empty())
+//    {
+//        ble::DeviceInfo info{};
+//        m_Devices.pop(info);
+//
+//        if (info.address)
+//        {
+//            std::expected<ble::CDevice, ble::CDevice::Error> expectedDevice =
+//                    co_await ble::make_device<ble::CDevice>(info.address.value(),
+//                                                            [this](ble::ConnectionStatus status)
+//                                                            {
+//                                                                switch (status)
+//                                                                {
+//                                                                    case ble::ConnectionStatus::connected:
+//                                                                        LOG_INFO("Connection status changed to connected?");
+//                                                                        break;
+//                                                                    case ble::ConnectionStatus::disconnected:
+//                                                                        std::lock_guard lock{ *m_pSharedMutex };
+//                                                                        m_pServer->revoke_authentication();
+//                                                                        LOG_WARN("Lost connection to authenticated server...");
+//                                                                        break;
+//                                                                }
+//                                                            });
+//            if (expectedDevice)
+//            {
+//                if (bool verified = co_await verify_server_address(*expectedDevice, info.address.value()); verified)
+//                {
+//                    m_pServer->grant_authentication(AuthenticatedDevice{ .device = std::move(*expectedDevice), .info = info });
+//                }
+//            }
+//        }
+//    }
+//}
+auto CAuthenticator::make_connection_changed_cb() const
 {
+    return [wpServer = m_pServer->weak_from_this()](ble::ConnectionStatus status)
+    {
+        switch (status)
+        {
+        case ble::ConnectionStatus::connected:
+            LOG_INFO("Connection status changed to connected?");
+            break;
+        case ble::ConnectionStatus::disconnected:
+            std::shared_ptr<CServer> pServer = wpServer.lock();
+            if (pServer)
+            {
+                pServer->revoke_authentication();
+            }
+            LOG_WARN("Lost connection to authenticated server...");
+            break;
+        }
+    };
+}
+void CAuthenticator::process_queue()
+{
+    common::CCoroutineManager& manager = common::coroutine_manager_instance();
+
     while (!m_Devices.empty())
     {
         ble::DeviceInfo info{};
         m_Devices.pop(info);
 
-        if (info.address)
-        {
-            std::expected<ble::CDevice, ble::CDevice::Error> expectedDevice =
-                co_await ble::make_device<ble::CDevice>(info.address.value(),
-                                                        [this](ble::ConnectionStatus status)
-                                                        {
-                                                            switch (status)
-                                                            {
-                                                            case ble::ConnectionStatus::connected:
-                                                                LOG_INFO("Connection status changed to connected?");
-                                                                break;
-                                                            case ble::ConnectionStatus::disconnected:
-                                                                std::lock_guard lock{ *m_pSharedMutex };
-                                                                m_pServer->revoke_authentication();
-                                                                LOG_WARN("Lost connection to authenticated server...");
-                                                                break;
-                                                            }
-                                                        });
-            if (expectedDevice)
+        manager.fire_and_forget(
+            [](CAuthenticator* pAuthenticator, std::weak_ptr<CServer> wpServer, ble::DeviceInfo info) -> sys::awaitable_t<void>
             {
-                if (bool verified = co_await verify_server_address(*expectedDevice, info.address.value()); verified)
+                if (!info.address)
                 {
-                    std::lock_guard lock{ *m_pSharedMutex };
-                    m_pServer->grant_authentication(AuthenticatedDevice{ .device = std::move(*expectedDevice), .info = info });
+                    co_return;
                 }
-            }
-        }
+
+                std::expected<ble::CDevice, ble::CDevice::Error> expectedDevice =
+                    co_await ble::make_device<ble::CDevice>(info.address.value(), pAuthenticator->make_connection_changed_cb());
+
+
+                if (expectedDevice)
+                {
+                    if (bool verified = co_await pAuthenticator->verify_server_address(*expectedDevice, info.address.value()); verified)
+                    {
+                        std::shared_ptr<CServer> pServer = wpServer.lock();
+                        if (!pServer)
+                        {
+                            co_return;
+                        }
+                        if (pServer->is_authenticated())
+                        {
+                            co_return;
+                        }
+
+                        pServer->grant_authentication(AuthenticatedDevice{ .device = std::move(*expectedDevice), .info = info });
+                    }
+                }
+            },
+            this,
+            m_pServer->weak_from_this(),
+            info);
+
+        //if (info.address)
+        //{
+        //    std::expected<ble::CDevice, ble::CDevice::Error> expectedDevice =
+        //            co_await ble::make_device<ble::CDevice>(info.address.value(),
+        //                                                    [this](ble::ConnectionStatus status)
+        //                                                    {
+        //                                                        switch (status)
+        //                                                        {
+        //                                                            case ble::ConnectionStatus::connected:
+        //                                                                LOG_INFO("Connection status changed to connected?");
+        //                                                                break;
+        //                                                            case ble::ConnectionStatus::disconnected:
+        //                                                                std::lock_guard lock{ *m_pSharedMutex };
+        //                                                                m_pServer->revoke_authentication();
+        //                                                                LOG_WARN("Lost connection to authenticated server...");
+        //                                                                break;
+        //                                                        }
+        //                                                    });
+        //    if (expectedDevice)
+        //    {
+        //        if (bool verified = co_await verify_server_address(*expectedDevice, info.address.value()); verified)
+        //        {
+        //            m_pServer->grant_authentication(AuthenticatedDevice{ .device = std::move(*expectedDevice), .info = info });
+        //        }
+        //    }
+        //}
     }
 }
 sys::awaitable_t<bool> CAuthenticator::verify_server_address(const ble::CDevice& device, uint64_t address) const

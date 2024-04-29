@@ -39,11 +39,11 @@ if(MSVC)
 
     # runtime checks - incompatible with -O2
     # https://learn.microsoft.com/en-us/cpp/build/reference/rtc-run-time-error-checks?view=msvc-170
-    if(CMAKE_GENERATOR MATCHES "Visual Studio")
-        target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<CONFIG:Debug>:/RTCsu>")
-    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/RTCsu>")
-    endif()
+    #if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    #    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<CONFIG:Debug>:/RTCsu>")
+    #elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    #    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/RTCsu>")
+    #endif()
 
     # https://learn.microsoft.com/en-us/cpp/build/reference/nxcompat-compatible-with-data-execution-prevention?view=msvc-170
     target_link_options(${MAIN_PROJECT} PRIVATE "/NXCOMPAT")

@@ -16,7 +16,7 @@ class CRSSIPlot
 public:
     static constexpr std::string_view KEY = "rssiplot";
 public:
-    explicit CRSSIPlot(std::size_t size, CRssiDemander demander);
+    explicit CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander);
     ~CRSSIPlot() = default;
     CRSSIPlot(const CRSSIPlot& other) = delete;
     CRSSIPlot(CRSSIPlot&& other) = default;
@@ -31,6 +31,6 @@ private:
 private:
     std::size_t m_Index;
     std::vector<float> m_Values;
-    CRssiDemander m_Demander;
+    std::shared_ptr<CRssiDemander> m_pDemander;
 };
 }    // namespace gui

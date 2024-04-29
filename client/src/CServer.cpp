@@ -3,9 +3,23 @@
 //
 #include "CServer.hpp"
 #include "client_common.hpp"
+#include "common/CCoroutineManager.hpp"
 // clang-format off
 
-
+void locker(std::string_view name, std::mutex& mutex)
+{
+    mutex.lock();
+    static int32_t locks = 0;
+    ++locks;
+    //LOG_INFO_FMT("MUTEX LOCKED BY \"{}\". Lock #{}", name.data(), locks);
+}
+void unlocker(std::string_view name, std::mutex& mutex)
+{
+    mutex.unlock();
+    static int32_t unlocks = 0;
+    ++unlocks;
+    //LOG_INFO_FMT("MUTEX UNLOCKED BY \"{}\". Unlock #{}", name.data(), unlocks);
+}
 // clang-format on
 namespace
 {
@@ -135,8 +149,8 @@ template<typename owner_t>
     std::shared_ptr<ble::CCharacteristic> pCharacteristic = nullptr;
     // clang-format off
     find_characteristic_rssi_notification(pService)
-    .and_then(take_temp_ownership(pCharacteristic))
-    .or_else(log_failed_lookup<ble::CCharacteristic>(errorMsg));
+        .and_then(take_temp_ownership(pCharacteristic))
+        .or_else(log_failed_lookup<ble::CCharacteristic>(errorMsg));
     // clang-format on
 
     return pCharacteristic;
@@ -152,155 +166,280 @@ CServer::CServer(const CServer& other)
     , m_pClientPrivateKey{ load_key<security::CEccPrivateKey>(CLIENT_PRIVATE_KEY_NAME) }
     , m_Server{}
 {
-    std::lock_guard lock{ *other.m_pMutex };
+    //std::lock_guard lock{ *other.m_pMutex };
+    //m_Server = other.m_Server;
+
+
+    locker("CServer::CServer(const CServer& other)", *other.m_pMutex);
     m_Server = other.m_Server;
+    unlocker("CServer::CServer(const CServer& other)", *other.m_pMutex);
 }
 CServer& CServer::operator=(const CServer& other)
 {
     if (this != &other)
     {
-        std::lock_guard lock{ *other.m_pMutex };
+        //std::lock_guard lock{ *other.m_pMutex };
+        //
+        //m_pMutex = std::make_unique<mutex_type>();
+        //m_pClientPrivateKey = load_key<security::CEccPrivateKey>(CLIENT_PRIVATE_KEY_NAME);
+        //m_Server = other.m_Server;
 
+        locker("CServer::operator=", *other.m_pMutex);
         m_pMutex = std::make_unique<mutex_type>();
         m_pClientPrivateKey = load_key<security::CEccPrivateKey>(CLIENT_PRIVATE_KEY_NAME);
         m_Server = other.m_Server;
+        unlocker("CServer::operator=", *other.m_pMutex);
     }
 
     return *this;
 }
 void CServer::grant_authentication(AuthenticatedDevice&& device)
 {
-    std::lock_guard lock{ *m_pMutex };
+    //std::lock_guard lock{ *m_pMutex };
+    //m_Server.emplace(std::move(device));
+
+    locker("CServer::grant_authentication", *m_pMutex);
     m_Server.emplace(std::move(device));
+    unlocker("CServer::grant_authentication", *m_pMutex);
 }
 void CServer::revoke_authentication()
 {
-    std::lock_guard lock{ *m_pMutex };
+    //std::lock_guard lock{ *m_pMutex };
+    //m_Server = std::nullopt;
+
+    locker("CServer::revoke_authentication", *m_pMutex);
     m_Server = std::nullopt;
+    unlocker("CServer::revoke_authentication", *m_pMutex);
 }
-sys::fire_and_forget_t CServer::subscribe(std::function<void(std::span<const uint8_t>)> cb)
+//sys::fire_and_forget_t CServer::subscribe(std::function<void(std::span<const uint8_t>)> cb)
+//{
+//    try
+//    {
+//        if (is_authenticated())
+//        {
+//            std::shared_ptr<ble::CService> pService =
+//                    get_service_whereami("Server could not find service \"WhereAmI\" when trying to subscribe!");
+//            if (pService)
+//            {
+//                std::shared_ptr<ble::CCharacteristic> pCharacteristic = get_characteristic_rssi_notification(
+//                        pService,
+//                        "Server could not find characteristic \"RSSI Notification\" when trying to subscribe!");
+//                if (pCharacteristic)
+//                {
+//                    ble::CommunicationStatus status = co_await pCharacteristic->subscribe_to_notify(std::move(cb));
+//                    if (status != ble::CommunicationStatus::success)
+//                    {
+//                        LOG_ERROR_FMT("Failed to subscribe to characteristic \"RSSI Notification\". Reason: \"{}\"",
+//                                      ble::communication_status_to_str(status));
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    catch (...)
+//    {
+//        LOG_ERROR("AAAAAAAAAAAAAAA EXCEPTION CAUGHT IN SUBSCRIBE");
+//    }
+//};
+void CServer::subscribe(std::function<void(std::span<const uint8_t>)>&& cb)
 {
-    if (is_authenticated())
-    {
-        std::shared_ptr<ble::CService> pService =
-            get_service_whereami("Server could not find service \"WhereAmI\" when trying to subscribe!");
-        if (pService)
+    auto& coroutineManager = common::coroutine_manager_instance();
+    coroutineManager.fire_and_forget(
+        [](std::weak_ptr<CServer> wpSelf, std::function<void(std::span<const uint8_t>)> cb) -> sys::awaitable_t<void>
         {
-            std::shared_ptr<ble::CCharacteristic> pCharacteristic = get_characteristic_rssi_notification(
-                pService,
-                "Server could not find characteristic \"RSSI Notification\" when trying to subscribe!");
-            if (pCharacteristic)
+            std::shared_ptr<CServer> pSelf = wpSelf.lock();
+            if (pSelf)
             {
-                ble::CommunicationStatus status = co_await pCharacteristic->subscribe_to_notify(std::move(cb));
-                if (status != ble::CommunicationStatus::success)
+                if (pSelf->is_authenticated())
                 {
-                    LOG_ERROR_FMT("Failed to subscribe to characteristic \"RSSI Notification\". Reason: \"{}\"",
-                                  ble::communication_status_to_str(status));
+                    std::shared_ptr<ble::CService> pService =
+                        pSelf->get_service_whereami("Server could not find service \"WhereAmI\" when trying to subscribe!");
+                    if (pService)
+                    {
+                        std::shared_ptr<ble::CCharacteristic> pCharacteristic = get_characteristic_rssi_notification(
+                            pService,
+                            "Server could not find characteristic \"RSSI Notification\" when trying to subscribe!");
+                        if (pCharacteristic)
+                        {
+                            ble::CommunicationStatus status = co_await pCharacteristic->subscribe_to_notify(std::move(cb));
+                            if (status != ble::CommunicationStatus::success)
+                            {
+                                LOG_ERROR_FMT("Failed to subscribe to characteristic \"RSSI Notification\". Reason: \"{}\"",
+                                              ble::communication_status_to_str(status));
+                            }
+                        }
+                    }
                 }
             }
-        }
-    }
+        },
+        weak_from_this(),
+        std::move(cb));
 };
-sys::fire_and_forget_t CServer::unsubscribe()
+void CServer::unsubscribe()
 {
-    if (is_authenticated())
-    {
-        std::shared_ptr<ble::CService> pService =
-            get_service_whereami("Server could not find service \"WhereAmI\" when trying to unsubscribe!");
-
-        if (pService)
+    auto& coroutineManager = common::coroutine_manager_instance();
+    coroutineManager.fire_and_forget(
+        [](std::weak_ptr<CServer> wpSelf) -> sys::awaitable_t<void>
         {
-            std::shared_ptr<ble::CCharacteristic> pCharacteristic = get_characteristic_rssi_notification(
-                pService,
-                "Server could not find characteristic \"RSSI Notification\" when trying to unsubscribe!");
-            if (pCharacteristic)
+            std::shared_ptr<CServer> pSelf = wpSelf.lock();
+            if (!pSelf)
             {
-                ble::CommunicationStatus status = co_await pCharacteristic->unsubscribe();
-                if (status != ble::CommunicationStatus::success)
+                co_return;
+            }
+
+            if (!pSelf->is_authenticated())
+            {
+                co_return;
+            }
+
+            LOG_INFO("STARTING unsubscribe");
+            std::shared_ptr<ble::CService> pService =
+                pSelf->get_service_whereami("Server could not find service \"WhereAmI\" when trying to unsubscribe!");
+
+            if (pService)
+            {
+                std::shared_ptr<ble::CCharacteristic> pCharacteristic = get_characteristic_rssi_notification(
+                    pService,
+                    "Server could not find characteristic \"RSSI Notification\" when trying to unsubscribe!");
+                if (pCharacteristic)
                 {
-                    LOG_ERROR_FMT("Failed to unsubscribe from \"RSSI Notification\". Reason: {}",
-                                  ble::communication_status_to_str(status).data());
+                    ble::CommunicationStatus status = co_await pCharacteristic->unsubscribe();
+                    if (status != ble::CommunicationStatus::success)
+                    {
+                        LOG_ERROR_FMT("Failed to unsubscribe from \"RSSI Notification\". Reason: {}",
+                                      ble::communication_status_to_str(status).data());
+                    }
                 }
             }
-        }
-    }
+
+            LOG_INFO("EXITING unsubscribe");
+        },
+        weak_from_this());
+    //if (is_authenticated())
+    //{
+    //    LOG_INFO("STARTING unsubscribe");
+    //    std::shared_ptr<ble::CService> pService =
+    //        get_service_whereami("Server could not find service \"WhereAmI\" when trying to unsubscribe!");
+    //
+    //    if (pService)
+    //    {
+    //        std::shared_ptr<ble::CCharacteristic> pCharacteristic = get_characteristic_rssi_notification(
+    //            pService,
+    //            "Server could not find characteristic \"RSSI Notification\" when trying to unsubscribe!");
+    //        if (pCharacteristic)
+    //        {
+    //            ble::CommunicationStatus status = co_await pCharacteristic->unsubscribe();
+    //            if (status != ble::CommunicationStatus::success)
+    //            {
+    //                LOG_ERROR_FMT("Failed to unsubscribe from \"RSSI Notification\". Reason: {}",
+    //                              ble::communication_status_to_str(status).data());
+    //            }
+    //        }
+    //    }
+    //}
+    //LOG_INFO("EXITING unsubscribe");
 }
-sys::fire_and_forget_t CServer::try_demand_rssi(gfx::CWindow& window,
-                                                const std::weak_ptr<ble::CCharacteristic>& characteristic,
-                                                const std::vector<byte>& packet)
+//sys::fire_and_forget_t CServer::demand_rssi(gfx::CWindow& window)
+//{
+//    std::shared_ptr<ble::CService> pService =
+//        get_service_whereami("Server could not find service \"WhereAmI\" when trying to demand RSSI!");
+//
+//    if (pService)
+//    {
+//        // clang-format off
+//        std::optional<std::weak_ptr<ble::CCharacteristic>> characteristic = find_characteristic_demand_rssi(pService)
+//                .or_else(log_failed_lookup<ble::CCharacteristic>(
+//                        "Failed to find \"Demand RSSI\" characteristic when trying to demand rssi!"));
+//        // clang-format on
+//
+//        if (characteristic)
+//        {
+//            std::vector<byte> packet = make_packet_demand_rssi(m_pClientPrivateKey.get());
+//            co_await try_demand_rssi(window, *characteristic, packet);
+//        }
+//    }
+//
+//    co_return;
+//}
+void CServer::demand_rssi(gfx::CWindow& window)
 {
-    const std::shared_ptr<ble::CCharacteristic>& pCharacteristic = characteristic.lock();
+    auto& coroutineManager = common::coroutine_manager_instance();
+    coroutineManager.fire_and_forget(
+        [](std::weak_ptr<CServer> wpSelf, gfx::CWindow* pWindow) -> sys::awaitable_t<void>
+        {
+            std::shared_ptr<CServer> pSelf = wpSelf.lock();
+            if (!pSelf)
+            {
+                co_return;
+            }
 
-    static constexpr int32_t MAX_ATTEMPS = 3;
-    int32_t attempt{};
-    do
-    {
-        auto communicationStatus = co_await pCharacteristic->write_data(packet);
+            std::shared_ptr<ble::CService> pService =
+                pSelf->get_service_whereami("Server could not find service \"WhereAmI\" when trying to demand RSSI!");
 
-        LOG_INFO_FMT("Write status: {}", ble::communication_status_to_str(communicationStatus));
-        UNHANDLED_CASE_PROTECTION_ON
-        switch (communicationStatus)
-        {
-        case ble::CommunicationStatus::unreachable:
-        {
-            revoke_authentication();
-            window.popup_warning("Unreachable", "Could not demand RSSI value from server");
-            [[fallthrough]];
-        }
-        case ble::CommunicationStatus::success:
-        {
-            attempt = MAX_ATTEMPS;
-            break;
-        }
-        case ble::CommunicationStatus::accessDenied:
-        {
-            LOG_WARN("Could not write to WhereAmI's demand RSSI characteristic - Access Was Denied");
-            window.popup_warning("Access Denied", "Could not demand RSSI value from server");
-            [[fallthrough]];
-        }
-        case ble::CommunicationStatus::protocolError:
-        {
-            ++attempt;
-            LOG_WARN("Could not write to WhereAmI's demand RSSI characteristic - Protocol Error");
-            window.popup_warning("Protocol Error", "Could not demand RSSI value from server");
-        }
-        }
-        UNHANDLED_CASE_PROTECTION_OFF
-    } while (attempt < MAX_ATTEMPS);
-}
-sys::fire_and_forget_t CServer::demand_rssi(gfx::CWindow& window)
-{
-    std::shared_ptr<ble::CService> pService =
-        get_service_whereami("Server could not find service \"WhereAmI\" when trying to demand RSSI!");
+            if (pService)
+            {
+                std::optional<std::weak_ptr<ble::CCharacteristic>> characteristic = find_characteristic_demand_rssi(pService).or_else(
+                    log_failed_lookup<ble::CCharacteristic>("Failed to find \"Demand RSSI\" characteristic when trying to demand rssi!"));
 
-    if (pService)
-    {
-        std::optional<std::weak_ptr<ble::CCharacteristic>> characteristic = find_characteristic_demand_rssi(pService).or_else(
-            log_failed_lookup<ble::CCharacteristic>("Failed to find \"Demand RSSI\" characteristic when trying to demand rssi!"));
+                if (characteristic)
+                {
+                    co_await pSelf->try_demand_rssi(pWindow, *characteristic, make_packet_demand_rssi(pSelf->m_pClientPrivateKey.get()));
+                }
+            }
 
-        if (characteristic)
-        {
-            std::vector<byte> packet = make_packet_demand_rssi(m_pClientPrivateKey.get());
-            try_demand_rssi(window, *characteristic, packet);
-        }
-    }
-
-    co_return;
+            co_return;
+        },
+        weak_from_this(),
+        &window);
+    //std::shared_ptr<ble::CService> pService =
+    //        get_service_whereami("Server could not find service \"WhereAmI\" when trying to demand RSSI!");
+    //
+    //if (pService)
+    //{
+    //    // clang-format off
+    //    std::optional<std::weak_ptr<ble::CCharacteristic>> characteristic = find_characteristic_demand_rssi(pService)
+    //            .or_else(log_failed_lookup<ble::CCharacteristic>(
+    //                    "Failed to find \"Demand RSSI\" characteristic when trying to demand rssi!"));
+    //    // clang-format on
+    //
+    //    if (characteristic)
+    //    {
+    //        std::vector<byte> packet = make_packet_demand_rssi(m_pClientPrivateKey.get());
+    //        co_await try_demand_rssi(window, *characteristic, packet);
+    //    }
+    //}
+    //
+    //co_return;
 }
 bool CServer::connected() const
 {
-    std::lock_guard lock{ *m_pMutex };
+    //std::lock_guard lock{ *m_pMutex };
+    //if (m_Server)
+    //{
+    //    return m_Server->device.connected();
+    //}
+    //
+    //return false;
+
+    bool result = false;
+    locker("CServer::connected", *m_pMutex);
     if (m_Server)
     {
-        return m_Server->device.connected();
+        result = m_Server->device.connected();
     }
-
-    return false;
+    unlocker("CServer::connected", *m_pMutex);
+    return result;
 }
 bool CServer::is_authenticated() const
 {
-    std::lock_guard lock{ *m_pMutex };
-    return m_Server.has_value();
+    //std::lock_guard lock{ *m_pMutex };
+    //return m_Server.has_value();
+
+
+    locker("CServer::is_authenticated", *m_pMutex);
+    bool result = m_Server.has_value();
+    unlocker("CServer::is_authenticated", *m_pMutex);
+    return result;
 }
 sys::awaitable_t<bool> CServer::has_subscribed() const
 {
@@ -322,29 +461,96 @@ sys::awaitable_t<bool> CServer::has_subscribed() const
 }
 uint64_t CServer::server_address() const
 {
-    std::lock_guard lock{ *m_pMutex };
-    return m_Server->info.address.value();
+    //std::lock_guard lock{ *m_pMutex };
+    //return m_Server->info.address.value();
+
+    locker("CServer::server_address", *m_pMutex);
+    auto result = m_Server->info.address.value();
+    unlocker("CServer::server_address", *m_pMutex);
+    return result;
 }
 std::string CServer::server_address_as_str() const
 {
-    std::lock_guard lock{ *m_pMutex };
-    return ble::DeviceInfo::address_as_str(m_Server->info.address.value());
+    //std::lock_guard lock{ *m_pMutex };
+    //return ble::DeviceInfo::address_as_str(m_Server->info.address.value());
+
+
+    locker("CServer::server_address_as_str", *m_pMutex);
+    auto result = ble::DeviceInfo::address_as_str(m_Server->info.address.value());
+    unlocker("CServer::server_address_as_str", *m_pMutex);
+    return result;
+}
+sys::awaitable_t<void>
+    CServer::try_demand_rssi(gfx::CWindow* pWindow, std::weak_ptr<ble::CCharacteristic> characteristic, std::vector<byte> packet)
+{
+    const std::shared_ptr<ble::CCharacteristic>& pCharacteristic = characteristic.lock();
+
+    static constexpr int32_t MAX_ATTEMPS = 3;
+    int32_t attempt{};
+    do
+    {
+        auto communicationStatus = co_await pCharacteristic->write_data(packet);
+
+        LOG_INFO_FMT("Write status: {}", ble::communication_status_to_str(communicationStatus));
+        UNHANDLED_CASE_PROTECTION_ON
+        switch (communicationStatus)
+        {
+        case ble::CommunicationStatus::unreachable:
+        {
+            revoke_authentication();
+            pWindow->popup_warning("Unreachable", "Could not demand RSSI value from server");
+            [[fallthrough]];
+        }
+        case ble::CommunicationStatus::success:
+        {
+            attempt = MAX_ATTEMPS;
+            break;
+        }
+        case ble::CommunicationStatus::accessDenied:
+        {
+            LOG_WARN("Could not write to WhereAmI's demand RSSI characteristic - Access Was Denied");
+            pWindow->popup_warning("Access Denied", "Could not demand RSSI value from server");
+            [[fallthrough]];
+        }
+        case ble::CommunicationStatus::protocolError:
+        {
+            ++attempt;
+            LOG_WARN("Could not write to WhereAmI's demand RSSI characteristic - Protocol Error");
+            pWindow->popup_warning("Protocol Error", "Could not demand RSSI value from server");
+        }
+        }
+        UNHANDLED_CASE_PROTECTION_OFF
+    } while (attempt < MAX_ATTEMPS);
 }
 std::shared_ptr<ble::CService> CServer::get_service_whereami(std::string_view errorMsg) const
 {
-    std::lock_guard lock{ *m_pMutex };
+    //std::lock_guard lock{ *m_pMutex };
+    //
+    //if (m_Server)
+    //{
+    //    std::shared_ptr<ble::CService> pService = nullptr;
+    //    // clang-format off
+    //    find_service_whereami(m_Server->device)
+    //            .and_then(take_temp_ownership(pService))
+    //            .or_else(log_failed_lookup<ble::CService>(errorMsg));
+    //    // clang-format on
+    //
+    //    return pService;
+    //}
+    //
+    //return nullptr;
 
+
+    locker("CServer::server_address_as_str", *m_pMutex);
+    std::shared_ptr<ble::CService> pService = nullptr;
     if (m_Server)
     {
-        std::shared_ptr<ble::CService> pService = nullptr;
         // clang-format off
         find_service_whereami(m_Server->device)
                 .and_then(take_temp_ownership(pService))
                 .or_else(log_failed_lookup<ble::CService>(errorMsg));
         // clang-format on
-
-        return pService;
     }
-
-    return nullptr;
+    unlocker("CServer::server_address_as_str", *m_pMutex);
+    return pService;
 }

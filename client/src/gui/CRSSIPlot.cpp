@@ -4,12 +4,16 @@
 #include "CRSSIPlot.hpp"
 // third party
 #include "imgui/imgui.h"
+// clang-format off
+
+
+// clang-format on
 namespace gui
 {
-CRSSIPlot::CRSSIPlot(std::size_t size, CRssiDemander demander)
+CRSSIPlot::CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander)
     : m_Index{ 0u }
     , m_Values{}
-    , m_Demander{ std::move(demander) }
+    , m_pDemander{ std::move(pDemander) }
 {
     m_Values.resize(size);
 }
@@ -32,9 +36,9 @@ float CRSSIPlot::rssi_avg() const
 }
 void CRSSIPlot::plot()
 {
-    m_Demander.send_demand();
+    m_pDemander->send_demand();
 
-    std::optional<std::vector<int8_t>> rssi = m_Demander.rssi();
+    std::optional<std::vector<int8_t>> rssi = m_pDemander->rssi();
     if (rssi)
     {
         for (auto&& value : rssi.value())

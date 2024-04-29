@@ -3,6 +3,8 @@ SET(COMMON_SRCS
         CThreadSafeHashMap.hpp
         CThreadSafeQueue.hpp
         CMutex.hpp
+        CCoroutineManager.cpp
+        CCoroutineManager.hpp
 )
 
 
