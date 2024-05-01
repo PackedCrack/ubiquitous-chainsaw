@@ -239,4 +239,25 @@ enum class ProtectionLevel : int32_t
     
     std::unreachable();
 }
+enum class CharacteristicSubscriptionState
+{
+    subscribed,
+    notSubscribed,
+    inFlight
+};
+[[nodiscard]] std::string_view characteristic_subscription_state(CharacteristicSubscriptionState state)
+{
+    UNHANDLED_CASE_PROTECTION_ON
+    // clang-format off
+    switch (state)
+    {
+        case CharacteristicSubscriptionState::subscribed: return "subscribed";
+        case CharacteristicSubscriptionState::notSubscribed: return "notSubscribed";
+        case CharacteristicSubscriptionState::inFlight: return "inFlight";
+    };
+    // clang-format on
+    UNHANDLED_CASE_PROTECTION_OFF
+
+    std::unreachable();
+}
 }    // namespace ble

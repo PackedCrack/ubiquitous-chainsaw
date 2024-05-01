@@ -7,24 +7,33 @@ namespace ble
 {
 CService::awaitable_make_t CService::make(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
 {
-    CService sv{ service };
-    std::printf("\nService UUID: %ws", to_hstring(sv.m_pService->Uuid()).data());
-    co_await sv.query_characteristics();
+    // Work around because make_shared requires a public constructor
+    // But construction of CCharacteristic should go through this factory function
+    std::shared_ptr<CService> pService{ new CService{ service } };
 
-    co_return sv;
+    #ifndef NDEBUG
+    LOG_INFO_FMT("Service UUID: \"{}\"", winrt::to_string(to_hstring(pService->m_Service.Uuid())).c_str());
+    #endif
+    std::printf("\nService UUID: %ws", to_hstring(pService->m_Service.Uuid()).data());
+    co_await pService->query_characteristics();
+
+    co_return pService;
 }
 CService::~CService()
 {
-    if (m_pService)
-    {
-        if (m_pService.use_count() == 1)
-        {
-            m_pService->Close();
-        }
-    }
+    //if (m_Service)
+    //{
+    //    if (m_pService.use_count() == 1)
+    //    {
+    //        m_pService->Close();
+    //    }
+    //}
+    // Unless we manually close the service to the BLE server we will not be able to access it again.. 
+    // It will fail with 'Access Denied'.
+    m_Service.Close();
 }
 CService::CService(GattDeviceService service)
-    : m_pService{ std::make_shared<GattDeviceService>(std::move(service)) }
+    : m_Service{ std::move(service) }
     , m_Characteristics{}
 {}
 std::optional<std::weak_ptr<CCharacteristic>> CService::characteristic(const UUID& uuid) const
@@ -35,21 +44,21 @@ std::optional<std::weak_ptr<CCharacteristic>> CService::characteristic(const UUI
         return std::nullopt;
     }
 
-    return std::make_optional<std::weak_ptr<CCharacteristic>>(iter->second);
+    return std::make_optional<std::weak_ptr<CCharacteristic>>(iter->second->weak_from_this());
 }
 std::string CService::uuid_as_str() const
 {
-    return winrt::to_string(winrt::to_hstring(m_pService->Uuid()));
+    return winrt::to_string(winrt::to_hstring(m_Service.Uuid()));
 }
-sys::fire_and_forget_t CService::unsubscribe_from_characteristic(const UUID& characteristic)
-{
-    auto iter = m_Characteristics.find(characteristic);
-    ASSERT(iter != std::end(m_Characteristics), "Tried to unsubscribe from a non existing characteristic..");
-    CommunicationStatus status = co_await iter->second->unsubscribe();
-    ASSERT_FMT(status == CommunicationStatus::success,
-               "Expected success when unsubscribing.. Error: \"{}\"",
-               communication_status_to_str(status));
-}
+//sys::fire_and_forget_t CService::unsubscribe_from_characteristic(const UUID& characteristic)
+//{
+//    auto iter = m_Characteristics.find(characteristic);
+//    ASSERT(iter != std::end(m_Characteristics), "Tried to unsubscribe from a non existing characteristic..");
+//    CommunicationStatus status = co_await iter->second->unsubscribe();
+//    ASSERT_FMT(status == CommunicationStatus::success,
+//               "Expected success when unsubscribing.. Error: \"{}\"",
+//               communication_status_to_str(status));
+//}
 winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
@@ -58,28 +67,42 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
 
     m_Characteristics.clear();
 
-    GattCharacteristicsResult result = co_await m_pService->GetCharacteristicsAsync();
-    if (result.Status() == GattCommunicationStatus::Success)
+    try
     {
-        IVectorView<GattCharacteristic> characteristics = result.Characteristics();
-        m_Characteristics.reserve(characteristics.Size());
-
-        for (auto&& chr : characteristics)
+        GattCharacteristicsResult result = co_await m_Service.GetCharacteristicsAsync();
+        if (result.Status() == GattCommunicationStatus::Success)
         {
-            auto [iter, emplaced] =
-                m_Characteristics.try_emplace(make_uuid(chr.Uuid()),
-                                              std::make_shared<CCharacteristic>(co_await make_characteristic<CCharacteristic>(chr)));
-            if (!emplaced)
+            IVectorView<GattCharacteristic> characteristics = result.Characteristics();
+            m_Characteristics.reserve(characteristics.Size());
+
+            for (auto&& chr : characteristics)
             {
-                LOG_ERROR_FMT("Failed to emplace characteristic with UUID: \"{}\"", uuid_as_str());
+                auto [iter, emplaced] =
+                    m_Characteristics.try_emplace(make_uuid(chr.Uuid()), co_await make_characteristic<CCharacteristic>(chr));
+                if (!emplaced)
+                {
+                    LOG_ERROR_FMT("Failed to emplace characteristic with UUID: \"{}\"", uuid_as_str());
+                }
             }
         }
+        else
+        {
+            LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Characteristics from Service with UUID: \"{}\"",
+                communication_status_to_str(communication_status_from_winrt(result.Status())),
+                uuid_as_str());
+        }
     }
-    else
+    catch (const winrt::hresult_error& err)
     {
-        LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Characteristics from Service with UUID: \"{}\"",
-                      communication_status_to_str(communication_status_from_winrt(result.Status())),
-                      uuid_as_str());
+        LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to query Characteristics from Service: \"{}\".",
+            err.code().value,
+            winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+            winrt::to_string(winrt::to_hstring(m_Service.Uuid())).c_str());
+    }
+    catch (...)
+    {
+        LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to query Characteristics from Service: \"{}\"",
+            winrt::to_string(winrt::to_hstring(m_Service.Uuid())).c_str());
     }
 }
 }    // namespace ble

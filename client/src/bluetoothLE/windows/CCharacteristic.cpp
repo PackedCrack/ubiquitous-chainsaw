@@ -204,6 +204,7 @@ CCharacteristic::awaitable_subscription_state_t CCharacteristic::has_subscribed(
     if (pInFlight->try_acquire())
     {
         auto returnValue = CharacteristicSubscriptionState::notSubscribed;
+
         std::shared_ptr<CDescriptor> pDescriptor = iter->second;
         ASSERT(pDescriptor, "Expected a valid ptr.");
 
@@ -234,7 +235,7 @@ CCharacteristic::awaitable_subscription_state_t CCharacteristic::has_subscribed(
     }
     else
     {
-        co_return CharacteristicSubscriptionState::querying;
+        co_return CharacteristicSubscriptionState::inFlight;
     }
 }
 CCharacteristic::awaitable_subscription_state_t CCharacteristic::unsubscribe()
@@ -243,6 +244,7 @@ CCharacteristic::awaitable_subscription_state_t CCharacteristic::unsubscribe()
     ASSERT(m_Characteristic, "Expected a valid characteristic");
 
     auto returnValue = CharacteristicSubscriptionState::subscribed;
+
     std::binary_semaphore* pInFlight = m_InFlight[INDEX_SEMAPHORE_UNSUBSCRIBE].get();
     if (pInFlight->try_acquire())
     {
@@ -280,7 +282,7 @@ CCharacteristic::awaitable_subscription_state_t CCharacteristic::unsubscribe()
     }
     else
     {
-        returnValue = CharacteristicSubscriptionState::querying;
+        returnValue = CharacteristicSubscriptionState::inFlight;
     }
 
     co_return returnValue;

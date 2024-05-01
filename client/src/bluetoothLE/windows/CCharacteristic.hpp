@@ -36,7 +36,7 @@ private:
     using GattValueChangedEventArgs = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs;
 public:
     [[nodiscard]] static awaitable_make_t make(const GattCharacteristic& characteristic);
-    CCharacteristic() = default;
+    //CCharacteristic() = default;
     ~CCharacteristic();
     CCharacteristic(const CCharacteristic& other) = delete;
     CCharacteristic(CCharacteristic&& other) noexcept;
@@ -52,7 +52,7 @@ public:
         using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
         ASSERT(m_Characteristic, "Expected a valid characteristic");
 
-        // Placing this here since we don't have access to the constants in the translation unit because this is a template function
+        // Placing this here because we don't have access to the constants in the translation unit since this is a template function
         static constexpr std::size_t INDEX_SEMAPHORE_SUBSCRIBE = 2u;
         
         std::binary_semaphore* pInFlight = m_InFlight[INDEX_SEMAPHORE_SUBSCRIBE].get();
@@ -94,7 +94,7 @@ public:
         }
         else
         {
-            co_return CharacteristicSubscriptionState::querying;
+            co_return CharacteristicSubscriptionState::inFlight;
         }
     }
     [[nodiscard]] awaitable_subscription_state_t has_subscribed() const;
