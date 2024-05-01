@@ -21,8 +21,9 @@ CDescriptor::CDescriptor(GattDescriptor descriptor)
     : m_Descriptor{ descriptor }
 {
 #ifndef NDEBUG
-    std::printf("\nDescriptor UUID: %ws", to_hstring(m_Descriptor.Uuid()).data());
-    std::printf("\n%s", std::format("Descriptor protection level: \"{}\"", prot_level_to_str(protection_level())).data());
+    LOG_INFO_FMT("Descriptor UUID: \"{}\"\nDescriptor protection level: \"{}\"",
+                 winrt::to_string(to_hstring(m_Descriptor.Uuid())).c_str(),
+                 prot_level_to_str(protection_level()));
 #endif
 }
 CDescriptor::awaitable_read_t CDescriptor::read_value() const
@@ -54,7 +55,7 @@ CDescriptor::awaitable_read_t CDescriptor::read_value() const
     }
     catch (const winrt::hresult_error& err)
     {
-        LOG_WARN_FMT("Exception \"{:X}\" - \"{}\" thrown by WinRT when trying to read from Descriptor \"{}\".",
+        LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to read from Descriptor: \"{}\".",
                      err.code().value,
                      winrt::to_string(winrt::to_hstring(err.message())).c_str(),
                      winrt::to_string(winrt::to_hstring(m_Descriptor.Uuid())).c_str());
