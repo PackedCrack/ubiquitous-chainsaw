@@ -8,12 +8,12 @@ namespace ble
 CService::awaitable_make_t CService::make(const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService& service)
 {
     // Work around because make_shared requires a public constructor
-    // But construction of CCharacteristic should go through this factory function
+    // But construction of CService should go through this factory function
     std::shared_ptr<CService> pService{ new CService{ service } };
 
-    #ifndef NDEBUG
+#ifndef NDEBUG
     LOG_INFO_FMT("Service UUID: \"{}\"", winrt::to_string(to_hstring(pService->m_Service.Uuid())).c_str());
-    #endif
+#endif
     std::printf("\nService UUID: %ws", to_hstring(pService->m_Service.Uuid()).data());
     co_await pService->query_characteristics();
 
@@ -28,7 +28,7 @@ CService::~CService()
     //        m_pService->Close();
     //    }
     //}
-    // Unless we manually close the service to the BLE server we will not be able to access it again.. 
+    // Unless we manually close the service to the BLE server we will not be able to access it again..
     // It will fail with 'Access Denied'.
     m_Service.Close();
 }
@@ -88,21 +88,21 @@ winrt::Windows::Foundation::IAsyncAction CService::query_characteristics()
         else
         {
             LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Characteristics from Service with UUID: \"{}\"",
-                communication_status_to_str(communication_status_from_winrt(result.Status())),
-                uuid_as_str());
+                          communication_status_to_str(communication_status_from_winrt(result.Status())),
+                          uuid_as_str());
         }
     }
     catch (const winrt::hresult_error& err)
     {
         LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to query Characteristics from Service: \"{}\".",
-            err.code().value,
-            winrt::to_string(winrt::to_hstring(err.message())).c_str(),
-            winrt::to_string(winrt::to_hstring(m_Service.Uuid())).c_str());
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Service.Uuid())).c_str());
     }
     catch (...)
     {
         LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to query Characteristics from Service: \"{}\"",
-            winrt::to_string(winrt::to_hstring(m_Service.Uuid())).c_str());
+                      winrt::to_string(winrt::to_hstring(m_Service.Uuid())).c_str());
     }
 }
 }    // namespace ble

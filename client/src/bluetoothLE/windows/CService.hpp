@@ -19,7 +19,6 @@ private:
     using GattDeviceService = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService;
 public:
     [[nodiscard]] static awaitable_make_t make(const GattDeviceService& service);
-    CService() = default;
     ~CService();
     CService(const CService& other) = delete;
     CService(CService&& other) noexcept = default;

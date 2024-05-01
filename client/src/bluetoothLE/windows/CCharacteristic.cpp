@@ -11,7 +11,6 @@ namespace
 {
 constexpr std::size_t INDEX_SEMAPHORE_HAS_SUBSCRIBED = 0u;
 constexpr std::size_t INDEX_SEMAPHORE_UNSUBSCRIBE = 1u;
-
 [[nodiscard]] ble::CharacteristicProperties
     operator|(ble::CharacteristicProperties lhs,
               winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
@@ -138,21 +137,21 @@ CCharacteristic::awaitable_make_t CCharacteristic::make(const GattCharacteristic
 
 #ifndef NDEBUG
     std::vector<std::string> allProperties = pCharacteristic->properties_as_str();
-    std::string properties{};
+    std::string line{};
     for (auto&& property : allProperties)
     {
-        properties += property;
-        properties += ", ";
+        line += property;
+        line += ", ";
     }
     // Remove the two last characters, to make sure the string doesn't end with ', '
-    properties.pop_back();
-    properties.pop_back();
+    line.pop_back();
+    line.pop_back();
 
     LOG_INFO_FMT("Characteristic UUID: \"{}\""
                  "\nCharacteristic properties: \"{}\""
                  "\nCharacteristic protection level: \"{}\"",
                  winrt::to_string(to_hstring(pCharacteristic->m_Characteristic.Uuid())).c_str(),
-                 properties.c_str(),
+                 line.c_str(),
                  prot_level_to_str(pCharacteristic->protection_level()));
 #endif
 
@@ -166,10 +165,7 @@ CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttr
     , m_Revoker{}
     , m_InFlight{}
 {
-    for (auto&& pSemaphore : m_InFlight)
-    {
-        pSemaphore = std::make_unique<std::binary_semaphore>(1);
-    }
+    std::generate(std::begin(m_InFlight), std::end(m_InFlight), []() { return std::make_unique<std::binary_semaphore>(1); });
 }
 CCharacteristic::~CCharacteristic()
 {
@@ -179,9 +175,8 @@ CCharacteristic::CCharacteristic(CCharacteristic&& other) noexcept
     : m_Characteristic{ std::move(other.m_Characteristic) }
     , m_Descriptors{ std::move(other.m_Descriptors) }
     , m_NotifyEventHandler{ std::move(other.m_NotifyEventHandler) }
-    , m_Revoker{ std::move(other.m_Revoker) } 
-    , m_InFlight{ std::move(other.m_InFlight) }
-{};
+    , m_Revoker{ std::move(other.m_Revoker) }
+    , m_InFlight{ std::move(other.m_InFlight) } {};
 CCharacteristic& CCharacteristic::operator=(CCharacteristic&& other) noexcept
 {
     m_Characteristic = std::move(other.m_Characteristic);
@@ -189,7 +184,7 @@ CCharacteristic& CCharacteristic::operator=(CCharacteristic&& other) noexcept
     m_NotifyEventHandler = std::move(other.m_NotifyEventHandler);
     m_Revoker = std::move(other.m_Revoker);
     m_InFlight = std::move(other.m_InFlight);
-    
+
 
     return *this;
 }
@@ -227,7 +222,7 @@ CCharacteristic::awaitable_subscription_state_t CCharacteristic::has_subscribed(
         else
         {
             LOG_ERROR_FMT("Failed to query subscription state from Client Configuration Descriptor. Reason: \"{}\"",
-                communication_status_to_str(expectedValue.error()));
+                          communication_status_to_str(expectedValue.error()));
         }
 
         pInFlight->release();
@@ -261,21 +256,21 @@ CCharacteristic::awaitable_subscription_state_t CCharacteristic::unsubscribe()
             else
             {
                 LOG_ERROR_FMT("Failed to unsubscribe from Characteristic: \"{}\". Reason: \"{}\"",
-                    winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
-                    communication_status_to_str(communication_status_from_winrt(status)));
+                              winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
+                              communication_status_to_str(communication_status_from_winrt(status)));
             }
         }
         catch (const winrt::hresult_error& err)
         {
             LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to unsubscribe from Characteristic: \"{}\".",
-                err.code().value,
-                winrt::to_string(winrt::to_hstring(err.message())).c_str(),
-                winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                         err.code().value,
+                         winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                         winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
         }
         catch (...)
         {
             LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to unsubscribe from Characteristic: \"{}\"",
-                winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                          winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
         }
 
         pInFlight->release();
@@ -317,23 +312,23 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
         }
         else
         {
-            LOG_WARN_FMT("Failed to read from Characteristic: \"{}\". Reason: \"{}\"", 
-                winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
-                communication_status_to_str(status));
+            LOG_WARN_FMT("Failed to read from Characteristic: \"{}\". Reason: \"{}\"",
+                         winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
+                         communication_status_to_str(status));
             co_return std::unexpected(status);
         }
     }
     catch (const winrt::hresult_error& err)
     {
         LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to read from Characteristic: \"{}\".",
-            err.code().value,
-            winrt::to_string(winrt::to_hstring(err.message())).c_str(),
-            winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
     catch (...)
     {
         LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to read from Characteristic: \"{}\"",
-            winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                      winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
 
     co_return std::unexpected{ CommunicationStatus::unreachable };
@@ -404,14 +399,14 @@ CCharacteristic::awaitable_communication_status_t CCharacteristic::write_data(co
     catch (const winrt::hresult_error& err)
     {
         LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to write to Characteristic: \"{}\".",
-            err.code().value,
-            winrt::to_string(winrt::to_hstring(err.message())).c_str(),
-            winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
     catch (...)
     {
         LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to write to Characteristic: \"{}\"",
-            winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                      winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
 
     co_return CommunicationStatus::unreachable;
@@ -444,21 +439,21 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
         else
         {
             LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
-                communication_status_to_str(communication_status_from_winrt(result.Status())),
-                uuid_as_str());
+                          communication_status_to_str(communication_status_from_winrt(result.Status())),
+                          uuid_as_str());
         }
     }
     catch (const winrt::hresult_error& err)
     {
         LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to query descriptors from Characteristic: \"{}\".",
-            err.code().value,
-            winrt::to_string(winrt::to_hstring(err.message())).c_str(),
-            winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
     catch (...)
     {
         LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to write to query descriptors from Characteristic: \"{}\"",
-            winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                      winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
 }
 }    // namespace ble

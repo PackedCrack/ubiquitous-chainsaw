@@ -36,7 +36,6 @@ private:
     using GattValueChangedEventArgs = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs;
 public:
     [[nodiscard]] static awaitable_make_t make(const GattCharacteristic& characteristic);
-    //CCharacteristic() = default;
     ~CCharacteristic();
     CCharacteristic(const CCharacteristic& other) = delete;
     CCharacteristic(CCharacteristic&& other) noexcept;
@@ -54,7 +53,7 @@ public:
 
         // Placing this here because we don't have access to the constants in the translation unit since this is a template function
         static constexpr std::size_t INDEX_SEMAPHORE_SUBSCRIBE = 2u;
-        
+
         std::binary_semaphore* pInFlight = m_InFlight[INDEX_SEMAPHORE_SUBSCRIBE].get();
         if (pInFlight->try_acquire())
         {
@@ -65,7 +64,8 @@ public:
             {
                 using GattCCCDValue = GattClientCharacteristicConfigurationDescriptorValue;
 
-                GattCommunicationStatus status = co_await m_Characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattCCCDValue::Notify);
+                GattCommunicationStatus status =
+                    co_await m_Characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattCCCDValue::Notify);
                 if (status == GattCommunicationStatus::Success)
                 {
                     co_return CharacteristicSubscriptionState::subscribed;
@@ -73,21 +73,21 @@ public:
                 else
                 {
                     LOG_ERROR_FMT("Failed to subscribe to Characteristic: \"{}\". Reason: \"{}\"",
-                        winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
-                        communication_status_to_str(communication_status_from_winrt(status)));
+                                  winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
+                                  communication_status_to_str(communication_status_from_winrt(status)));
                 }
             }
             catch (const winrt::hresult_error& err)
             {
                 LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to subscribe to Characteristic: \"{}\".",
-                    err.code().value,
-                    winrt::to_string(winrt::to_hstring(err.message())).c_str(),
-                    winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+                             err.code().value,
+                             winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                             winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
             }
             catch (...)
             {
                 LOG_ERROR_FMT("Unknown Exception caught when trying to subscribe to Characteristic: \"{}\".",
-                    winrt::to_string(to_hstring(m_Characteristic.Uuid())).c_str());
+                              winrt::to_string(to_hstring(m_Characteristic.Uuid())).c_str());
             }
 
             co_return CharacteristicSubscriptionState::notSubscribed;
