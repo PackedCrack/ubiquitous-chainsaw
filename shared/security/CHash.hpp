@@ -15,16 +15,16 @@ typedef unsigned char byte;
 
 template<typename hash_t>
 concept hash = requires(hash_t hash) {
-    { hash.size() } -> std::convertible_to<typename decltype(hash)::size_type>;
-    { hash.data() } -> std::convertible_to<typename decltype(hash)::const_pointer>;
-    { hash.as_string() } -> std::convertible_to<std::string>;
+    { hash.size() } -> std::same_as<typename decltype(hash)::size_type>;
+    { hash.data() } -> std::same_as<typename decltype(hash)::const_pointer>;
+    { hash.as_string() } -> std::same_as<std::string>;
 };
 
 template<typename algorithm_t>
 concept hash_algorithm = requires(algorithm_t alg, std::array<uint8_t, 26>&& data, std::vector<byte>&& buffer) {
     { algorithm_t::HASH_NAME } -> std::convertible_to<const std::string_view>;
-    { algorithm_t::HASH_SIZE } -> std::convertible_to<std::size_t>;
-    //{ alg.hash(data, buffer) } -> std::convertible_to<decltype(buffer)>;
+    { algorithm_t::HASH_SIZE } -> std::convertible_to<const std::size_t>;
+    //{ alg.hash(std::declval<std::array<uint8_t, 26>>(), std::declval<std::vector<byte>>()) } -> std::same_as<std::vector<byte>>;
 };
 template<typename algorithm_t>
 requires hash_algorithm<algorithm_t>
@@ -43,7 +43,7 @@ public:
     * @post `m_Hash` is resized to `hash_type::HASH_SIZE` and filled with the hash computed from the provided data.
     */
     template<typename buffer_t>
-    requires common::const_buffer<buffer_t>
+    requires common::const_buffer<buffer_t> || common::buffer<buffer_t>
     explicit CHash(buffer_t&& data)
         : m_Hash{}
     {
@@ -129,7 +129,7 @@ public:
     [[nodiscard]] std::size_t size() const { return m_Hash.size(); }
 private:
     template<typename buffer_t>
-    requires common::const_buffer<buffer_t>
+    requires common::const_buffer<buffer_t> || common::buffer<buffer_t>
     void create_hash(buffer_t&& data)
     {
         m_Hash = hash_type::hash(std::forward<buffer_t>(data), m_Hash);

@@ -13,7 +13,7 @@
 class CAuthenticator
 {
 public:
-    explicit CAuthenticator(std::shared_ptr<CServer> pServer);
+    explicit CAuthenticator(CServer& server);
     ~CAuthenticator() = default;
     CAuthenticator(const CAuthenticator& other);
     CAuthenticator(CAuthenticator&& other) = default;
@@ -29,9 +29,9 @@ private:
     //sys::fire_and_forget_t process_queue();
     [[nodiscard]] auto make_connection_changed_cb() const;
     void process_queue();
-    [[nodiscard]] sys::awaitable_t<bool> verify_server_address(const ble::CDevice& device, uint64_t address) const;
+    [[nodiscard]] sys::awaitable_t<bool> verify_server_address(const std::shared_ptr<ble::CDevice>&, uint64_t address) const;
 private:
     std::unique_ptr<security::CEccPublicKey> m_pServerKey = nullptr;
-    std::shared_ptr<CServer> m_pServer = nullptr;
+    Pointer<CServer> m_pServer = nullptr;
     CThreadSafeQueue<ble::DeviceInfo> m_Devices;
 };
