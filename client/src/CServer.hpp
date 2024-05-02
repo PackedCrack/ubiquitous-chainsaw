@@ -39,7 +39,7 @@ public:
 public:
     void grant_authentication(AuthenticatedDevice&& device);
     void revoke_authentication();
-    void subscribe(std::function<void(std::span<const uint8_t>)>&& cb);
+    void subscribe(std::function<void(std::span<uint8_t>)>&& cb);
     void unsubscribe();
     void demand_rssi(gfx::CWindow& window);
     [[nodiscard]] bool connected() const;

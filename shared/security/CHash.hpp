@@ -19,7 +19,6 @@ concept hash = requires(hash_t hash) {
     { hash.data() } -> std::same_as<typename decltype(hash)::const_pointer>;
     { hash.as_string() } -> std::same_as<std::string>;
 };
-
 template<typename algorithm_t>
 concept hash_algorithm = requires(algorithm_t alg, std::array<uint8_t, 26>&& data, std::vector<byte>&& buffer) {
     { algorithm_t::HASH_NAME } -> std::convertible_to<const std::string_view>;

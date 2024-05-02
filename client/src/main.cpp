@@ -138,7 +138,7 @@ int main(int argc, char** argv)
     CServer server{};
     CAuthenticator authenticator{ server };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(5)));
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)));
 
 
     bool exit = false;
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
                 {
                     LOG_INFO("RE CREATING RSSI DEMANDER");
                     deviceList.recreate_list();
-                    rssiPlot = gui::CRSSIPlot{ 30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(5)) };
+                    rssiPlot = gui::CRSSIPlot{ 30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)) };
                 }
 
                 static uint32_t ab = 0;

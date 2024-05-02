@@ -14,7 +14,6 @@ CService::awaitable_make_t CService::make(const winrt::Windows::Devices::Bluetoo
 #ifndef NDEBUG
     LOG_INFO_FMT("Service UUID: \"{}\"", winrt::to_string(to_hstring(pService->m_Service.Uuid())).c_str());
 #endif
-    std::printf("\nService UUID: %ws", to_hstring(pService->m_Service.Uuid()).data());
     co_await pService->query_characteristics();
 
     co_return pService;

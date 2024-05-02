@@ -13,10 +13,7 @@ CRssiDemander::CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono:
     , m_pServerPubKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }
     , m_pServer{ &server }
     , m_pWindow{ &window }
-//, m_pMutex{ std::make_unique<std::mutex>() }
-//, m_pShouldExit{ std::make_unique<std::atomic<bool>>(false) }
-//, m_pCV{ std::make_unique<std::condition_variable>() }
-//, m_RssiDemander{ std::thread{ make_rssi_demander() } }
+    , m_Timer{}
 {}
 CRssiDemander::~CRssiDemander()
 {
@@ -32,37 +29,32 @@ CRssiDemander::~CRssiDemander()
     //}
 }
 CRssiDemander::CRssiDemander(CRssiDemander&& other) noexcept
-    : m_Queue{}
-    , m_DemandInterval{}
-    , m_pServerPubKey{}
-    , m_pServer{}
-    , m_pWindow{}
-//, m_pMutex{}
-//, m_pShouldExit{}
-//, m_pCV{}
-//, m_RssiDemander{}
-{
-    move(other);
-}
+    : m_Queue{ std::move(other.m_Queue) }
+    , m_DemandInterval{ std::move(other.m_DemandInterval) }
+    , m_pServerPubKey{ std::move(other.m_pServerPubKey) }
+    , m_pServer{ std::move(other.m_pServer) }
+    , m_pWindow{ std::move(other.m_pWindow) }
+    , m_Timer{ std::move(other.m_Timer) }
+{}
 CRssiDemander& CRssiDemander::operator=(CRssiDemander&& other) noexcept
 {
-    move(other);
-
-    return *this;
-}
-void CRssiDemander::move(CRssiDemander& other)
-{
-    //other.join_rssi_demander();
-
     m_Queue = std::move(other.m_Queue);
     m_pServer = std::move(other.m_pServer);
     m_pServerPubKey = std::move(other.m_pServerPubKey);
     m_pWindow = std::move(other.m_pWindow);
-    //m_pMutex = std::move(other.m_pMutex);
     m_DemandInterval = std::move(other.m_DemandInterval);
-    //m_pShouldExit = std::move(other.m_pShouldExit);
-    //m_RssiDemander = std::thread{ make_rssi_demander() };
+    m_Timer = std::move(other.m_Timer);
+
+    return *this;
 }
+//void CRssiDemander::move(CRssiDemander& other)
+//{
+//    m_Queue = std::move(other.m_Queue);
+//    m_pServer = std::move(other.m_pServer);
+//    m_pServerPubKey = std::move(other.m_pServerPubKey);
+//    m_pWindow = std::move(other.m_pWindow);
+//    m_DemandInterval = std::move(other.m_DemandInterval);
+//}
 std::optional<std::vector<int8_t>> CRssiDemander::rssi()
 {
     auto vec = std::make_optional<std::vector<int8_t>>();
@@ -74,24 +66,37 @@ std::optional<std::vector<int8_t>> CRssiDemander::rssi()
 
     return vec->size() > 0 ? vec : std::nullopt;
 }
-auto CRssiDemander::make_rssi_receiver() const
+auto CRssiDemander::make_rssi_receiver()
 {
-    return [this](std::span<const uint8_t>) { LOG_INFO("DE E NAJS"); };
+    return [wpSelf = weak_from_this()](std::span<uint8_t> packet)
+    {
+        std::shared_ptr<CRssiDemander> pSelf = wpSelf.lock();
+        if (pSelf)
+        {
+            static constexpr ble::RSSINotificationHeader HEADER{};
+            uint8_t offset = packet[HEADER.hashOffset];
+            uint8_t size = packet[HEADER.hashSize];
+            std::span<uint8_t> hashBlock{ std::begin(packet) + offset, size };
+            security::CHash<security::Sha2_256> hash{ std::cbegin(hashBlock), std::cend(hashBlock) };
+
+            offset = packet[HEADER.signatureOffset];
+            size = packet[HEADER.signatureSize];
+            std::span<uint8_t> signatureBlock{ std::begin(packet) + offset, size };
+
+
+            if (pSelf->m_pServerPubKey->verify_hash(signatureBlock, hash))
+            {
+                LOG_INFO("AAAAAAAAAAAAAAAAAAAAA VERIFIED");
+            }
+            else
+            {
+                LOG_INFO("BBBBBBBBBBBBBBBBBBBB NOT VERIFIED");
+            }
+        }
+    };
 }
 void CRssiDemander::send_demand()
 {
-    //if (m_Timer.lap<float>() >= static_cast<float>(m_DemandInterval.count()))
-    //{
-    //    if (!co_await m_pServer->has_subscribed())
-    //    {
-    //        m_pServer->subscribe(make_rssi_receiver());
-    //    }
-    //
-    //    m_pServer->demand_rssi(*m_pWindow);
-    //
-    //    m_Timer.reset();
-    //}
-
     auto& coroutineManager = common::coroutine_manager_instance();
     auto coroutine = [](std::weak_ptr<CRssiDemander> wpSelf) -> sys::awaitable_t<void>
     {
@@ -123,14 +128,14 @@ void CRssiDemander::send_demand()
             case CServer::HasSubscribedResult::notAuthenticated:
             {
 #ifndef NDEBUG
-                LOG_INFO("has_subscribed returned \"notAuthenticated\" - RSSI Demand will not be sent.");
+                //LOG_INFO("has_subscribed returned \"notAuthenticated\" - RSSI Demand will not be sent.");
 #endif
                 break;
             }
             case CServer::HasSubscribedResult::inFlight:
             {
 #ifndef NDEBUG
-                LOG_INFO("has_subscribed returned \"inFlight\" - RSSI Demand will not be sent.");
+                //LOG_INFO("has_subscribed returned \"inFlight\" - RSSI Demand will not be sent.");
 #endif
                 break;
             }
@@ -141,43 +146,3 @@ void CRssiDemander::send_demand()
 
     coroutineManager.fire_and_forget(coroutine, weak_from_this());
 }
-//std::function<void()> CRssiDemander::make_rssi_demander() const
-//{
-//    return [this]()
-//    {
-//        do
-//        {
-//            {
-//                std::unique_lock lock{ *(m_pMutex) };
-//                if (m_pServer->is_authenticated())
-//                {
-//                    static int32_t a = 0;
-//                    if (a < 1)
-//                    // if not subscribed
-//                    {
-//                        m_pServer->subscribe(make_rssi_receiver());
-//                        ++a;
-//                    }
-//                    m_pServer->demand_rssi(*m_pWindow);
-//                }
-//            }
-//
-//            std::unique_lock lock{ *(m_pMutex) };
-//            m_pCV->wait_for(lock, m_DemandInterval);
-//        } while (!m_pShouldExit->load());
-//    };
-//}
-//void CRssiDemander::join_rssi_demander() noexcept
-//{
-//    {
-//        std::lock_guard lock{ *(m_pMutex) };
-//        m_pServer->unsubscribe();
-//
-//        bool expected = false;
-//        while (!m_pShouldExit->compare_exchange_strong(expected, true))
-//        {};
-//        m_pCV->notify_one();
-//    }
-//
-//    m_RssiDemander.join();
-//}

@@ -109,7 +109,7 @@ public:
     CEccPublicKey& operator=(CEccPublicKey&& other) noexcept;
 public:
     template<typename buffer_t, typename hash_t>
-    requires common::buffer<std::remove_cvref_t<buffer_t>> && hash<std::remove_cvref_t<hash_t>>
+    requires(common::buffer<buffer_t> || common::const_buffer<buffer_t>) && hash<std::remove_cvref_t<hash_t>>
     bool verify_hash(buffer_t&& source, hash_t&& hash)
     {
         ASSERT(source.size() > 0u, "Tried to verify signature on empty buffer!");

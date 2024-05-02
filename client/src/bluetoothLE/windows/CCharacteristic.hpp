@@ -45,7 +45,7 @@ private:
     explicit CCharacteristic(GattCharacteristic characteristic);
 public:
     template<typename invokable_t>
-    requires std::invocable<invokable_t, std::span<const uint8_t>>
+    requires std::invocable<invokable_t, std::span<uint8_t>>
     [[nodiscard]] awaitable_subscription_state_t subscribe_to_notify(invokable_t&& cb)
     {
         using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
@@ -115,7 +115,7 @@ private:
 private:
     GattCharacteristic m_Characteristic;
     std::unordered_map<ble::UUID, std::shared_ptr<CDescriptor>, ble::UUID::Hasher> m_Descriptors;
-    std::function<void(std::span<const uint8_t>)> m_NotifyEventHandler;
+    std::function<void(std::span<uint8_t>)> m_NotifyEventHandler;
     GattCharacteristic::ValueChanged_revoker m_Revoker;
     std::array<std::unique_ptr<std::binary_semaphore>, 3u> m_InFlight;
 };

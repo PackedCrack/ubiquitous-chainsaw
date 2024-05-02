@@ -370,6 +370,7 @@ auto CCharacteristic::value_changed_handler()
         if (pSelf)
         {
             winrt::Windows::Storage::Streams::IBuffer buffer = args.CharacteristicValue();
+
             ASSERT(pSelf->m_NotifyEventHandler, "Expected a event handler");
             pSelf->m_NotifyEventHandler(std::span<uint8_t>{ buffer.data(), buffer.Length() });
         }

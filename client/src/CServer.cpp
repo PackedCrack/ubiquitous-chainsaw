@@ -132,10 +132,10 @@ void CServer::revoke_authentication()
     std::lock_guard lock{ *m_pMutex };
     m_Server = std::nullopt;
 }
-void CServer::subscribe(std::function<void(std::span<const uint8_t>)>&& cb)
+void CServer::subscribe(std::function<void(std::span<uint8_t>)>&& cb)
 {
     auto& coroutineManager = common::coroutine_manager_instance();
-    auto coroutine = [](std::weak_ptr<ble::CDevice> wpDevice, std::function<void(std::span<const uint8_t>)> cb) -> sys::awaitable_t<void>
+    auto coroutine = [](std::weak_ptr<ble::CDevice> wpDevice, std::function<void(std::span<uint8_t>)> cb) -> sys::awaitable_t<void>
     {
         std::shared_ptr<ble::CDevice> pDevice = wpDevice.lock();
         if (!pDevice)

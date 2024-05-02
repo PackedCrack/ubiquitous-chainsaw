@@ -162,16 +162,16 @@ using ShaHash = std::variant<security::CHash<security::Sha2_224>,
     switch (version)
     {
         // clang-format off
-        case ble::ShaVersion::Sha2_224: return CHash<Sha2_224>{ std::cbegin(hashData), std::cend(hashData) };
-        case ble::ShaVersion::Sha2_256: return CHash<Sha2_256>{ std::cbegin(hashData), std::cend(hashData) };
-        case ble::ShaVersion::Sha3_224: return CHash<Sha3_224>{ std::cbegin(hashData), std::cend(hashData) };
-        case ble::ShaVersion::Sha3_256: return CHash<Sha3_256>{ std::cbegin(hashData), std::cend(hashData) };
-        case ble::ShaVersion::Sha3_384: return CHash<Sha3_384>{ std::cbegin(hashData), std::cend(hashData) };
-        case ble::ShaVersion::Sha3_512: return CHash<Sha3_512>{ std::cbegin(hashData), std::cend(hashData) };
-        case ble::ShaVersion::count:
-            // cppcheck-suppress constStatement
-            ASSERT(false, "Value of \"count\" passed unexpectedly from ble::ShaVersion"); // this should never happen so we want to break here..
-            return CHash<Sha2_224>{ std::string_view{ "0000000000" } };
+    case ble::ShaVersion::Sha2_224: return CHash<Sha2_224>{ std::cbegin(hashData), std::cend(hashData) };
+    case ble::ShaVersion::Sha2_256: return CHash<Sha2_256>{ std::cbegin(hashData), std::cend(hashData) };
+    case ble::ShaVersion::Sha3_224: return CHash<Sha3_224>{ std::cbegin(hashData), std::cend(hashData) };
+    case ble::ShaVersion::Sha3_256: return CHash<Sha3_256>{ std::cbegin(hashData), std::cend(hashData) };
+    case ble::ShaVersion::Sha3_384: return CHash<Sha3_384>{ std::cbegin(hashData), std::cend(hashData) };
+    case ble::ShaVersion::Sha3_512: return CHash<Sha3_512>{ std::cbegin(hashData), std::cend(hashData) };
+    case ble::ShaVersion::count:
+        // cppcheck-suppress constStatement
+        ASSERT(false, "Value of \"count\" passed unexpectedly from ble::ShaVersion"); // this should never happen so we want to break here..
+        return CHash<Sha2_224>{ std::string_view{ "0000000000" } };
         // clang-format on
     }
     UNHANDLED_CASE_PROTECTION_OFF
@@ -184,17 +184,17 @@ using ShaHash = std::variant<security::CHash<security::Sha2_224>,
     switch (type)
     {
         // clang-format off
-        case ble::ShaVersion::Sha2_224: return security::Sha2_224::HASH_SIZE;
-        case ble::ShaVersion::Sha2_256: return security::Sha2_256::HASH_SIZE;
-        case ble::ShaVersion::Sha3_224: return security::Sha3_224::HASH_SIZE;
-        case ble::ShaVersion::Sha3_256: return security::Sha3_256::HASH_SIZE;
-        case ble::ShaVersion::Sha3_384: return security::Sha3_384::HASH_SIZE;
-        case ble::ShaVersion::Sha3_512: return security::Sha3_512::HASH_SIZE;
-        case ble::ShaVersion::count:
-            // cppcheck-suppress constStatement
-            ASSERT(false, "Value of \"count\" passed unexpectedly from ble::ShaVersion"); // this should never happen so we want to break here..
-            return 0;
-        // clang-format off
+    case ble::ShaVersion::Sha2_224: return security::Sha2_224::HASH_SIZE;
+    case ble::ShaVersion::Sha2_256: return security::Sha2_256::HASH_SIZE;
+    case ble::ShaVersion::Sha3_224: return security::Sha3_224::HASH_SIZE;
+    case ble::ShaVersion::Sha3_256: return security::Sha3_256::HASH_SIZE;
+    case ble::ShaVersion::Sha3_384: return security::Sha3_384::HASH_SIZE;
+    case ble::ShaVersion::Sha3_512: return security::Sha3_512::HASH_SIZE;
+    case ble::ShaVersion::count:
+        // cppcheck-suppress constStatement
+        ASSERT(false, "Value of \"count\" passed unexpectedly from ble::ShaVersion"); // this should never happen so we want to break here..
+        return 0;
+    // clang-format off
     }
     UNHANDLED_CASE_PROTECTION_OFF
     
@@ -234,5 +234,21 @@ struct DemandRSSIHeader
 [[nodiscard]] consteval DemandRSSIHeader header_whereami_demand_rssi()
 {
     return DemandRSSIHeader{};
+}
+struct RSSINotificationHeader
+{
+    uint8_t randomDataOffset = 0u;
+    uint8_t randomDataSize = 1u;
+    uint8_t rssiOffset = 2u;
+    uint8_t rssiSize = 3u;
+    uint8_t shaVersion = 4u;
+    uint8_t hashOffset = 5u;
+    uint8_t hashSize = 6u;
+    uint8_t signatureOffset = 7u;
+    uint8_t signatureSize = 8u;
+};
+[[nodiscard]] consteval RSSINotificationHeader header_whereami_rssi_notification()
+{
+    return RSSINotificationHeader{};
 }
 }    // namespace ble
