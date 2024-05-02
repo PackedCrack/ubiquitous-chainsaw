@@ -93,32 +93,53 @@ void CRssiDemander::send_demand()
     //}
 
     auto& coroutineManager = common::coroutine_manager_instance();
-    coroutineManager.fire_and_forget(
-        [](std::weak_ptr<CRssiDemander> wpSelf) -> sys::awaitable_t<void>
+    auto coroutine = [](std::weak_ptr<CRssiDemander> wpSelf) -> sys::awaitable_t<void>
+    {
+        std::shared_ptr<CRssiDemander> pSelf = wpSelf.lock();
+        if (!pSelf)
         {
-            std::shared_ptr<CRssiDemander> pSelf = wpSelf.lock();
+            co_return;
+        }
 
-            if (pSelf)
+        float demandInterval = static_cast<float>(pSelf->m_DemandInterval.count());
+        if (pSelf->m_Timer.lap<float>() >= demandInterval)
+        {
+            CServer::HasSubscribedResult result = co_await pSelf->m_pServer->has_subscribed();
+            UNHANDLED_CASE_PROTECTION_ON
+            switch (result)
             {
-                if (pSelf->m_Timer.lap<float>() >= static_cast<float>(pSelf->m_DemandInterval.count()))
-                {
-                    if (!co_await pSelf->m_pServer->has_subscribed())
-                    {
-                        LOG_INFO("NOT SUBSCRIBED");
-                        pSelf->m_pServer->subscribe(pSelf->make_rssi_receiver());
-                    }
-                    else
-                    {
-                        LOG_INFO("SUBSCRIBED");
-                    }
-
-                    pSelf->m_pServer->demand_rssi(*(pSelf->m_pWindow));
-
-                    pSelf->m_Timer.reset();
-                }
+            case CServer::HasSubscribedResult::subscribed:
+            {
+                gfx::CWindow& window = *(pSelf->m_pWindow);
+                pSelf->m_pServer->demand_rssi(window);
+                pSelf->m_Timer.reset();
+                break;
             }
-        },
-        weak_from_this());
+            case CServer::HasSubscribedResult::notSubscribed:
+            {
+                pSelf->m_pServer->subscribe(pSelf->make_rssi_receiver());
+                break;
+            }
+            case CServer::HasSubscribedResult::notAuthenticated:
+            {
+#ifndef NDEBUG
+                LOG_INFO("has_subscribed returned \"notAuthenticated\" - RSSI Demand will not be sent.");
+#endif
+                break;
+            }
+            case CServer::HasSubscribedResult::inFlight:
+            {
+#ifndef NDEBUG
+                LOG_INFO("has_subscribed returned \"inFlight\" - RSSI Demand will not be sent.");
+#endif
+                break;
+            }
+            }
+            UNHANDLED_CASE_PROTECTION_OFF
+        }
+    };
+
+    coroutineManager.fire_and_forget(coroutine, weak_from_this());
 }
 //std::function<void()> CRssiDemander::make_rssi_demander() const
 //{

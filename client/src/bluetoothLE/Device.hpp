@@ -28,6 +28,9 @@ concept device = requires(device_t device, const device_t constDevice) {
     { constDevice.address_as_str() } -> std::same_as<std::string>;
     { constDevice.services() } -> std::same_as<const typename device_t::service_container_t&>;
     { constDevice.service(std::declval<const UUID>()) } -> std::same_as<std::optional<std::weak_ptr<CService>>>;
+    {
+        constDevice.characteristic(std::declval<const UUID>(), std::declval<const UUID>())
+    } -> std::same_as<std::optional<std::weak_ptr<CCharacteristic>>>;
 };
 template<typename device_t, typename... ctor_args_t>
 requires device<device_t, ctor_args_t...>

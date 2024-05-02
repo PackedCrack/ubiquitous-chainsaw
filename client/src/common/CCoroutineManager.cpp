@@ -24,7 +24,14 @@ void CCoroutineManager::coroutine_finished()
 }
 void CCoroutineManager::wait_for_all()
 {
+#ifndef NDEBUG
+    while (m_ActiveCoroutines.load() != 0)
+    {
+        LOG_INFO_FMT("ACTIVE COROUTINES: {}", m_ActiveCoroutines.load());
+    }
+#else
     std::unique_lock<std::mutex> lock{ m_Mutex };
     m_ConditionVariable.wait(lock, [this] { return m_ActiveCoroutines.load() == 0; });
+#endif
 }
 }    // namespace common

@@ -23,7 +23,7 @@ namespace
             co_return pService->characteristic(ble::uuid_characteristic_whoami_authenticate());
         }
     }
-    
+
     co_return std::nullopt;
 }
 template<typename buffer_t>

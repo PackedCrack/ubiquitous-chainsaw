@@ -103,7 +103,7 @@ private:
         : m_Device{ nullptr }
         , m_Services{}
         , m_ConnectionChanged{ std::forward<invokable_t>(cb) }
-        , m_Revoker{ m_Device.ConnectionStatusChanged(winrt::auto_revoke, connection_changed_handler()) }
+        , m_Revoker{}
     {}
 public:
     [[nodiscard]] static std::string_view error_to_str(Error err);
@@ -112,6 +112,8 @@ public:
     [[nodiscard]] std::string address_as_str() const;
     [[nodiscard]] const service_container_t& services() const;
     [[nodiscard]] std::optional<std::weak_ptr<CService>> service(const UUID& uuid) const;
+    [[nodiscard]] std::optional<std::weak_ptr<CCharacteristic>> characteristic(const UUID& serviceUUID,
+                                                                               const UUID& characteristicUUID) const;
 private:
     [[nodiscard]] std::function<void(const BluetoothLEDevice& device, const IInspectable& inspectable)> connection_changed_handler();
     [[nodiscard]] concurrency::task<bool> query_services(uint64_t address);

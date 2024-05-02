@@ -245,15 +245,15 @@ enum class CharacteristicSubscriptionState
     notSubscribed,
     inFlight
 };
-[[nodiscard]] std::string_view characteristic_subscription_state(CharacteristicSubscriptionState state)
+[[nodiscard]] constexpr std::string_view characteristic_subscription_state_to_str(CharacteristicSubscriptionState state)
 {
     UNHANDLED_CASE_PROTECTION_ON
     // clang-format off
     switch (state)
     {
-        case CharacteristicSubscriptionState::subscribed: return "subscribed";
-        case CharacteristicSubscriptionState::notSubscribed: return "notSubscribed";
-        case CharacteristicSubscriptionState::inFlight: return "inFlight";
+        case CharacteristicSubscriptionState::subscribed: return "Subscribed";
+        case CharacteristicSubscriptionState::notSubscribed: return "Not Subscribed";
+        case CharacteristicSubscriptionState::inFlight: return "In Flight";
     };
     // clang-format on
     UNHANDLED_CASE_PROTECTION_OFF

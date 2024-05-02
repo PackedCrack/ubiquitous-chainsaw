@@ -71,6 +71,21 @@ std::optional<std::weak_ptr<CService>> CDevice::service(const UUID& uuid) const
 
     return std::make_optional<std::weak_ptr<CService>>(iter->second);
 }
+std::optional<std::weak_ptr<CCharacteristic>> CDevice::characteristic(const UUID& serviceUUID, const UUID& characteristicUUID) const
+{
+    auto iter = m_Services.find(serviceUUID);
+    if (iter != std::end(m_Services))
+    {
+        const std::shared_ptr<CService>& pService = iter->second;
+        std::optional<std::weak_ptr<CCharacteristic>> characteristic = pService->characteristic(characteristicUUID);
+        if (characteristic)
+        {
+            return std::move(characteristic.value());
+        }
+    }
+
+    return std::nullopt;
+}
 //void CDevice::unsubscribe_from_characteristic(const ble::UUID& service, const ble::UUID& characteristic)
 //{
 //    auto iter = m_Services.find(service);

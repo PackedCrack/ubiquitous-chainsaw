@@ -10,45 +10,43 @@
 namespace common
 {
 template<typename buffer_t>
-concept const_buffer = requires(const std::remove_reference_t<buffer_t> buffer)
-{
-	typename decltype(buffer)::value_type;
-	typename decltype(buffer)::size_type;
-	typename decltype(buffer)::const_pointer;
-	typename decltype(buffer)::const_reference;
-	typename decltype(buffer)::const_iterator;
-	typename decltype(buffer)::const_reverse_iterator;
+concept const_buffer = requires(const std::remove_reference_t<buffer_t> buffer) {
+    typename decltype(buffer)::value_type;
+    typename decltype(buffer)::size_type;
+    typename decltype(buffer)::const_pointer;
+    typename decltype(buffer)::const_reference;
+    typename decltype(buffer)::const_iterator;
+    typename decltype(buffer)::const_reverse_iterator;
 
 
-		requires sizeof(typename decltype(buffer)::value_type) == 1;
+    requires sizeof(typename decltype(buffer)::value_type) == 1;
 
-	{ buffer.data() } -> std::same_as<typename decltype(buffer)::const_pointer>;
-	{ buffer.size() } -> std::same_as<typename decltype(buffer)::size_type >;
-	{ buffer.operator[](std::declval<typename decltype(buffer)::size_type>()) } -> std::same_as<typename decltype(buffer)::const_reference>;
-	{ buffer.cbegin() } -> std::same_as<typename decltype(buffer)::const_iterator>;
-	{ buffer.cend() } -> std::same_as<typename decltype(buffer)::const_iterator>;
-	{ buffer.crbegin() } -> std::same_as<typename decltype(buffer)::const_reverse_iterator>;
-	{ buffer.crend() } -> std::same_as<typename decltype(buffer)::const_reverse_iterator>;
+    { buffer.data() } -> std::same_as<typename decltype(buffer)::const_pointer>;
+    { buffer.size() } -> std::same_as<typename decltype(buffer)::size_type>;
+    { buffer.operator[](std::declval<typename decltype(buffer)::size_type>()) } -> std::same_as<typename decltype(buffer)::const_reference>;
+    { buffer.cbegin() } -> std::same_as<typename decltype(buffer)::const_iterator>;
+    { buffer.cend() } -> std::same_as<typename decltype(buffer)::const_iterator>;
+    { buffer.crbegin() } -> std::same_as<typename decltype(buffer)::const_reverse_iterator>;
+    { buffer.crend() } -> std::same_as<typename decltype(buffer)::const_reverse_iterator>;
 };
 template<typename buffer_t>
-concept buffer = requires(std::remove_reference_t<buffer_t> buffer)
-{
-	typename decltype(buffer)::value_type;
-	typename decltype(buffer)::size_type;
-	typename decltype(buffer)::pointer;
-	typename decltype(buffer)::reference;
-	typename decltype(buffer)::iterator;
-	typename decltype(buffer)::reverse_iterator;
+concept buffer = requires(std::remove_reference_t<buffer_t> buffer) {
+    typename decltype(buffer)::value_type;
+    typename decltype(buffer)::size_type;
+    typename decltype(buffer)::pointer;
+    typename decltype(buffer)::reference;
+    typename decltype(buffer)::iterator;
+    typename decltype(buffer)::reverse_iterator;
 
-		requires sizeof(typename decltype(buffer)::value_type) == 1;
+    requires sizeof(typename decltype(buffer)::value_type) == 1;
 
-	{ buffer.data() } -> std::same_as<typename decltype(buffer)::pointer>;
-	{ buffer.size() } -> std::same_as<typename decltype(buffer)::size_type >;
-	{ buffer.operator[](std::declval<typename decltype(buffer)::size_type>()) } -> std::same_as<typename decltype(buffer)::reference>;
-	{ buffer.begin() } -> std::same_as<typename decltype(buffer)::iterator>;
-	{ buffer.end() } -> std::same_as<typename decltype(buffer)::iterator>;
-	{ buffer.rbegin() } -> std::same_as<typename decltype(buffer)::reverse_iterator>;
-	{ buffer.rend() } -> std::same_as<typename decltype(buffer)::reverse_iterator>;
+    { buffer.data() } -> std::same_as<typename decltype(buffer)::pointer>;
+    { buffer.size() } -> std::same_as<typename decltype(buffer)::size_type>;
+    { buffer.operator[](std::declval<typename decltype(buffer)::size_type>()) } -> std::same_as<typename decltype(buffer)::reference>;
+    { buffer.begin() } -> std::same_as<typename decltype(buffer)::iterator>;
+    { buffer.end() } -> std::same_as<typename decltype(buffer)::iterator>;
+    { buffer.rbegin() } -> std::same_as<typename decltype(buffer)::reverse_iterator>;
+    { buffer.rend() } -> std::same_as<typename decltype(buffer)::reverse_iterator>;
 };
 template<typename string_t>
 concept string = requires(string_t str) {
