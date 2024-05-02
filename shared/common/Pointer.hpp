@@ -52,7 +52,7 @@ public:
     }
     auto& operator*() const { return *m_Pointer; }
     T* operator->() const { return m_Pointer; }
-    operator bool() { return m_Pointer != nullptr; }
+    operator bool() const { return m_Pointer != nullptr; }
 private:
     T* m_Pointer = nullptr;
 };

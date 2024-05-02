@@ -21,8 +21,8 @@ add_dependencies(${MAIN_PROJECT} CHILD_HEADER_FINDER)
 
 if(MSVC)
     # https://learn.microsoft.com/en-us/cpp/build/reference/analyze-code-analysis?view=msvc-170
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
     #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:anglebrackets>")
     #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_BINARY_DIR}/dependencies>")
     #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_SOURCE_DIR}/../external>")
@@ -39,11 +39,11 @@ if(MSVC)
 
     # runtime checks - incompatible with -O2
     # https://learn.microsoft.com/en-us/cpp/build/reference/rtc-run-time-error-checks?view=msvc-170
-    if(CMAKE_GENERATOR MATCHES "Visual Studio")
-        target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<CONFIG:Debug>:/RTCsu>")
-    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/RTCsu>")
-    endif()
+    #if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    #    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<CONFIG:Debug>:/RTCsu>")
+    #elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    #    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/RTCsu>")
+    #endif()
 
     # https://learn.microsoft.com/en-us/cpp/build/reference/nxcompat-compatible-with-data-execution-prevention?view=msvc-170
     target_link_options(${MAIN_PROJECT} PRIVATE "/NXCOMPAT")

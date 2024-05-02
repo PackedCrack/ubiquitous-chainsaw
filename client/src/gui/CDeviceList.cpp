@@ -159,10 +159,8 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
 }
 void CDeviceList::recreate_list()
 {
-    ASSERT(!m_pScanner->scanning(), "Already scanning!");
-
     std::lock_guard<mutex_t> lock{ *m_pMutex };
-    if (m_ScanTimer.active())
+    if (m_ScanTimer.active() || m_pScanner->scanning())
     {
         return;
     }

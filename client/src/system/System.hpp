@@ -15,6 +15,10 @@ IGNORE_WARNING_POP
 #else
     #error Only windows is implemented
 #endif
+// clang-format off
+
+
+// clang-format on
 namespace sys
 {
 using fire_and_forget_t = os_fire_and_forget_t;
