@@ -173,7 +173,7 @@ std::vector<CCharacteristic> CWhereAmI::make_characteristics(const std::shared_p
 {
     std::vector<CCharacteristic> chars{};
     chars.emplace_back(make_characteristic_demand_rssi(pProfile));
-    chars.emplace_back(make_characteristic_send_rssi(pProfile));
+    chars.emplace_back(make_characteristic_rssi_notification(pProfile));
 
     return chars;
 }
@@ -207,7 +207,7 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
                     LOG_INFO("WHERE_AM_I WRITE EVENT!");
                     if (pSelf->m_NotifyHandle == std::nullopt)
                     {
-                        pSelf->m_NotifyHandle.emplace(handle_of(ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI));
+                        pSelf->m_NotifyHandle.emplace(handle_of(ID_CHARACTERISTIC_WHEREAMI_RSSI_NOTIFICATION));
                     }
 
                     std::span<uint8_t> packet{ pContext->om->om_data, std::span<uint8_t>::size_type{ pContext->om->om_len } };
@@ -257,13 +257,13 @@ auto CWhereAmI::make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfi
             }
             else
             {
-                LOG_WARN("Characteristic callback for \"Server Auth\" failed to retrieve pointer to self from shared_ptr to Profile.");
+                LOG_WARN("Characteristic callback for \"DemandRSSI\" failed to retrieve pointer to self from shared_ptr to Profile.");
             }
         }
         else
         {
             LOG_WARN(
-                "Characteristic callback for \"Server Auth\" failed to take ownership of shared pointer to profile! It has been deleted.");
+                "Characteristic callback for \"DemandRSSI\" failed to take ownership of shared pointer to profile! It has been deleted.");
         }
 
         return std::to_underlying(NimbleErrorCode::unexpectedCallbackBehavior);
@@ -274,7 +274,7 @@ CCharacteristic CWhereAmI::make_characteristic_demand_rssi(const std::shared_ptr
 {
     return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_DEMAND_RSSI, make_callback_demand_rssi(pProfile), CharsPropertyFlag::write);
 }
-auto CWhereAmI::make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile)
+auto CWhereAmI::make_callback_rssi_notification(const std::shared_ptr<Profile>& pProfile)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wshadow"
@@ -324,8 +324,10 @@ auto CWhereAmI::make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile
     };
 #pragma GCC diagnostic pop
 }
-CCharacteristic CWhereAmI::make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile)
+CCharacteristic CWhereAmI::make_characteristic_rssi_notification(const std::shared_ptr<Profile>& pProfile)
 {
-    return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_SEND_RSSI, make_callback_send_rssi(pProfile), CharsPropertyFlag::notify);
+    return make_characteristic(ID_CHARACTERISTIC_WHEREAMI_RSSI_NOTIFICATION,
+                               make_callback_rssi_notification(pProfile),
+                               CharsPropertyFlag::notify);
 }
 }    // namespace ble

@@ -28,8 +28,8 @@ private:
     [[nodiscard]] std::vector<CCharacteristic> make_characteristics(const std::shared_ptr<Profile>& pProfile);
     [[nodiscard]] auto make_callback_demand_rssi(const std::shared_ptr<Profile>& pProfile);
     [[nodiscard]] CCharacteristic make_characteristic_demand_rssi(const std::shared_ptr<Profile>& pProfile);
-    [[nodiscard]] auto make_callback_send_rssi(const std::shared_ptr<Profile>& pProfile);
-    [[nodiscard]] CCharacteristic make_characteristic_send_rssi(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] auto make_callback_rssi_notification(const std::shared_ptr<Profile>& pProfile);
+    [[nodiscard]] CCharacteristic make_characteristic_rssi_notification(const std::shared_ptr<Profile>& pProfile);
 private:
     int8_t m_Rssi;
     std::optional<uint16_t> m_NotifyHandle;
