@@ -19,15 +19,15 @@ template<typename service_t, typename... make_args_t>
 concept service = requires(service_t service, const service_t constService, const UUID uuid) {
     awaitable_make<service_t, make_args_t...>;
     string_uuid<service_t>;
-    typename service_t::awaitable_subscribe_t;
+    //typename service_t::awaitable_subscribe_t;
 
-    {
-        service.subscribe_to_characteristic(UUID{}, [](std::span<const uint8_t>) {})
-    } -> std::same_as<typename service_t::awaitable_subscribe_t>;
-    {
-        service.subscribe_to_characteristic(UUID{}, std::function<void(std::span<const uint8_t>)>{})
-    } -> std::same_as<typename service_t::awaitable_subscribe_t>;
-    { service.unsubscribe_from_characteristic(UUID{}) };
+    //{
+    //    service.subscribe_to_characteristic(UUID{}, [](std::span<const uint8_t>) {})
+    //} -> std::same_as<typename service_t::awaitable_subscribe_t>;
+    //{
+    //    service.subscribe_to_characteristic(UUID{}, std::function<void(std::span<const uint8_t>)>{})
+    //} -> std::same_as<typename service_t::awaitable_subscribe_t>;
+    //{ service.unsubscribe_from_characteristic(UUID{}) };
 
     { constService.characteristic(uuid) } -> std::same_as<std::optional<std::weak_ptr<CCharacteristic>>>;
 };

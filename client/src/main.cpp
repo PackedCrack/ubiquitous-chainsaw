@@ -15,6 +15,7 @@
 #include "CServer.hpp"
 
 #include <winrt/Windows.Foundation.h>
+#include <winrt/windows.storage.streams.h>
 
 #include "bluetoothLE/Scanner.hpp"
 #include "bluetoothLE/Device.hpp"
@@ -134,10 +135,10 @@ int main(int argc, char** argv)
     gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
     gui::CGui gui{};
 
-    auto pServer = std::make_shared<CServer>();
-    CAuthenticator authenticator{ pServer };
+    CServer server{};
+    CAuthenticator authenticator{ server };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u, std::make_shared<CRssiDemander>(*pServer, window, std::chrono::seconds(2)));
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(5)));
 
 
     bool exit = false;
@@ -155,7 +156,7 @@ int main(int argc, char** argv)
         //    rssiPlot.add_rssi_value(val);
         //}
 
-        if (pServer->connected())
+        if (server.connected())
         {
             // int missedAnswers = rssiPlot.missed();
             // if (missedAnswers > 5)
@@ -173,14 +174,14 @@ int main(int argc, char** argv)
         }
         else
         {
-            if (!pServer->is_authenticated())
+            if (!server.is_authenticated())
             {
                 // TODO::
                 if (!scanner.scanning())
                 {
                     LOG_INFO("RE CREATING RSSI DEMANDER");
                     deviceList.recreate_list();
-                    rssiPlot = gui::CRSSIPlot{ 30u, std::make_shared<CRssiDemander>(*pServer, window, std::chrono::seconds(2)) };
+                    rssiPlot = gui::CRSSIPlot{ 30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(5)) };
                 }
 
                 static uint32_t ab = 0;

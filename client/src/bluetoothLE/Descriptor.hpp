@@ -26,7 +26,7 @@ concept descriptor = requires(const descriptor_t constDescriptor) {
 };
 template<typename descriptor_t, typename... ctor_args_t>
 requires descriptor<descriptor_t, ctor_args_t...>
-[[nodiscard]] typename descriptor_t::awaitable_t make_descriptor(ctor_args_t&&... args)
+[[nodiscard]] typename descriptor_t::awaitable_make_t make_descriptor(ctor_args_t&&... args)
 {
     return descriptor_t::make(std::forward<ctor_args_t>(args)...);
 }

@@ -9,6 +9,8 @@
 #define TO_BOOL(expr) common::enum_to_bool(expr)
 namespace
 {
+constexpr std::size_t INDEX_SEMAPHORE_HAS_SUBSCRIBED = 0u;
+constexpr std::size_t INDEX_SEMAPHORE_UNSUBSCRIBE = 1u;
 [[nodiscard]] ble::CharacteristicProperties
     operator|(ble::CharacteristicProperties lhs,
               winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristicProperties rhs)
@@ -126,117 +128,163 @@ namespace
 }    // namespace
 namespace ble
 {
-CCharacteristic::awaitable_t CCharacteristic::make(const GattCharacteristic& characteristic)
+CCharacteristic::awaitable_make_t CCharacteristic::make(const GattCharacteristic& characteristic)
 {
-    CCharacteristic charac{ characteristic };
+    // Work around because make_shared requires a public constructor
+    // But construction of CCharacteristic should go through this factory function
+    std::shared_ptr<CCharacteristic> pCharacteristic{ new CCharacteristic{ characteristic } };
+    ASSERT(pCharacteristic, "Expected successful construction");
 
 #ifndef NDEBUG
-    std::vector<std::string> allProperties = charac.properties_as_str();
-    std::printf("\nCharacteristic UUID: %ws", to_hstring(charac.m_pCharacteristic->Uuid()).data());
-    std::printf("\nCharacteristic properties: ");
+    std::vector<std::string> allProperties = pCharacteristic->properties_as_str();
+    std::string line{};
     for (auto&& property : allProperties)
     {
-        std::printf("%s, ", property.c_str());
+        line += property;
+        line += ", ";
     }
-    std::printf("\n%s", std::format("Characteristic protection level: \"{}\"", prot_level_to_str(charac.protection_level())).c_str());
+    // Remove the two last characters, to make sure the string doesn't end with ', '
+    line.pop_back();
+    line.pop_back();
+
+    LOG_INFO_FMT("Characteristic UUID: \"{}\""
+                 "\nCharacteristic properties: \"{}\""
+                 "\nCharacteristic protection level: \"{}\"",
+                 winrt::to_string(to_hstring(pCharacteristic->m_Characteristic.Uuid())).c_str(),
+                 line.c_str(),
+                 prot_level_to_str(pCharacteristic->protection_level()));
 #endif
 
-    co_await charac.query_descriptors();
-    co_return charac;
+    co_await pCharacteristic->query_descriptors();
+    co_return pCharacteristic;
 }
 CCharacteristic::CCharacteristic(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic)
-    : m_pCharacteristic{ std::make_shared<GattCharacteristic>(std::move(characteristic)) }
+    : m_Characteristic{ std::move(characteristic) }
     , m_Descriptors{}
     , m_NotifyEventHandler{}
     , m_Revoker{}
-{}
+    , m_InFlight{}
+{
+    std::generate(std::begin(m_InFlight), std::end(m_InFlight), []() { return std::make_unique<std::binary_semaphore>(1); });
+}
 CCharacteristic::~CCharacteristic()
 {
     revoke_value_changed_handler();
 }
-CCharacteristic::CCharacteristic(const CCharacteristic& other)
-    : m_pCharacteristic{ other.m_pCharacteristic }
-    , m_Descriptors{ other.m_Descriptors }
-    , m_NotifyEventHandler{ other.m_NotifyEventHandler }
-    , m_Revoker{}
-{
-    refresh_value_changed_handler();
-}
 CCharacteristic::CCharacteristic(CCharacteristic&& other) noexcept
-    : m_pCharacteristic{ std::move(other.m_pCharacteristic) }
+    : m_Characteristic{ std::move(other.m_Characteristic) }
     , m_Descriptors{ std::move(other.m_Descriptors) }
     , m_NotifyEventHandler{ std::move(other.m_NotifyEventHandler) }
     , m_Revoker{ std::move(other.m_Revoker) }
-{
-    refresh_value_changed_handler();
-};
-CCharacteristic& CCharacteristic::operator=(const CCharacteristic& other)
-{
-    if (this != &other)
-    {
-        m_pCharacteristic = other.m_pCharacteristic;
-        m_Descriptors = other.m_Descriptors;
-        m_NotifyEventHandler = other.m_NotifyEventHandler;
-        m_Revoker = GattCharacteristic::ValueChanged_revoker{};
-        refresh_value_changed_handler();
-    }
-
-    return *this;
-}
+    , m_InFlight{ std::move(other.m_InFlight) } {};
 CCharacteristic& CCharacteristic::operator=(CCharacteristic&& other) noexcept
 {
-    m_pCharacteristic = std::move(other.m_pCharacteristic);
+    m_Characteristic = std::move(other.m_Characteristic);
     m_Descriptors = std::move(other.m_Descriptors);
     m_NotifyEventHandler = std::move(other.m_NotifyEventHandler);
     m_Revoker = std::move(other.m_Revoker);
-    refresh_value_changed_handler();
+    m_InFlight = std::move(other.m_InFlight);
+
 
     return *this;
 }
-CCharacteristic::awaitable_bool_t CCharacteristic::has_subscribed() const
+CCharacteristic::awaitable_subscription_state_t CCharacteristic::has_subscribed() const
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 
     auto iter = m_Descriptors.find(uuid_descriptor_client_characteristic_configuration_descriptor());
     ASSERT(iter != std::end(m_Descriptors), "has_subscribed called on unsubscribable characteristic!");
 
-    std::expected<std::vector<uint8_t>, CommunicationStatus> expectedValue = co_await iter->second->read_value();
-    if (expectedValue)
+    std::binary_semaphore* pInFlight = m_InFlight[INDEX_SEMAPHORE_HAS_SUBSCRIBED].get();
+    if (pInFlight->try_acquire())
     {
-        ASSERT_FMT(expectedValue->size() > 1, "Expected at least a uint16 in the Client Configuration Descriptor..");
+        auto returnValue = CharacteristicSubscriptionState::notSubscribed;
 
-        const std::vector<uint8_t>& data = *expectedValue;
-        uint16_t value = data[0];
-        value = value | data[1];
+        std::shared_ptr<CDescriptor> pDescriptor = iter->second;
+        ASSERT(pDescriptor, "Expected a valid ptr.");
 
-        if (value & std::to_underlying(GattClientCharacteristicConfigurationDescriptorValue::Notify))
+        std::expected<std::vector<uint8_t>, CommunicationStatus> expectedValue = co_await pDescriptor->read_value();
+        if (expectedValue)
         {
-            co_return true;
+            ASSERT_FMT(expectedValue->size() > 1, "Expected at least a uint16 in the Client Configuration Descriptor..");
+
+            // The Client Configuration Descriptor should return two bytes which holds if we are subscribed
+            const std::vector<uint8_t>& data = *expectedValue;
+            uint16_t value = data[0];
+            value = value | data[1];
+
+            if (value & std::to_underlying(GattClientCharacteristicConfigurationDescriptorValue::Notify) ||
+                value & std::to_underlying(GattClientCharacteristicConfigurationDescriptorValue::Indicate))
+            {
+                returnValue = CharacteristicSubscriptionState::subscribed;
+            }
         }
-        if (value & std::to_underlying(GattClientCharacteristicConfigurationDescriptorValue::Indicate))
+        else
         {
-            co_return true;
+            LOG_ERROR_FMT("Failed to query subscription state from Client Configuration Descriptor. Reason: \"{}\"",
+                          communication_status_to_str(expectedValue.error()));
         }
+
+        pInFlight->release();
+        co_return returnValue;
     }
     else
     {
-        LOG_ERROR_FMT("Could not read Client Configuration Descriptor. Reason: \"{}\"", communication_status_to_str(expectedValue.error()));
+        co_return CharacteristicSubscriptionState::inFlight;
     }
-
-    co_return false;
 }
-CCharacteristic::awaitable_unsubscribe_t CCharacteristic::unsubscribe()
+CCharacteristic::awaitable_subscription_state_t CCharacteristic::unsubscribe()
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-    ASSERT(m_pCharacteristic, "Expected a valid characteristic");
+    ASSERT(m_Characteristic, "Expected a valid characteristic");
 
-    revoke_value_changed_handler();
-    co_return communication_status_from_winrt(co_await m_pCharacteristic->WriteClientCharacteristicConfigurationDescriptorAsync(
-        GattClientCharacteristicConfigurationDescriptorValue::None));
+    auto returnValue = CharacteristicSubscriptionState::subscribed;
+
+    std::binary_semaphore* pInFlight = m_InFlight[INDEX_SEMAPHORE_UNSUBSCRIBE].get();
+    if (pInFlight->try_acquire())
+    {
+        revoke_value_changed_handler();
+        try
+        {
+            using GattCCCDValue = GattClientCharacteristicConfigurationDescriptorValue;
+
+            auto status = co_await m_Characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattCCCDValue::None);
+            if (status == GattCommunicationStatus::Success)
+            {
+                returnValue = CharacteristicSubscriptionState::notSubscribed;
+            }
+            else
+            {
+                LOG_ERROR_FMT("Failed to unsubscribe from Characteristic: \"{}\". Reason: \"{}\"",
+                              winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
+                              communication_status_to_str(communication_status_from_winrt(status)));
+            }
+        }
+        catch (const winrt::hresult_error& err)
+        {
+            LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to unsubscribe from Characteristic: \"{}\".",
+                         err.code().value,
+                         winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                         winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+        }
+        catch (...)
+        {
+            LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to unsubscribe from Characteristic: \"{}\"",
+                          winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+        }
+
+        pInFlight->release();
+    }
+    else
+    {
+        returnValue = CharacteristicSubscriptionState::inFlight;
+    }
+
+    co_return returnValue;
 }
 [[nodiscard]] std::string CCharacteristic::uuid_as_str() const
 {
-    return winrt::to_string(winrt::to_hstring(m_pCharacteristic->Uuid()));
+    return winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid()));
 }
 CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
 {
@@ -246,38 +294,57 @@ CCharacteristic::awaitable_read_t CCharacteristic::read_value() const
     using namespace Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace Windows::Storage::Streams;
 
-    GattReadResult result = co_await m_pCharacteristic->ReadValueAsync(BluetoothCacheMode::Uncached);
-
-    CommunicationStatus status = communication_status_from_winrt(result.Status());
-    if (status == CommunicationStatus::success)
+    try
     {
-        IBuffer buffer = result.Value();
+        GattReadResult result = co_await m_Characteristic.ReadValueAsync(BluetoothCacheMode::Uncached);
 
-        read_t data{};
-        data->resize(buffer.Length());
-        size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
-        std::memcpy(data->data(), buffer.data(), smallestSize);
+        CommunicationStatus status = communication_status_from_winrt(result.Status());
+        if (status == CommunicationStatus::success)
+        {
+            IBuffer buffer = result.Value();
 
-        co_return data;
+            read_t data{};
+            data->resize(buffer.Length());
+            std::size_t smallestSize = buffer.Length() <= data->size() ? buffer.Length() : data->size();
+            std::memcpy(data->data(), buffer.data(), smallestSize);
+
+            co_return data;
+        }
+        else
+        {
+            LOG_WARN_FMT("Failed to read from Characteristic: \"{}\". Reason: \"{}\"",
+                         winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str(),
+                         communication_status_to_str(status));
+            co_return std::unexpected(status);
+        }
     }
-    else
+    catch (const winrt::hresult_error& err)
     {
-        LOG_ERROR_FMT("Read failed with: \"{}\"", communication_status_to_str(status));
-        co_return std::unexpected(status);
+        LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to read from Characteristic: \"{}\".",
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
+    catch (...)
+    {
+        LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to read from Characteristic: \"{}\"",
+                      winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+    }
+
+    co_return std::unexpected{ CommunicationStatus::unreachable };
 }
-CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data) const
+CCharacteristic::awaitable_communication_status_t CCharacteristic::write_data(const std::vector<uint8_t>& data) const
 {
     co_return co_await write_data(data, GattWriteOption::WriteWithoutResponse);
 }
-CCharacteristic::awaitable_write_t CCharacteristic::write_data_with_response(const std::vector<uint8_t>& data) const
+CCharacteristic::awaitable_communication_status_t CCharacteristic::write_data_with_response(const std::vector<uint8_t>& data) const
 {
     co_return co_await write_data(data, GattWriteOption::WriteWithResponse);
 }
 CharacteristicProperties CCharacteristic::properties() const
 {
-    ASSERT(m_pCharacteristic, "Expected a valid characteristic.");
-    return to_props_from_winrt(m_pCharacteristic->CharacteristicProperties());
+    ASSERT(m_Characteristic, "Expected a valid characteristic.");
+    return to_props_from_winrt(m_Characteristic.CharacteristicProperties());
 }
 std::vector<std::string> CCharacteristic::properties_as_str() const
 {
@@ -285,8 +352,8 @@ std::vector<std::string> CCharacteristic::properties_as_str() const
 }
 ProtectionLevel CCharacteristic::protection_level() const
 {
-    ASSERT(m_pCharacteristic, "Expected a valid characteristic.");
-    return protection_level_from_winrt(m_pCharacteristic->ProtectionLevel());
+    ASSERT(m_Characteristic, "Expected a valid characteristic.");
+    return protection_level_from_winrt(m_Characteristic.ProtectionLevel());
 }
 void CCharacteristic::revoke_value_changed_handler()
 {
@@ -295,49 +362,54 @@ void CCharacteristic::revoke_value_changed_handler()
         m_Revoker.revoke();
     }
 }
-void CCharacteristic::register_value_changed_handler()
+auto CCharacteristic::value_changed_handler()
 {
-    m_Revoker = m_pCharacteristic->ValueChanged(winrt::auto_revoke, value_changed_handler());
-}
-void CCharacteristic::refresh_value_changed_handler()
-{
-    revoke_value_changed_handler();
-    register_value_changed_handler();
-}
-std::function<void(winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattCharacteristic characteristic,
-                   const winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattValueChangedEventArgs& args)>
-    CCharacteristic::value_changed_handler()
-{
-    return [this](GattCharacteristic characteristic, const GattValueChangedEventArgs& args)
+    return [wpSelf = weak_from_this()](GattCharacteristic characteristic, const GattValueChangedEventArgs& args)
     {
-        winrt::Windows::Storage::Streams::IBuffer buffer = args.CharacteristicValue();
-        this->m_NotifyEventHandler(std::span<uint8_t>{ buffer.data(), buffer.Length() });
+        std::shared_ptr<CCharacteristic> pSelf = wpSelf.lock();
+        if (pSelf)
+        {
+            winrt::Windows::Storage::Streams::IBuffer buffer = args.CharacteristicValue();
+            ASSERT(pSelf->m_NotifyEventHandler, "Expected a event handler");
+            pSelf->m_NotifyEventHandler(std::span<uint8_t>{ buffer.data(), buffer.Length() });
+        }
     };
 }
-CCharacteristic::awaitable_write_t CCharacteristic::write_data(const std::vector<uint8_t>& data, GattWriteOption option) const
+void CCharacteristic::register_value_changed_handler()
+{
+    // Unusure if this callback is characteristic specific or one big callback for ALL subscribed characteristics
+    // - Its not a problem for now since there exist only a single subscribable characteristic..
+    m_Revoker = m_Characteristic.ValueChanged(winrt::auto_revoke, value_changed_handler());
+}
+CCharacteristic::awaitable_communication_status_t CCharacteristic::write_data(const std::vector<uint8_t>& data,
+                                                                              GattWriteOption option) const
 {
     using Buffer = winrt::Windows::Storage::Streams::Buffer;
 
 
     Buffer buffer{ static_cast<uint32_t>(data.size()) };
     buffer.Length(buffer.Capacity());
-    std::memcpy(buffer.data(), data.data(), buffer.Length() <= data.size() ? buffer.Length() : data.size());
+    std::size_t smallestSize = buffer.Length() <= data.size() ? buffer.Length() : data.size();
+    std::memcpy(buffer.data(), data.data(), smallestSize);
 
     try
     {
-        co_return communication_status_from_winrt(co_await m_pCharacteristic->WriteValueAsync(buffer, option));
+        co_return communication_status_from_winrt(co_await m_Characteristic.WriteValueAsync(buffer, option));
     }
-    catch (...)    // catch all because i have no clue what windows throws and when
+    catch (const winrt::hresult_error& err)
     {
-        winrt::guid guid = m_pCharacteristic->Uuid();
-        uint16_t uniqueValue = guid.Data1 & 0x00'00'FF'00;
-        uniqueValue = uniqueValue | (guid.Data1 & 0x00'00'00'FF);
-
-        LOG_ERROR_FMT("Windows BLE driver exception when trying to Write to characteristic with UUID: \"{}\"",
-                      std::format("{:02X}", uniqueValue));
-
-        co_return ble::CommunicationStatus::unreachable;
+        LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to write to Characteristic: \"{}\".",
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
+    catch (...)
+    {
+        LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to write to Characteristic: \"{}\"",
+                      winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+    }
+
+    co_return CommunicationStatus::unreachable;
 }
 winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 {
@@ -346,29 +418,42 @@ winrt::Windows::Foundation::IAsyncAction CCharacteristic::query_descriptors()
 
 
     m_Descriptors.clear();
-
-    GattDescriptorsResult result = co_await m_pCharacteristic->GetDescriptorsAsync();
-    if (result.Status() == GattCommunicationStatus::Success)
+    try
     {
-        IVectorView<GattDescriptor> descriptors = result.Descriptors();
-        m_Descriptors.reserve(descriptors.Size());
-
-        for (auto&& descriptor : descriptors)
+        GattDescriptorsResult result = co_await m_Characteristic.GetDescriptorsAsync();
+        if (result.Status() == GattCommunicationStatus::Success)
         {
-            auto [iter, emplaced] =
-                m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()),
-                                          std::make_shared<CDescriptor>(co_await make_descriptor<CDescriptor>(descriptor)));
-            if (!emplaced)
+            IVectorView<GattDescriptor> descriptors = result.Descriptors();
+            m_Descriptors.reserve(descriptors.Size());
+
+            for (auto&& descriptor : descriptors)
             {
-                LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
+                auto [iter, emplaced] =
+                    m_Descriptors.try_emplace(make_uuid(descriptor.Uuid()), co_await make_descriptor<CDescriptor>(descriptor));
+                if (!emplaced)
+                {
+                    LOG_ERROR_FMT("Failed to emplace descriptor with UUID: \"{}\"", uuid_as_str());
+                }
             }
         }
+        else
+        {
+            LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
+                          communication_status_to_str(communication_status_from_winrt(result.Status())),
+                          uuid_as_str());
+        }
     }
-    else
+    catch (const winrt::hresult_error& err)
     {
-        LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Descriptors from Characteristic with UUID: \"{}\"",
-                      communication_status_to_str(communication_status_from_winrt(result.Status())),
-                      uuid_as_str());
+        LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to query descriptors from Characteristic: \"{}\".",
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
+    }
+    catch (...)
+    {
+        LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to write to query descriptors from Characteristic: \"{}\"",
+                      winrt::to_string(winrt::to_hstring(m_Characteristic.Uuid())).c_str());
     }
 }
 }    // namespace ble

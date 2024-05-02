@@ -19,21 +19,21 @@
 // clang-format on
 namespace ble
 {
-class CDescriptor
+class CDescriptor : public std::enable_shared_from_this<CDescriptor>
 {
 public:
-    using awaitable_t = concurrency::task<CDescriptor>;
+    // We return shared ptrs because concurrency::task<T> requires that T has a copy constructor
+    using awaitable_make_t = concurrency::task<std::shared_ptr<CDescriptor>>;
     using read_t = std::expected<std::vector<uint8_t>, CommunicationStatus>;
     using awaitable_read_t = concurrency::task<read_t>;
 private:
     using GattDescriptor = winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDescriptor;
 public:
-    [[nodiscard]] static awaitable_t make(const GattDescriptor& descriptor);
-    CDescriptor() = default;
+    [[nodiscard]] static awaitable_make_t make(const GattDescriptor& descriptor);
     ~CDescriptor() = default;
-    CDescriptor(const CDescriptor& other) = default;
+    CDescriptor(const CDescriptor& other) = delete;
     CDescriptor(CDescriptor&& other) = default;
-    CDescriptor& operator=(const CDescriptor& other) = default;
+    CDescriptor& operator=(const CDescriptor& other) = delete;
     CDescriptor& operator=(CDescriptor&& other) = default;
 private:
     explicit CDescriptor(GattDescriptor descriptor);
@@ -42,6 +42,6 @@ public:
     [[nodiscard]] std::string uuid_as_str() const;
     [[nodiscard]] ProtectionLevel protection_level() const;
 private:
-    std::shared_ptr<GattDescriptor> m_pDescriptor;
+    GattDescriptor m_Descriptor;
 };
 }    // namespace ble
