@@ -8,10 +8,10 @@
 #include "SDL3/SDL.h"
 #include "../../win32.hpp"
 #include <shellapi.h>
-
-
 namespace gfx
-{ class CWindow; } // namespace gfx
+{
+class CWindow;
+}    // namespace gfx
 namespace sys
 {
 class CTrayIcon
@@ -50,4 +50,4 @@ private:
     gfx::CWindow* m_pWindow;
     MessageCallback m_MessageCallback;
 };
-}   // namespace sys
+}    // namespace sys

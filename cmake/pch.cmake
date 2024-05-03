@@ -24,6 +24,7 @@ SET(STD_PCH <cstdint>
         <ranges>
         <random>
         <queue>
+        <semaphore>
         <cerrno>
         <unordered_set>
         <numeric>)

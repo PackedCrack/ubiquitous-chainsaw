@@ -29,11 +29,45 @@ idf_component_register(
 	"include" # https://www.wolfssl.com/how-do-i-manage-the-build-configuration-of-wolfssl/
 	)
 
-include(../../cmake/CompilerWarnings.cmake)
-apply_compiler_warnings(${COMPONENT_LIB})
+set_target_properties(${COMPONENT_LIB} PROPERTIES CXX_STANDARD 23)
+
+
+SET(warnings
+        -Wall
+        -Wextra
+        -Wshadow
+        -Wnon-virtual-dtor
+        -Wold-style-cast
+        -Wcast-align
+        -Wunused
+        -Woverloaded-virtual
+        -Wpedantic
+        -Wconversion
+        -Wsign-conversion
+        -Wnull-dereference
+        -Wdouble-promotion
+        -Wformat=2
+        -Wimplicit-fallthrough
+        -Wmisleading-indentation
+        -Wduplicated-cond
+        -Wduplicated-branches
+        -Wlogical-op
+)
+target_compile_options(${COMPONENT_LIB} PRIVATE ${warnings})
 
 include(../../cmake/pch.cmake)
 use_pch(${COMPONENT_LIB})
 
 include(../cmake/cppcheck.cmake)
 add_dependencies(${COMPONENT_LIB} CPPCHECK_${COMPONENT_LIB})
+
+
+file(GLOB_RECURSE ALL_SOURCE_FILES 
+	"${CMAKE_SOURCE_DIR}/main/*.cpp"
+	"${CMAKE_SOURCE_DIR}/main/*.hpp")
+add_custom_target(
+    clang-format
+    COMMAND clang-format -i -style=file ${ALL_SOURCE_FILES}
+    COMMENT "Running clang-format on all source files."
+)
+add_dependencies(${COMPONENT_LIB} clang-format)

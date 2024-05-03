@@ -14,4 +14,4 @@ project(${MAIN_PROJECT} LANGUAGES C CXX)
 
 # Can't configure cmake because its hijacked by espressif......
 # Have to resort to globals
-add_compile_options("-std=c++23" "${GCC_WARNINGS}")
+#add_compile_options("-std=c++23" "${GCC_WARNINGS}")

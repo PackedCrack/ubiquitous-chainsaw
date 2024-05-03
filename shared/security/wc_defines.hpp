@@ -17,8 +17,13 @@ static constexpr WCResult WC_FAILURE = -1;
 #define WC_ERR_TO_STR(err) wc_GetErrorString(err)
 
 #ifndef NDEBUG
-#define WC_CHECK(expr) if(WCResult code = expr; code == WC_SUCCESS) {} \
-else { LOG_ASSERT_FMT("WolfCrypt failure: \"{}\"", WC_ERR_TO_STR(code)); }
+    #define WC_CHECK(expr)                                                                                                                 \
+        if (WCResult code = expr; code == WC_SUCCESS)                                                                                      \
+        {}                                                                                                                                 \
+        else                                                                                                                               \
+        {                                                                                                                                  \
+            LOG_ASSERT_FMT("WolfCrypt failure: \"{}\"", WC_ERR_TO_STR(code));                                                              \
+        }
 #else
-#define WC_CHECK(expr) expr
+    #define WC_CHECK(expr) expr
 #endif

@@ -1,27 +1,26 @@
 //
 // Created by qwerty on 2024-01-26.
 //
-
 #pragma once
 #include "../client_defines.hpp"
 #include "common/ble_services.hpp"
 #include "common/common.hpp"
+// clang-format off
 
 
+// clang-format on
 namespace ble
 {
 template<typename int_t>
 concept unsigned_integral = std::integral<int_t> && std::is_unsigned_v<int_t>;
 template<typename async_t, typename... make_args_t>
-concept awaitable_make = requires
-{
-    typename async_t::awaitable_t;
-    requires std::is_invocable_r_v<typename async_t::awaitable_t, decltype(&async_t::make), make_args_t...>;
+concept awaitable_make = requires {
+    typename async_t::awaitable_make_t;
+    requires std::is_invocable_r_v<typename async_t::awaitable_make_t, decltype(&async_t::make), make_args_t...>;
 };
 template<typename T>
-concept string_uuid = requires(const T type)
-{
-    { type.uuid_as_str() } -> std::convertible_to<std::string>;
+concept string_uuid = requires(const T type) {
+    { type.uuid_as_str() } -> std::same_as<std::string>;
 };
 template<typename int_t>
 requires unsigned_integral<int_t>
@@ -33,16 +32,16 @@ template<typename uuid_t>
 [[nodiscard]] ble::UUID make_uuid(uuid_t&& guid)
 {
     ble::UUID uuid{};
-    uuid.data[0] = (guid.Data1 & 0xFF00'0000) >> 24;
-    uuid.data[1] = common::assert_down_cast<uint8_t>((guid.Data1 & 0x00FF'0000) >> 16);
-    uuid.data[2] = (guid.Data1 & 0x0000'FF00) >> 8;
-    uuid.data[3] = (guid.Data1 & 0x0000'00FF);
+    uuid.data[0] = (guid.Data1 & 0xFF'00'00'00) >> 24;
+    uuid.data[1] = common::assert_down_cast<uint8_t>((guid.Data1 & 0x00'FF'00'00) >> 16);
+    uuid.data[2] = (guid.Data1 & 0x00'00'FF'00) >> 8;
+    uuid.data[3] = (guid.Data1 & 0x00'00'00'FF);
 
-    uuid.data[4] = (guid.Data2 & 0x0000'FF00) >> 8;
-    uuid.data[5] = (guid.Data2 & 0x0000'00FF);
+    uuid.data[4] = (guid.Data2 & 0x00'00'FF'00) >> 8;
+    uuid.data[5] = (guid.Data2 & 0x00'00'00'FF);
 
-    uuid.data[6] = (guid.Data3 & 0x0000'FF00) >> 8;
-    uuid.data[7] = (guid.Data3 & 0x0000'00FF);
+    uuid.data[6] = (guid.Data3 & 0x00'00'FF'00) >> 8;
+    uuid.data[7] = (guid.Data3 & 0x00'00'00'FF);
 
     uuid.data[8] = guid.Data4[0];
     uuid.data[9] = guid.Data4[1];
@@ -55,8 +54,8 @@ template<typename uuid_t>
 
 #ifndef NDEBUG
     ASSERT((uuid == uuid_service_whoami()) || (uuid == uuid_characteristic_whoami_authenticate()) || (uuid == uuid_service_whereami()) ||
-           (uuid == uuid_characteristic_whereami_send_rssi()) || (uuid == uuid_characteristic_whereami_demand_rssi()) ||
-           (uuid == client_characteristic_configuration_descriptor()),
+               (uuid == uuid_characteristic_whereami_rssi_notification()) || (uuid == uuid_characteristic_whereami_demand_rssi()) ||
+               (uuid == uuid_descriptor_client_characteristic_configuration_descriptor()),
            "Unknown uuid!");
 #endif
 
@@ -99,23 +98,16 @@ enum class AddressType
 };
 [[nodiscard]] constexpr std::string_view address_type_to_str(AddressType type)
 {
+    // clang-format off
     UNHANDLED_CASE_PROTECTION_ON
     switch (type)
     {
-    case AddressType::real:
-    {
-        return "Real";
-    }
-    case AddressType::random:
-    {
-        return "Random";
-    }
-    case AddressType::none:
-    {
-        return "None";
-    }
+    case AddressType::real: { return "Real"; }
+    case AddressType::random: { return "Random"; }
+    case AddressType::none: { return "None"; }
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
 
     std::unreachable();
 }
@@ -123,7 +115,6 @@ struct DeviceInfo
 {
     std::optional<uint64_t> address;
     AddressType addressType = AddressType::none;
-
     [[nodiscard]] static std::string address_as_str(uint64_t address) { return hex_addr_to_str(address); }
 };
 enum class ConnectionStatus
@@ -133,6 +124,7 @@ enum class ConnectionStatus
 };
 [[nodiscard]] constexpr std::string_view connnection_status_to_str(ConnectionStatus status)
 {
+    // clang-format off
     UNHANDLED_CASE_PROTECTION_ON
     switch (status)
     // cppcheck-suppress missingReturn
@@ -141,6 +133,7 @@ enum class ConnectionStatus
     case ConnectionStatus::disconnected: return "Disconnected";
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
 
     std::unreachable();
 }
@@ -151,8 +144,9 @@ enum class CommunicationStatus
     protocolError = 2,
     accessDenied = 3
 };
-[[nodiscard]] constexpr std::string_view gatt_communication_status_to_str(CommunicationStatus status)
+[[nodiscard]] constexpr std::string_view communication_status_to_str(CommunicationStatus status)
 {
+    // clang-format off
     UNHANDLED_CASE_PROTECTION_ON
     switch (status)
     // cppcheck-suppress missingReturn
@@ -163,7 +157,107 @@ enum class CommunicationStatus
     case CommunicationStatus::success: return "Success";
     }
     UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
 
     std::unreachable();
 }
-}   // namespace ble
+enum class CharacteristicProperties : uint32_t
+{
+    none = 0,
+    broadcast = 0x1,
+    read = 0x2,
+    writeWithoutResponse = 0x4,
+    write = 0x8,
+    notify = 0x10,
+    indicate = 0x20,
+    authenticatedSignedWrites = 0x40,
+    extendedProperties = 0x80,
+    reliableWrites = 0x1'00,
+    writableAuxiliaries = 0x2'00,
+};
+[[nodiscard]] constexpr CharacteristicProperties operator&(CharacteristicProperties lhs, CharacteristicProperties rhs)
+{
+    return CharacteristicProperties{ std::to_underlying(lhs) & std::to_underlying(rhs) };
+}
+[[nodiscard]] constexpr CharacteristicProperties operator|(CharacteristicProperties lhs, CharacteristicProperties rhs)
+{
+    return CharacteristicProperties{ std::to_underlying(lhs) | std::to_underlying(rhs) };
+}
+[[nodiscard]] constexpr CharacteristicProperties operator^(CharacteristicProperties lhs, CharacteristicProperties rhs)
+{
+    return CharacteristicProperties{ std::to_underlying(lhs) ^ std::to_underlying(rhs) };
+}
+[[nodiscard]] constexpr CharacteristicProperties operator~(CharacteristicProperties prop)
+{
+    return CharacteristicProperties{ std::to_underlying(prop) };
+}
+[[nodiscard]] constexpr std::string_view characteristic_properties_to_str(CharacteristicProperties properties)
+{
+    // clang-format off
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (properties)
+    // cppcheck-suppress missingReturn
+    {
+    case CharacteristicProperties::none: return "None";
+    case CharacteristicProperties::broadcast: return "Broadcast";
+    case CharacteristicProperties::read: return "Read";
+    case CharacteristicProperties::writeWithoutResponse: return "Write Without Response";
+    case CharacteristicProperties::write: return "Write";
+    case CharacteristicProperties::notify: return "Notify";
+    case CharacteristicProperties::indicate: return "Indicate";
+    case CharacteristicProperties::authenticatedSignedWrites: return "Authenticated Signed Writes";
+    case CharacteristicProperties::extendedProperties: return "Extended Properties";
+    case CharacteristicProperties::reliableWrites: return "Reliable Writes";
+    case CharacteristicProperties::writableAuxiliaries: return "Writable Auxiliaries";
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
+
+    std::unreachable();
+}
+enum class ProtectionLevel : int32_t
+{
+    plain = 0,
+    authenticationRequired = 1,
+    encryptionRequired = 2,
+    encryptionAndAuthenticationRequired = 3,
+};
+[[nodiscard]] constexpr std::string_view prot_level_to_str(ProtectionLevel level)
+{
+    // clang-format off
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (level)
+    // cppcheck-suppress missingReturn
+    {
+    case ProtectionLevel::authenticationRequired: return "Authentication Required";
+    case ProtectionLevel::encryptionAndAuthenticationRequired: return "Encryption and Authentication Required";
+    case ProtectionLevel::encryptionRequired: return "Encryption Required";
+    case ProtectionLevel::plain: return "Plain";
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format off
+    
+    std::unreachable();
+}
+enum class CharacteristicSubscriptionState
+{
+    subscribed,
+    notSubscribed,
+    inFlight
+};
+[[nodiscard]] constexpr std::string_view characteristic_subscription_state_to_str(CharacteristicSubscriptionState state)
+{
+    UNHANDLED_CASE_PROTECTION_ON
+    // clang-format off
+    switch (state)
+    {
+        case CharacteristicSubscriptionState::subscribed: return "Subscribed";
+        case CharacteristicSubscriptionState::notSubscribed: return "Not Subscribed";
+        case CharacteristicSubscriptionState::inFlight: return "In Flight";
+    };
+    // clang-format on
+    UNHANDLED_CASE_PROTECTION_OFF
+
+    std::unreachable();
+}
+}    // namespace ble

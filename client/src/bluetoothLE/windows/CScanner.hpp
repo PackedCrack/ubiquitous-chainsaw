@@ -6,8 +6,10 @@
 #include "../../common/CThreadSafeHashMap.hpp"
 // windows
 #include <winrt/Windows.Devices.Bluetooth.Advertisement.h>
+// clang-format off
 
 
+// clang-format on
 namespace ble
 {
 class CScanner
@@ -16,10 +18,9 @@ public:
     using pos_t = std::vector<ble::DeviceInfo>::difference_type;
 private:
     using IBluetoothLEAdvertisementWatcher = winrt::Windows::Devices::Bluetooth::Advertisement::IBluetoothLEAdvertisementWatcher;
-    using BluetoothLEAdvertisementWatcher =
-            winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher;
+    using BluetoothLEAdvertisementWatcher = winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher;
     using BluetoothLEAdvertisementReceivedEventArgs =
-            winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs;
+        winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementReceivedEventArgs;
 public:
     CScanner();
     ~CScanner();
@@ -38,10 +39,8 @@ private:
     void revoke_received_event_handler();
     void register_received_event_handler();
     void refresh_received_event_handler();
-    [[nodiscard]] std::function<void(
-            const BluetoothLEAdvertisementWatcher&,
-            BluetoothLEAdvertisementReceivedEventArgs)>
-            received_event_handler();
+    [[nodiscard]] std::function<void(const BluetoothLEAdvertisementWatcher&, BluetoothLEAdvertisementReceivedEventArgs)>
+        received_event_handler();
 private:
     BluetoothLEAdvertisementWatcher m_Watcher;
     winrt::event_revoker<IBluetoothLEAdvertisementWatcher> m_ReceivedRevoker;
@@ -50,4 +49,4 @@ private:
     std::atomic<size_t> m_Count;
     std::unique_ptr<std::mutex> m_pMutex;
 };
-}   // namespace ble
+}    // namespace ble

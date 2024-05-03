@@ -21,11 +21,11 @@ add_dependencies(${MAIN_PROJECT} CHILD_HEADER_FINDER)
 
 if(MSVC)
     # https://learn.microsoft.com/en-us/cpp/build/reference/analyze-code-analysis?view=msvc-170
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:anglebrackets>")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_BINARY_DIR}/dependencies>")
-    target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_SOURCE_DIR}/../external>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/analyze:external->")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:anglebrackets>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_BINARY_DIR}/dependencies>")
+    #target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/external:I ${CMAKE_SOURCE_DIR}/../external>")
     # https://learn.microsoft.com/en-us/cpp/build/reference/sdl-enable-additional-security-checks?view=msvc-170
     target_compile_options(${MAIN_PROJECT} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/sdl>")
     # https://learn.microsoft.com/en-us/cpp/build/reference/gs-buffer-security-check?view=msvc-170
@@ -105,9 +105,7 @@ add_custom_target(
     COMMAND clang-format -i -style=file ${ALL_SOURCE_FILES}
     COMMENT "Running clang-format on all source files."
 )
-
-# clang-format still needs to be set up with correct settings
-#add_dependencies(${MAIN_PROJECT} clang-format)
+add_dependencies(${MAIN_PROJECT} clang-format)
 
 
 # testing

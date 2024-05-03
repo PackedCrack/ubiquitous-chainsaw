@@ -1,0 +1,37 @@
+//
+// Created by qwerty on 2024-04-27.
+//
+#pragma once
+#include "client_common.hpp"
+#include "common/Pointer.hpp"
+#include "common/CStopWatch.hpp"
+#include "common/CThreadSafeQueue.hpp"
+#include "CServer.hpp"
+// clang-format off
+
+
+// clang-format on
+class CRssiDemander : public std::enable_shared_from_this<CRssiDemander>
+{
+public:
+    CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono::seconds demandInterval);
+    ~CRssiDemander();
+    CRssiDemander(const CRssiDemander& other) = delete;
+    CRssiDemander(CRssiDemander&& other) noexcept;
+    CRssiDemander& operator=(const CRssiDemander& other) = delete;
+    CRssiDemander& operator=(CRssiDemander&& other) noexcept;
+    //private:
+    //    void move(CRssiDemander& other);
+public:
+    [[nodiscard]] std::optional<std::vector<int8_t>> rssi();
+    void send_demand();
+private:
+    [[nodiscard]] auto make_rssi_receiver();
+private:
+    CThreadSafeQueue<int8_t> m_Queue;
+    std::chrono::seconds m_DemandInterval;
+    std::unique_ptr<security::CEccPublicKey> m_pServerPubKey;
+    Pointer<CServer> m_pServer = nullptr;
+    Pointer<gfx::CWindow> m_pWindow = nullptr;
+    common::CStopWatch<std::chrono::seconds> m_Timer;
+};

@@ -3,96 +3,55 @@
 //
 #include "CDevice.hpp"
 #include "win_ble_common.hpp"
+// clang-format off
 
 
-namespace
-{
-[[nodiscard]] ble::UUID make_uuid(const winrt::guid& guid)
-{
-    ble::UUID uuid{};
-    static_assert(std::is_trivially_copyable_v<std::remove_reference_t<decltype(guid)>>);
-    static_assert(std::is_trivially_copy_constructible_v<ble::UUID>);
-    static_assert(sizeof(ble::UUID) == sizeof(decltype(guid)));
-    std::memcpy(&uuid, &guid, sizeof(uuid));
-    
-    return uuid;
-}
-}   // namespace
+// clang-format on
 namespace ble
 {
-CDevice::awaitable_t CDevice::make(uint64_t address)
+CDevice::~CDevice()
 {
-    using namespace winrt::Windows::Devices::Bluetooth;
-    
-    std::expected<CDevice, CDevice::Error> expected{};
-    expected->m_pDevice = std::make_shared<BluetoothLEDevice>(co_await BluetoothLEDevice::FromBluetoothAddressAsync(address));
-    /*
-    * The returned BluetoothLEDevice is set to null if
-    * FromBluetoothAddressAsync can't find the device identified by bluetoothAddress.
-    * */
-    if(*(expected->m_pDevice))
-    {
-        co_await expected->query_services();
-    }
-    else
-    {
-        LOG_WARN_FMT(
-                "Failed to instantiate CDevice: Could not find a peripheral with address: \"{}\"", ble::hex_addr_to_str(address));
-        co_return std::unexpected(Error::invalidAddress);
-    }
-    
-    co_return expected;
+    revoke_connection_changed_handler();
 }
-CDevice::CDevice(const CDevice& other) 
-    : m_pDevice{ nullptr }
-    , m_Services{}
-    , m_ConnectionChanged{}
+CDevice::CDevice(CDevice&& other) noexcept
+    : m_Device{ std::move(other.m_Device) }
+    , m_Services{ std::move(other.m_Services) }
+    , m_ConnectionChanged{ std::move(other.m_ConnectionChanged) }
+    , m_Revoker{ std::move(other.m_Revoker) }
+{}
+CDevice& CDevice::operator=(CDevice&& other) noexcept
 {
-    copy(other);
-}
-CDevice::CDevice(CDevice&& other) noexcept 
-    : m_pDevice{ nullptr }
-    , m_Services{}
-    , m_ConnectionChanged{}
-{
-    move(other);
-}
-CDevice& CDevice::operator=(const CDevice& other)
-{
-    if (this != &other)
-        copy(other);
-
-    return *this;
-}
-CDevice& CDevice::operator=(CDevice&& other) noexcept 
-{
-    move(other);
-
-    return *this;
-}
-void CDevice::copy(const CDevice& other)
-{
-    m_pDevice = other.m_pDevice;
-    m_Services = other.m_Services;
-    if (other.m_ConnectionChanged)
-        this->set_connection_changed_cb(other.m_ConnectionChanged);
-}
-void CDevice::move(CDevice& other)
-{
-    m_pDevice = std::move(other.m_pDevice);
+    m_Device = std::move(other.m_Device);
     m_Services = std::move(other.m_Services);
-    if (other.m_ConnectionChanged)
-        this->set_connection_changed_cb(std::move(other.m_ConnectionChanged));
+    m_ConnectionChanged = std::move(other.m_ConnectionChanged);
+    m_Revoker = std::move(other.m_Revoker);
+
+    return *this;
+}
+std::string_view CDevice::error_to_str(Error err)
+{
+    // clang-format off
+    UNHANDLED_CASE_PROTECTION_ON
+    switch (err)
+    {
+    case Error::invalidAddress: return "Invalid Address";
+    case Error::failedToQueryServices: return "Failed To Query Services";
+    case Error::constructorError: return "Constructor Error";
+    }
+    UNHANDLED_CASE_PROTECTION_OFF
+    // clang-format on
+
+    std::unreachable();
 }
 bool CDevice::connected() const
 {
-    return m_pDevice->ConnectionStatus() == winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus::Connected;
+    ASSERT(m_Device, "Expected a valid BluetoothLEDevice!");
+    return m_Device.ConnectionStatus() == winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus::Connected;
 }
 uint64_t CDevice::address() const
 {
-    ASSERT(m_pDevice != nullptr, "Cannot retrieve address until a connection has been established.");
-    
-    return m_pDevice->BluetoothAddress();
+    ASSERT(m_Device, "Cannot retrieve address until a connection has been established.");
+    return m_Device.BluetoothAddress();
 }
 std::string CDevice::address_as_str() const
 {
@@ -102,42 +61,140 @@ const CDevice::service_container_t& CDevice::services() const
 {
     return m_Services;
 }
-std::optional<const CService*> CDevice::service(const UUID& uuid) const
+std::optional<std::weak_ptr<CService>> CDevice::service(const UUID& uuid) const
 {
     auto iter = m_Services.find(uuid);
-    if(iter == std::end(m_Services))
+    if (iter == std::end(m_Services))
+    {
         return std::nullopt;
-    
-    return std::make_optional<const CService*>(&(iter->second));
+    }
+
+    return std::make_optional<std::weak_ptr<CService>>(iter->second);
 }
-winrt::Windows::Foundation::IAsyncAction CDevice::query_services()
+std::optional<std::weak_ptr<CCharacteristic>> CDevice::characteristic(const UUID& serviceUUID, const UUID& characteristicUUID) const
+{
+    auto iter = m_Services.find(serviceUUID);
+    if (iter != std::end(m_Services))
+    {
+        const std::shared_ptr<CService>& pService = iter->second;
+        std::optional<std::weak_ptr<CCharacteristic>> characteristic = pService->characteristic(characteristicUUID);
+        if (characteristic)
+        {
+            return std::move(characteristic.value());
+        }
+    }
+
+    return std::nullopt;
+}
+//void CDevice::unsubscribe_from_characteristic(const ble::UUID& service, const ble::UUID& characteristic)
+//{
+//    auto iter = m_Services.find(service);
+//    ASSERT(iter != std::end(m_Services), "Tried to unsubscribe from a non existing service..");
+//    iter->second->unsubscribe_from_characteristic(characteristic);
+//}
+std::function<void(const winrt::Windows::Devices::Bluetooth::BluetoothLEDevice& device,
+                   const winrt::Windows::Foundation::IInspectable& inspectable)>
+    CDevice::connection_changed_handler()
+{
+    return [wpSelf = weak_from_this(), address = address_as_str()](const BluetoothLEDevice& device,
+                                                                   [[maybe_unused]] const IInspectable& inspectable)
+    {
+        using Status = winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus;
+
+        try
+        {
+            Status status = device.ConnectionStatus();
+            ConnectionStatus conStatus{};
+            if (status == Status::Connected)
+            {
+                conStatus = ConnectionStatus::connected;
+            }
+            else if (status == Status::Disconnected)
+            {
+                conStatus = ConnectionStatus::disconnected;
+            }
+            else
+            {
+                ASSERT(false, "Unexpected value returned from ConnectionStatus");
+            }
+
+            std::shared_ptr<CDevice> pSelf = wpSelf.lock();
+            if (pSelf)
+            {
+                ASSERT(pSelf->m_ConnectionChanged, "Expected a connection changed callback");
+                pSelf->m_ConnectionChanged(conStatus);
+            }
+        }
+        catch (const winrt::hresult_error& err)
+        {
+            LOG_WARN_FMT(
+                "Exception: \"{:X}\" - \"{}\", thrown by WinRT during Connection Changed Callback from Device with address: \"{}\".",
+                err.code().value,
+                winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                address.c_str());
+        }
+        catch (...)
+        {
+            LOG_ERROR_FMT("Unknown Exception thrown during Connection Changed Callback from Device with address: \"{}\"", address.c_str());
+        }
+    };
+}
+concurrency::task<bool> CDevice::query_services(uint64_t address)
 {
     using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
     using namespace winrt::Windows::Foundation::Collections;
-    
-    
+
+
     m_Services.clear();
-    
-    GattDeviceServicesResult result = co_await m_pDevice->GetGattServicesAsync();
-    if (result.Status() == GattCommunicationStatus::Success)
+
+    try
     {
-        IVectorView<GattDeviceService> svcs = result.Services();
-        m_Services.reserve(svcs.Size());
-        
-        for(auto&& svc : svcs)
+        GattDeviceServicesResult result = co_await m_Device.GetGattServicesAsync();
+        if (result.Status() == GattCommunicationStatus::Success)
         {
-            auto[iter, emplaced] = m_Services.try_emplace(make_uuid(svc.Uuid()), co_await make_service<CService>(svc));
-            if(!emplaced)
+            IVectorView<GattDeviceService> svcs = result.Services();
+            m_Services.reserve(svcs.Size());
+
+            for (auto&& svc : svcs)
             {
-                LOG_ERROR_FMT("Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(svc.Uuid())));
+                auto [iter, emplaced] = m_Services.try_emplace(make_uuid(svc.Uuid()), co_await make_service<CService>(svc));
+                ASSERT_FMT(emplaced, "Failed to emplace service with UUID: \"{}\"", winrt::to_string(to_hstring(svc.Uuid())));
             }
+
+            co_return true;
+        }
+        else
+        {
+            LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Services from device with address: \"{}\"",
+                          communication_status_to_str(communication_status_from_winrt(result.Status())),
+                          hex_addr_to_str(m_Device.BluetoothAddress()));
         }
     }
-    else
+    catch (const winrt::hresult_error& err)
     {
-        LOG_ERROR_FMT("Communication error: \"{}\" when trying to query Services from device with address: \"{}\"",
-                      gatt_communication_status_to_str(winrt_status_to_communication_status(result.Status())),
-                      hex_addr_to_str(m_pDevice->BluetoothAddress()));
+        LOG_WARN_FMT("Exception: \"{:X}\" - \"{}\", thrown by WinRT when trying to query Services from Device with address: \"{}\".",
+                     err.code().value,
+                     winrt::to_string(winrt::to_hstring(err.message())).c_str(),
+                     hex_addr_to_str(address).c_str());
+    }
+    catch (...)
+    {
+        LOG_ERROR_FMT("Unknown Exception thrown by WinRT when trying to query Services from Device with address: \"{}\"",
+                      hex_addr_to_str(address).c_str());
+    }
+
+    co_return false;
+}
+void CDevice::revoke_connection_changed_handler()
+{
+    if (m_Revoker)
+    {
+        m_Revoker.revoke();
     }
 }
-}   // namespace ble
+void CDevice::register_connection_changed_handler()
+{
+    ASSERT(m_Device, "Should never be invalid!");
+    m_Revoker = m_Device.ConnectionStatusChanged(winrt::auto_revoke, connection_changed_handler());
+}
+}    // namespace ble

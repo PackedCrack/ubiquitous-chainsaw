@@ -12,8 +12,6 @@
 #include "../common/CMutex.hpp"
 #include "../common/CStopWatch.hpp"
 #include "../system/System.hpp"
-
-
 namespace gui
 {
 class CDeviceList
@@ -38,6 +36,7 @@ public:
     [[nodiscard]] std::vector<ble::DeviceInfo> device_infos() const;
 private:
     [[nodiscard]] auto time_limited_scan(std::chrono::seconds seconds);
+    void spawn_time_limited_scan();
     void authentication_status();
     void device_list();
 private:
@@ -47,4 +46,4 @@ private:
     std::unique_ptr<mutex_t> m_pMutex;
     common::CStopWatch<time_t> m_ScanTimer;
 };
-}   // namespace gui
+}    // namespace gui

@@ -1,23 +1,25 @@
 //
 // Created by qwerty on 2024-04-04.
 //
-
 #pragma once
 #include <utility>
+// clang-format off
 
 
+// clang-format on
+// Simply a raw pointer with move and copy constructors/assignments
 template<typename T>
 class Pointer
 {
 public:
     Pointer() = default;
     explicit Pointer(T* p)
-            : m_Pointer{ p }
+        : m_Pointer{ p }
     {}
     // This cannot be explicit if we want to be able to do: Pointer = nullptr;
     // cppcheck-suppress noExplicitConstructor
     Pointer(std::nullptr_t null)
-            : m_Pointer{ null }
+        : m_Pointer{ null }
     {}
     ~Pointer() = default;
     Pointer(const Pointer& other)
@@ -50,6 +52,7 @@ public:
     }
     auto& operator*() const { return *m_Pointer; }
     T* operator->() const { return m_Pointer; }
+    operator bool() const { return m_Pointer != nullptr; }
 private:
     T* m_Pointer = nullptr;
 };

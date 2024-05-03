@@ -4,8 +4,6 @@
 #include "../system/System.hpp"
 // third_party
 #include "imgui/imgui.h"
-
-
 namespace
 {
 // Demonstrate using DockSpace() to create an explicit docking node within an existing window.
@@ -68,7 +66,9 @@ void ShowExampleAppDockSpace(bool* p_open)
     // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
     // and handle the pass-thru hole, so we ask Begin() to not render a background.
     if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+    {
         window_flags |= ImGuiWindowFlags_NoBackground;
+    }
 
     // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
     // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
@@ -76,13 +76,19 @@ void ShowExampleAppDockSpace(bool* p_open)
     // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
     if (!opt_padding)
+    {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    }
     ImGui::Begin("DockSpace Demo", p_open, window_flags);
     if (!opt_padding)
+    {
         ImGui::PopStyleVar();
+    }
 
     if (opt_fullscreen)
+    {
         ImGui::PopStyleVar(2);
+    }
 
     // Submit the DockSpace
     ImGuiIO& io = ImGui::GetIO();
@@ -106,15 +112,35 @@ void ShowExampleAppDockSpace(bool* p_open)
             ImGui::MenuItem("Padding", NULL, &opt_padding);
             ImGui::Separator();
 
-            if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))                 { dockspace_flags ^= ImGuiDockNodeFlags_NoSplit; }
-            if (ImGui::MenuItem("Flag: NoResize", "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
-            if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))  { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode; }
-            if (ImGui::MenuItem("Flag: AutoHideTabBar", "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))          { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
-            if (ImGui::MenuItem("Flag: PassthruCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
+            if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
+            {
+                dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
+            }
+            if (ImGui::MenuItem("Flag: NoResize", "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))
+            {
+                dockspace_flags ^= ImGuiDockNodeFlags_NoResize;
+            }
+            if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))
+            {
+                dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode;
+            }
+            if (ImGui::MenuItem("Flag: AutoHideTabBar", "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))
+            {
+                dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar;
+            }
+            if (ImGui::MenuItem("Flag: PassthruCentralNode",
+                                "",
+                                (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0,
+                                opt_fullscreen))
+            {
+                dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode;
+            }
             ImGui::Separator();
 
             if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
+            {
                 *p_open = false;
+            }
             ImGui::EndMenu();
         }
         /*HelpMarker(
@@ -135,7 +161,7 @@ void ShowExampleAppDockSpace(bool* p_open)
 void set_style()
 {
     ImGuiStyle& style = ImGui::GetStyle();
-    
+
     style.WindowPadding = ImVec2(15, 15);
     style.WindowRounding = 5.0f;
     style.FramePadding = ImVec2(5, 5);
@@ -147,7 +173,7 @@ void set_style()
     style.ScrollbarRounding = 9.0f;
     style.GrabMinSize = 5.0f;
     style.GrabRounding = 3.0f;
-    
+
     style.Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
     style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
     style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
@@ -191,35 +217,34 @@ void set_style()
     style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
     //style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
-    
+
     style.WindowMenuButtonPosition = ImGuiDir_None;
     style.DockingSeparatorSize = 0;
     style.WindowBorderSize = 0;
     style.ChildBorderSize = 0;
-    
 }
 [[nodiscard]] std::optional<std::filesystem::path> layout_filepath()
 {
     std::expected<std::filesystem::path, std::string> expected = sys::application_directory();
-    if(!expected)
+    if (!expected)
     {
         LOG_ERROR_FMT("Error when trying to get application directory: \"{}\"", expected.error());
         return std::nullopt;
     }
-    
+
     return std::optional<std::filesystem::path>{ *expected / "layout.ini" };
 }
 void load_layout()
 {
     std::optional<std::filesystem::path> layoutFile = layout_filepath();
-    if(layoutFile)
+    if (layoutFile)
     {
-        if(!std::filesystem::exists(*layoutFile))
+        if (!std::filesystem::exists(*layoutFile))
         {
             std::fstream fstream{ *layoutFile, std::ios::out | std::ios::binary | std::ios::trunc };
             fstream.write(defaultLayout.data(), defaultLayout.size());
         }
-        
+
         ImGui::LoadIniSettingsFromDisk(layoutFile->string().c_str());
     }
     else
@@ -227,25 +252,23 @@ void load_layout()
         LOG_ERROR("Could not load imgui layout because the filepath could not be retrieved.");
     }
 }
-}	// namespace
-
-
+}    // namespace
 namespace gui
 {
 CGui::CGui()
     : m_Widgets{}
 {
     set_style();
-    
+
     load_layout();
-    
+
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontFromMemoryTTF(FontLouisGeorge.data(), static_cast<int32_t>(FontLouisGeorge.size()), 18);
 }
 CGui::~CGui()
 {
     std::optional<std::filesystem::path> layoutFilepath = layout_filepath();
-    if(layoutFilepath)
+    if (layoutFilepath)
     {
         ImGui::SaveIniSettingsToDisk(layoutFilepath->string().c_str());
     }
@@ -265,7 +288,7 @@ void CGui::push()
     for (auto&& kvPair : m_Widgets)
     {
         Widget& widget = kvPair.second;
-        std::visit([](auto&& widget){ widget.push(); }, widget);
+        std::visit([](auto&& widget) { widget.push(); }, widget);
     }
 }
-}	// namespace gui
+}    // namespace gui
