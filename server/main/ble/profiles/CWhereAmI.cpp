@@ -136,8 +136,8 @@ requires security::hash_algorithm<algorithm_t>
 [[nodiscard]] std::size_t packet_size_rssi_notification(const std::vector<uint8_t>& packet)
 {
     static constexpr ble::RSSINotificationHeader HEADER{};
-    return (packet[HEADER.hashSize] + packet[HEADER.randomDataSize]) + (packet[HEADER.rssiSize] +
-                                                  packet[HEADER.signatureSize]) + sizeof(ble::RSSINotificationHeader);
+    return (packet[HEADER.hashSize] + packet[HEADER.randomDataSize]) + (packet[HEADER.rssiSize] + packet[HEADER.signatureSize]) +
+           sizeof(ble::RSSINotificationHeader);
 }
 }    // namespace
 namespace ble
@@ -332,10 +332,11 @@ auto CWhereAmI::make_callback_rssi_notification(const std::shared_ptr<Profile>& 
                     packet = pSelf->write_random_data_block(packet);
                     packet = pSelf->write_rssi_value(packet);
 
-                    security::CHash<security::Sha2_256> hash = make_hash<security::Sha2_256>(packet);
+                    using sha_t = security::Sha2_256;
+                    security::CHash<sha_t> hash = make_hash<security::Sha2_256>(packet);
                     std::vector<uint8_t> signature = pSelf->m_pPrivateKey->sign_hash(get_rng(), hash);
 
-                    packet = pSelf->write_hash(packet, hash, ShaVersion::Sha2_256);
+                    packet = pSelf->write_hash(packet, hash, sha_to_enum<sha_t>());
                     packet = pSelf->write_signature(packet, signature);
 
                     // Packet was allocated as a too large buffer - now with the data written it should be resized to the correct byte size
@@ -404,6 +405,8 @@ std::vector<uint8_t> CWhereAmI::write_rssi_value(std::vector<uint8_t>& packet) c
     packet[HEADER.rssiSize] = size;
 
     packet[offset] = m_Rssi;
+
+    LOG_INFO_FMT("AAAAAAAAA RSSI: {}", m_Rssi);
 
     return packet;
 }

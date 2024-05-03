@@ -7,6 +7,67 @@
 
 
 // clang-format on
+namespace
+{
+[[nodiscard]] bool valid_sha_version_id(ble::ShaVersion version)
+{
+    if (ble::sha_version_id(version) < ble::sha_version_id(ble::ShaVersion::count))
+    {
+        return true;
+    }
+
+    LOG_WARN_FMT("Recieved a packet with an invalid ShaVersion: {}", ble::sha_version_id(version));
+    return false;
+}
+[[nodiscard]] bool valid_signature(security::CEccPublicKey* pServerKey, std::span<uint8_t> signature, ble::ShaHash& hash)
+{
+    bool verified{ false };
+    std::visit([&verified, pServerKey, signature](auto&& h) { verified = pServerKey->verify_hash(signature, h); }, hash);
+
+    return verified;
+}
+[[nodiscard]] std::span<uint8_t> view(std::span<uint8_t> packet, uint8_t offset, uint8_t size)
+{
+    ASSERT(packet.size() >= static_cast<std::size_t>(offset + size), "View is outside the packets buffer!");
+    return std::span<uint8_t>{ std::begin(packet) + offset, size };
+}
+[[nodiscard]] std::span<uint8_t> view_random_data_block(std::span<uint8_t> packet)
+{
+    static constexpr ble::RSSINotificationHeader HEADER{};
+    uint8_t offset = packet[HEADER.randomDataOffset];
+    uint8_t size = packet[HEADER.randomDataSize];
+
+    return view(packet, offset, size);
+}
+[[nodiscard]] std::span<uint8_t> view_signature(std::span<uint8_t> packet)
+{
+    static constexpr ble::RSSINotificationHeader HEADER{};
+    uint8_t offset = packet[HEADER.signatureOffset];
+    uint8_t size = packet[HEADER.signatureSize];
+
+    return view(packet, offset, size);
+}
+[[nodiscard]] std::span<uint8_t> view_hash(std::span<uint8_t> packet)
+{
+    static constexpr ble::RSSINotificationHeader HEADER{};
+    uint8_t offset = packet[HEADER.hashOffset];
+    uint8_t size = packet[HEADER.hashSize];
+
+    return view(packet, offset, size);
+}
+[[nodiscard]] ble::ShaVersion extract_sha_version(std::span<uint8_t> packet)
+{
+    static constexpr ble::RSSINotificationHeader HEADER{};
+    return ble::ShaVersion{ packet[HEADER.shaVersion] };
+}
+[[nodiscard]] int8_t extract_rssi_value(std::span<uint8_t> packet)
+{
+    static constexpr ble::RSSINotificationHeader HEADER{};
+    ASSERT(packet[HEADER.rssiSize] == 1, "Expected RSSI value to be sizeof 1 (int8_t).");
+    uint8_t offset = packet[HEADER.rssiOffset];
+    return static_cast<int8_t>(packet[offset]);
+}
+}    // namespace
 CRssiDemander::CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono::seconds demandInterval)
     : m_Queue{}
     , m_DemandInterval{ demandInterval }
@@ -79,18 +140,25 @@ auto CRssiDemander::make_rssi_receiver()
             std::span<uint8_t> hashBlock{ std::begin(packet) + offset, size };
             security::CHash<security::Sha2_256> hash{ std::cbegin(hashBlock), std::cend(hashBlock) };
 
-            offset = packet[HEADER.signatureOffset];
-            size = packet[HEADER.signatureSize];
-            std::span<uint8_t> signatureBlock{ std::begin(packet) + offset, size };
-
-
-            if (pSelf->m_pServerPubKey->verify_hash(signatureBlock, hash))
+            ble::ShaVersion version = extract_sha_version(packet);
+            if (valid_sha_version_id(version))
             {
-                LOG_INFO("AAAAAAAAAAAAAAAAAAAAA VERIFIED");
-            }
-            else
-            {
-                LOG_INFO("BBBBBBBBBBBBBBBBBBBB NOT VERIFIED");
+                std::span<uint8_t> randomData = view_random_data_block(packet);
+                // TODO: Check cache if we expect an incoming packet with this random data
+
+                ble::ShaHash hash = ble::make_sha_hash(version, view_hash(packet));
+                std::span<uint8_t> signatureBlock = view_signature(packet);
+
+                if (valid_signature(pSelf->m_pServerPubKey.get(), signatureBlock, hash))
+                {
+                    int8_t rssi = extract_rssi_value(packet);
+                    LOG_INFO_FMT("Recieved verified RSSI Notification packet. RSSI Value: \"{}\"", rssi);
+                    pSelf->m_Queue.push(rssi);
+                }
+                else
+                {
+                    LOG_WARN("Recieved RSSI Notification packet with an invalid signature!");
+                }
             }
         }
     };
