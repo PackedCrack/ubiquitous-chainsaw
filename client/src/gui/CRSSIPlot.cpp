@@ -15,7 +15,38 @@ CRSSIPlot::CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander)
     , m_MaxSize{ size }
     , m_Values{ 0 }
     , m_pDemander{ std::move(pDemander) }
-{}
+{
+    float avg{};
+    if (size == 7)
+    {
+        avg = 66.0f;
+    }
+    else if (size == 14)
+    {
+        avg = 68.0f;
+    }
+    else if (size == 21)
+    {
+        avg = 66.0f;
+    }
+    else if (size == 28)
+    {
+        avg = 67.0f;
+    }
+    else if (size == 35)
+    {
+        avg = 67.0f;
+    }
+    else
+    {
+        __debugbreak();
+    }
+
+    for (int i = 0; i < size; ++i)
+    {
+        m_Values.push_back(avg);
+    }
+}
 void CRSSIPlot::push()
 {
     static constexpr ImGuiWindowFlags WINDOW_FLAGS =
