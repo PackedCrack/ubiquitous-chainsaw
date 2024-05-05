@@ -119,6 +119,10 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
+[[nodiscard]] std::shared_ptr<CRssiDemander> make_rssi_demander(CServer& server, gfx::CWindow& window)
+{
+    return std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1));
+}
 }    // namespace
 int main(int argc, char** argv)
 {
@@ -138,7 +142,7 @@ int main(int argc, char** argv)
     CServer server{};
     CAuthenticator authenticator{ server };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(60u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)));
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(60u, make_rssi_demander(server, window));
 
 
     common::CStopWatch<std::chrono::seconds> timer2{};
@@ -146,16 +150,6 @@ int main(int argc, char** argv)
     while (!exit)
     {
         common::CStopWatch timer{};
-
-        //static float val = 0.0f;
-        //static float b = 0.0f;
-        //static uint64_t frame = 0u;
-        //if (frame++ % 60 == 0)
-        //{
-        //    b = b + 0.35f;
-        //    val = std::sin(b);
-        //    rssiPlot.add_rssi_value(val);
-        //}
 
         if (server.connected())
         {
@@ -165,14 +159,11 @@ int main(int argc, char** argv)
 
             float avg = rssiPlot.rssi_avg();
             LOG_INFO_FMT("RING BUFFER AVG: {}", avg);
-            //if (avg < -70.0f)
-            //{
-            //    LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
-            //}
+            if (avg < -70.0f)
+            {
+                //LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
+            }
             //      cowabunga();
-
-            //std::optional<int8_t> rssi = demander.rssi();
-            //server.demand_rssi(window);
         }
         else
         {
@@ -181,9 +172,8 @@ int main(int argc, char** argv)
                 // TODO::
                 if (!scanner.scanning())
                 {
-                    LOG_INFO("RE CREATING RSSI DEMANDER");
                     deviceList.recreate_list();
-                    rssiPlot = gui::CRSSIPlot{ 60u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)) };
+                    rssiPlot = gui::CRSSIPlot{ 10u, make_rssi_demander(server, window) };
                 }
 
                 static uint32_t ab = 0;
@@ -212,7 +202,7 @@ int main(int argc, char** argv)
             std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
         }
 
-        if (timer2.lap<float>() >= static_cast<float>(std::chrono::seconds(65).count()))
+        if (timer2.lap<float>() >= static_cast<float>(std::chrono::seconds(70).count()))
         {
             exit = true;
         }
