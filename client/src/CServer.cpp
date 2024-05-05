@@ -350,7 +350,6 @@ sys::awaitable_t<void>
     {
         auto communicationStatus = co_await pCharacteristic->write_data(packet);
 
-        LOG_INFO_FMT("Write status: {}", ble::communication_status_to_str(communicationStatus));
         UNHANDLED_CASE_PROTECTION_ON
         switch (communicationStatus)
         {

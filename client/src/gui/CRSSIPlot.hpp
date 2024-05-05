@@ -27,9 +27,10 @@ public:
     [[nodiscard]] float rssi_avg() const;
 private:
     void plot();
-    void add_rssi_value(float value);
+    void add_rssi_value(int8_t value);
 private:
     std::size_t m_Index;
+    std::size_t m_MaxSize;
     std::vector<float> m_Values;
     std::shared_ptr<CRssiDemander> m_pDemander;
 };

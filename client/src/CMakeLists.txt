@@ -6,6 +6,8 @@ SET(MAIN_SRCS
 		CServer.hpp
 		CRssiDemander.cpp
 		CRssiDemander.hpp
+		CReplayProtector.cpp
+		CReplayProtector.hpp
 		client_common.cpp
 		client_common.hpp
         resource.hpp
