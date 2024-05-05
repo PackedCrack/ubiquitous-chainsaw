@@ -126,7 +126,7 @@ void process_cmd_line_args(int argc, char** argv)
 }    // namespace
 int main(int argc, char** argv)
 {
-    std::vector<float> exitMedian{ -74.0f, -75.0f, -74.0f, -74.0f, -74.0f };
+    std::vector<float> exitMedian{ -72.0f, -71.0f, -74.0f, -72.0f, -70.0f };
     std::vector<std::size_t> sizes{ 7u, 14u, 21u, 28u, 35u };
     std::vector<std::vector<float>> times{};
     times.resize(sizes.size());
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
             auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(sizes[j], make_rssi_demander(server, window));
 
 
-            common::CStopWatch<std::chrono::milliseconds> timer2{};
+            common::CStopWatch<std::chrono::milliseconds>* timer2{ nullptr };
             bool exit = false;
             while (!exit)
             {
@@ -164,6 +164,10 @@ int main(int argc, char** argv)
 
                 if (server.connected())
                 {
+                    if (timer2 == nullptr)
+                    {
+                        timer2 = new common::CStopWatch<std::chrono::milliseconds>{};
+                    }
                     // int missedAnswers = rssiPlot.missed();
                     // if (missedAnswers > 5)
                     //      cowabunga();
@@ -172,7 +176,9 @@ int main(int argc, char** argv)
                     LOG_INFO_FMT("RING BUFFER AVG: {}", avg);
                     if (avg < exitMedian[j])
                     {
-                        times[j][i] = timer2.lap<float>();
+                        times[j][i] = timer2->lap<float>();
+                        delete timer2;
+                        timer2 = nullptr;
                         exit = true;
                         //LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
                     }

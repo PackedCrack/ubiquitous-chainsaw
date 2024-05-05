@@ -13,7 +13,7 @@ namespace gui
 CRSSIPlot::CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander)
     : m_Index{ 0u }
     , m_MaxSize{ size }
-    , m_Values{ 0 }
+    , m_Values{}
     , m_pDemander{ std::move(pDemander) }
 {
     float avg{};
