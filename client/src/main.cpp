@@ -138,9 +138,10 @@ int main(int argc, char** argv)
     CServer server{};
     CAuthenticator authenticator{ server };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)));
-
-
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(60u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)));
+    
+    
+    common::CStopWatch<std::chrono::seconds> timer2{};
     bool exit = false;
     while (!exit)
     {
@@ -181,7 +182,7 @@ int main(int argc, char** argv)
                 {
                     LOG_INFO("RE CREATING RSSI DEMANDER");
                     deviceList.recreate_list();
-                    rssiPlot = gui::CRSSIPlot{ 30u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)) };
+                    rssiPlot = gui::CRSSIPlot{ 60u, std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1)) };
                 }
 
                 static uint32_t ab = 0;
@@ -208,6 +209,11 @@ int main(int argc, char** argv)
         if (timeToWait > 0.0)
         {
             std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
+        }
+        
+        if(timer2.lap<float>() >= static_cast<float>(std::chrono::seconds(65).count()))
+        {
+            exit = true;
         }
     }
 
