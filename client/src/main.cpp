@@ -142,9 +142,10 @@ int main(int argc, char** argv)
     CServer server{};
     CAuthenticator authenticator{ server };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(10u, make_rssi_demander(server, window));
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(60u, make_rssi_demander(server, window));
 
 
+    common::CStopWatch<std::chrono::seconds> timer2{};
     bool exit = false;
     while (!exit)
     {
@@ -157,9 +158,10 @@ int main(int argc, char** argv)
             //      cowabunga();
 
             float avg = rssiPlot.rssi_avg();
+            LOG_INFO_FMT("RING BUFFER AVG: {}", avg);
             if (avg < -70.0f)
             {
-                LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
+                //LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
             }
             //      cowabunga();
         }
@@ -198,6 +200,11 @@ int main(int argc, char** argv)
         if (timeToWait > 0.0)
         {
             std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
+        }
+
+        if (timer2.lap<float>() >= static_cast<float>(std::chrono::seconds(70).count()))
+        {
+            exit = true;
         }
     }
 
