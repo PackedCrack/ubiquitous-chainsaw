@@ -223,9 +223,9 @@ int main(int argc, char** argv)
     for (int i = 0; i < sizes.size(); ++i)
     {
         LOG_INFO_FMT("Ring buffer size: {}", sizes[i]);
-        for (auto&& median : medians[i])
+        for (auto&& latency : times[i])
         {
-            LOG_INFO_FMT("RSSI MEDIAN: {}", median);
+            LOG_INFO_FMT("Disconnect latency: {}", latency);
         }
     };
     return EXIT_SUCCESS;
