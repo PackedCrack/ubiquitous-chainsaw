@@ -141,6 +141,10 @@ auto CAuthenticator::make_connection_changed_cb() const
             ASSERT(pServer, "Pointer to server should be valid for the duration of the program");
             pServer->revoke_authentication();
             LOG_WARN("Lost connection to authenticated server...");
+
+            static int revoked = 0;
+            ++revoked;
+            LOG_INFO_FMT("Revoked authentications: {}", revoked);
             break;
         }
     };
@@ -170,6 +174,10 @@ void CAuthenticator::process_queue()
                 }
 
                 pServer->grant_authentication(AuthenticatedDevice{ .pDevice = std::move(*expectedDevice), .info = info });
+
+                static int granted = 0;
+                ++granted;
+                LOG_INFO_FMT("Granted authentications: {}", granted);
             }
         }
     };
