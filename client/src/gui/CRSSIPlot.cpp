@@ -30,8 +30,17 @@ void CRSSIPlot::push()
 }
 float CRSSIPlot::rssi_avg() const
 {
-    float sum = std::accumulate(std::begin(m_Values), std::end(m_Values), 0.0f);
-    return sum / static_cast<float>(m_Values.size());
+    std::vector<float> values = m_Values;
+    //float sum = std::accumulate(std::begin(m_Values), std::end(m_Values), 0.0f);
+    //return sum / static_cast<float>(m_Values.size());
+
+    auto nthElement = std::begin(values) + values.size() / 2u;
+    std::nth_element(std::begin(values), nthElement, std::end(values));
+    return values[values.size() / 2];
+}
+bool CRSSIPlot::full() const
+{
+    return m_Values.size() == m_MaxSize;
 }
 void CRSSIPlot::plot()
 {

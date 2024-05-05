@@ -25,6 +25,7 @@ public:
 public:
     void push();
     [[nodiscard]] float rssi_avg() const;
+    bool full() const;
 private:
     void plot();
     void add_rssi_value(int8_t value);

@@ -126,99 +126,110 @@ void process_cmd_line_args(int argc, char** argv)
 }    // namespace
 int main(int argc, char** argv)
 {
-    std::vector<float> avgs{};
-    avgs.resize(5);
-    for (int i = 0; i < 5; ++i)
+    std::vector<std::size_t> sizes{ 7u, 14u, 21u, 28u, 35u };
+    std::vector<std::vector<float>> medians{};
+    medians.resize(sizes.size());
+    for (int j = 0; j < sizes.size(); ++j)
     {
-        sys::CSystem system{};
-
-        auto wc = security::CWolfCrypt::instance();
-        validate_app_directory();
-        process_cmd_line_args(argc, argv);
-
-        auto scanner = ble::make_scanner<ble::CScanner>();
-
-        // SDL window and input must be called on the same thread
-        gfx::CWindow window{ "Some title", 1'280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
-        gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
-        gui::CGui gui{};
-
-        CServer server{};
-        CAuthenticator authenticator{ server };
-        auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
-        auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(60u, make_rssi_demander(server, window));
+        medians[j].resize(5);
 
 
-        common::CStopWatch<std::chrono::seconds> timer2{};
-        bool exit = false;
-        while (!exit)
+        for (int i = 0; i < 5; ++i)
         {
-            common::CStopWatch timer{};
+            sys::CSystem system{};
 
-            if (server.connected())
+            auto wc = security::CWolfCrypt::instance();
+            validate_app_directory();
+            process_cmd_line_args(argc, argv);
+
+            auto scanner = ble::make_scanner<ble::CScanner>();
+
+            // SDL window and input must be called on the same thread
+            gfx::CWindow window{ "Some title", 1'280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
+            gfx::CRenderer renderer{ window, SDL_RENDERER_PRESENTVSYNC };
+            gui::CGui gui{};
+
+            CServer server{};
+            CAuthenticator authenticator{ server };
+            auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
+            auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(sizes[j], make_rssi_demander(server, window));
+
+
+            common::CStopWatch<std::chrono::seconds> timer2{};
+            bool exit = false;
+            while (!exit)
             {
-                // int missedAnswers = rssiPlot.missed();
-                // if (missedAnswers > 5)
-                //      cowabunga();
+                common::CStopWatch timer{};
 
-                float avg = rssiPlot.rssi_avg();
-                LOG_INFO_FMT("RING BUFFER AVG: {}", avg);
-                avgs[i] = avg;
-                if (avg < -70.0f)
+                if (server.connected())
                 {
-                    //LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
+                    // int missedAnswers = rssiPlot.missed();
+                    // if (missedAnswers > 5)
+                    //      cowabunga();
+
+                    float avg = rssiPlot.rssi_avg();
+                    LOG_INFO_FMT("RING BUFFER AVG: {}", avg);
+                    medians[j][i] = avg;
+                    if (avg < -70.0f)
+                    {
+                        //LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
+                    }
+                    //      cowabunga();
                 }
-                //      cowabunga();
-            }
-            else
-            {
-                if (!server.is_authenticated())
+                else
                 {
-                    // TODO::
-                    if (!scanner.scanning())
+                    if (!server.is_authenticated())
                     {
-                        deviceList.recreate_list();
-                        rssiPlot = gui::CRSSIPlot{ 60u, make_rssi_demander(server, window) };
-                    }
+                        // TODO::
+                        if (!scanner.scanning())
+                        {
+                            deviceList.recreate_list();
+                            rssiPlot = gui::CRSSIPlot{ sizes[j], make_rssi_demander(server, window) };
+                        }
 
-                    static uint32_t ab = 0;
-                    if ((ab % 150) == 0)
-                    {
-                        LOG_INFO("No authenticated server - begin cowabunga timer");
+                        static uint32_t ab = 0;
+                        if ((ab % 150) == 0)
+                        {
+                            LOG_INFO("No authenticated server - begin cowabunga timer");
+                        }
+                        ++ab;
                     }
-                    ++ab;
+                }
+
+
+                renderer.begin_frame();
+
+                window.process_events(&exit);
+
+                gui.push();
+
+                renderer.end_frame();
+
+
+                double target = 8.333333;
+                double timeToWait = target - timer.lap<double>();
+                if (timeToWait > 0.0)
+                {
+                    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
+                }
+
+                if (rssiPlot.full())
+                {
+                    exit = true;
                 }
             }
 
-
-            renderer.begin_frame();
-
-            window.process_events(&exit);
-
-            gui.push();
-
-            renderer.end_frame();
-
-
-            double target = 8.333333;
-            double timeToWait = target - timer.lap<double>();
-            if (timeToWait > 0.0)
-            {
-                std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
-            }
-
-            if (timer2.lap<float>() >= static_cast<float>(std::chrono::seconds(80).count()))
-            {
-                exit = true;
-            }
-        }
-
-        common::coroutine_manager_instance().wait_for_all();
+            common::coroutine_manager_instance().wait_for_all();
+        };
     };
 
-    for (auto&& avg : avgs)
+    for (int i = 0; i < sizes.size(); ++i)
     {
-        LOG_INFO_FMT("RSSI AVG: {}", avg);
-    }
+        LOG_INFO_FMT("Ring buffer size: {}", sizes[i]);
+        for (auto&& median : medians[i])
+        {
+            LOG_INFO_FMT("RSSI MEDIAN: {}", median);
+        }
+    };
     return EXIT_SUCCESS;
 }
