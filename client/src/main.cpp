@@ -126,7 +126,7 @@ void process_cmd_line_args(int argc, char** argv)
 }    // namespace
 int main(int argc, char** argv)
 {
-    std::vector<float> exitMedian{ 74.0f, 75.0f, 74.0f, 74.0f, 74.0f };
+    std::vector<float> exitMedian{ -74.0f, -75.0f, -74.0f, -74.0f, -74.0f };
     std::vector<std::size_t> sizes{ 7u, 14u, 21u, 28u, 35u };
     std::vector<std::vector<float>> times{};
     times.resize(sizes.size());

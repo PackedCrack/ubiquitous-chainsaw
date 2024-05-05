@@ -19,23 +19,23 @@ CRSSIPlot::CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander)
     float avg{};
     if (size == 7)
     {
-        avg = 66.0f;
+        avg = -66.0f;
     }
     else if (size == 14)
     {
-        avg = 68.0f;
+        avg = -68.0f;
     }
     else if (size == 21)
     {
-        avg = 66.0f;
+        avg = -66.0f;
     }
     else if (size == 28)
     {
-        avg = 67.0f;
+        avg = -67.0f;
     }
     else if (size == 35)
     {
-        avg = 67.0f;
+        avg = -67.0f;
     }
     else
     {
