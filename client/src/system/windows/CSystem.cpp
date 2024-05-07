@@ -15,6 +15,10 @@
 #pragma comment(lib, "PowrProf.lib")
 // winrt
 #include <winrt/windows.foundation.h>
+//
+//
+//
+//
 namespace sys
 {
 CSystem::CSystem()

@@ -3,10 +3,10 @@
 //
 #include "CRssiDemander.hpp"
 #include "common/CCoroutineManager.hpp"
-// clang-format off
-
-
-// clang-format on
+//
+//
+//
+//
 namespace
 {
 [[nodiscard]] bool valid_sha_version_id(ble::ShaVersion version)
@@ -67,20 +67,6 @@ namespace
     uint8_t offset = packet[HEADER.rssiOffset];
     return static_cast<int8_t>(packet[offset]);
 }
-[[nodiscard]] std::vector<byte> generate_random_block(security::CRandom& rng)
-{
-    static std::random_device rd{};
-    static std::mt19937_64 generator{ rd() };
-    static std::uniform_int_distribution<size_t> distribution{ 64u, 96u };
-    size_t blockSize = distribution(generator);
-
-    std::expected<std::vector<byte>, security::CRandom::Error> expected = rng.generate_block(blockSize);
-    ASSERT(expected, "Generating random data should never fail");
-
-    // This is NOT a bug
-    // https://godbolt.org/#z:OYLghAFBqd5QCxAYwPYBMCmBRdBLAF1QCcAaPECAMzwBtMA7AQwFtMQByARg9KtQYEAysib0QAJgAMfAQQCqAZ0wAFAB6cpvAFYgupWkwahkAUgkAhcxdLL6yAngGVG6AMKpaAVxYNJpVwAZPAZMADkfACNMYkkANlIAB1RFQicGD29ff2TUxwFg0IiWaNiJBLtMB3ShAiZiAkyfPwlbTHt8hlr6gkLwqJj42zqGpuzWxRHekP6SwfKASltUL2Jkdg5zAGYQ5G8sAGpTLbdkSfxBY%2BxTKQBBbd39zCOTyeIQ4AB9ADc8TAB3K43e4SHYMPZeQ7HNyYNSJKoETDoIF3B7gp4vNzfBEkFH3O7nEAgbEOXEnZAIepXA7ATAELgQBbA0wAdisdwOnIOxDpqwYRzZ%2BgOrQOW1IBwALKyACLHdn3Fmy1EEgjoIkkojEaEUqlbbA0ukSRnMtnArkHQkgWHwhxI6GWjVk06UrV68UhAjU60I1lWQXikViyUykNbeVmrk8gh8i2qoksVDYiDehwAOm%2BYi8mEZTLDJqV%2BNuDpxruduv1tIIW2NqNNHK5lpTiORrzjxJL2pdV3dlz1Bybvt9QsD4qlitD4frnKjMab6cz2dz4fHytuHoOLCYIQg6/qwGQ4p1xAAVMeDnvvkza/LzWgGJNrcRY2qQKkAF6YT4EA0EABqMVSAQXmlYU5WZKcDjwKgDjvB84WIaA6X/YhAP5Y5ZS2ECuCvW5zUHCDzWLUlSyPakSWAn8GSXCNzWnXliH5ElU3fRcwIgkMIPaZRIOg2DEXgxC/wA9JgPQ4UcLwutcNozkiM1TtywOEkJAoysjWogjI3oxiqgkZi8A/Y083YldpM5LjnigmCBDgxIEMrZDUNEzDRQkrl8LM2i5KdUi%2BxJLZVLpasNM880ZwYpSqi2fTDJCySCzw2tpQ4JZaE4ABWXg/A4LRSFQTg3GsawLRWNZnm2HhSAITQUqWABrEAJS4VMJHSiQJQlOIuAADi2ABOdKtikdL0oMTgJSymq8s4XhFBAGRqpylLSDgWAkDQFhEjoGJyEoDatvoWJvmQRJEh%2BLg%2Bs%2BLZus%2BNQ4glPg6ERFDKEiKbIhCeoAE9OEqj7mGIL6AHlIm0BFft4Da2EEIGGFoH6ltILBIi8YA3DEWg5u4XgsE3YxxER/AeWqbEsdy2Eqi8REpo9doptoPBImIb6PCwKaCHeFgIdIbFiEiFJMGlTA8eABnjBqpYqEMYBFF/P5/iB%2BFssq/hBBEMR2FBWRBCUVQNER3R9EMcWzEsawDEZubICWVBEk6LGAHpCVNqxLEMRFJgOB2gZUh2AHEACUAFpeETGJ3iwK3GTaDp0hcBh3E8Zo9ACBO%2BmKUoU9yNIBDGPx9Gzzp04GWJ9EqaoBG6UYk%2ByMv2gRGopmLuZS%2BGHo85TyYembzPsOWVZ1j0VKMsmxH8o4A47olDdFGOpSLtTa6DggXBCBII5QWw3hFq0BZ6sa5qJTalkuC2aQ4nuvq%2BoSNKOAm0hsty8fZvmqqJZWmBEBAFYCESKndogPtbaxAwisA2GobqcQg73RgsbYABwuAslTFIVMlUkRrwjinVWwhRDiC4AkbBut1BTUNqQf4zNEgQ2HhwTKD8prjyBlTP%2B35UDQSnjPOe3wF5LwgB4TawCN5bC3m/Jae9SANUQS1PqEpuoSikHEKQfV%2BosjGnfUeT8Zq2FfjvWqqiJDqNDponRYjeaoUakAA%3D
-    return std::move(*expected);
-}
 void insert_data(std::span<uint8_t> dst, std::span<const uint8_t> src)
 {
     ASSERT(dst.size() == src.size(), "Buffer size mismatch when calling memcpy");
@@ -95,9 +81,6 @@ void insert_data(std::span<uint8_t> dst, std::span<const uint8_t> src)
     packet[HEADER.randomDataSize] = common::assert_down_cast<uint8_t>(randomBlock.size());
 
     std::span<uint8_t> packetRandomBlock{ std::begin(packet) + packet[HEADER.randomDataOffset], packet[HEADER.randomDataSize] };
-    //ASSERT(packetRandomBlock.size() == randomBlock.size(), "Buffer size mismatch when calling memcpy");
-    //size_t bytesToCopy = randomBlock.size() < packetRandomBlock.size() ? randomBlock.size() : packetRandomBlock.size();
-    //std::memcpy(packetRandomBlock.data(), randomBlock.data(), bytesToCopy);
     insert_data(packetRandomBlock, randomBlock);
 
     return packet;
@@ -112,9 +95,6 @@ requires security::hash_algorithm<sha_t>
     packet[HEADER.hashSize] = common::assert_down_cast<uint8_t>(hash.size());
 
     std::span<uint8_t> packetHashBlock{ std::begin(packet) + packet[HEADER.hashOffset], packet[HEADER.hashSize] };
-    //ASSERT(packetHashBlock.size() == hash.size(), "Buffer size mismatch when calling memcpy");
-    //size_t bytesToCopy = hash.size() < packetHashBlock.size() ? hash.size() : packetHashBlock.size();
-    //std::memcpy(packetHashBlock.data(), hash.data(), bytesToCopy);
     insert_data(packetHashBlock, std::span<const uint8_t>{ hash.data(), hash.size() });
 
     return packet;
@@ -127,37 +107,7 @@ requires security::hash_algorithm<sha_t>
     packet[HEADER.signatureSize] = common::assert_down_cast<uint8_t>(signature.size());
 
     std::span<uint8_t> packetSignatureBlock{ std::begin(packet) + packet[HEADER.signatureOffset], packet[HEADER.signatureSize] };
-    //ASSERT(packetSignatureBlock.size() == signature.size(), "Buffer size mismatch when calling memcpy");
-    //size_t bytesToCopy = signature.size() < packetSignatureBlock.size() ? signature.size() : packetSignatureBlock.size();
-    //std::memcpy(packetSignatureBlock.data(), signature.data(), bytesToCopy);
     insert_data(packetSignatureBlock, signature);
-
-    return packet;
-}
-[[nodiscard]] std::vector<byte> make_packet_demand_rssi(security::CEccPrivateKey* pClientKey)
-{
-    using sha_type = security::Sha2_256;
-    static std::expected<security::CRandom, security::CRandom::Error> expected = security::CRandom::make_rng();
-    if (!expected)
-    {
-        LOG_FATAL("Failed to create cryptographic rng generator");
-    }
-
-    security::CRandom& rng = *expected;
-    std::vector<byte> randomBlock = generate_random_block(rng);
-    security::CHash<sha_type> hash{ randomBlock };
-    std::vector<byte> signature = pClientKey->sign_hash(rng, hash);
-
-    static constexpr ble::DemandRSSIHeader HEADER = ble::header_whereami_demand_rssi();
-    const size_t PACKET_SIZE = sizeof(decltype(HEADER)) + randomBlock.size() + hash.size() + signature.size();
-    ASSERT(PACKET_SIZE < 216, "Max packet size for BLE is around 216 bytes - give or take");
-
-    std::vector<byte> packet{};
-    packet.resize(PACKET_SIZE);
-    packet[HEADER.shaVersion] = ble::sha_version_id<typename decltype(hash)::hash_type>();
-    packet = insert_random_data_block(packet, randomBlock);
-    packet = insert_hash(packet, hash);
-    packet = insert_signature(packet, signature);
 
     return packet;
 }
@@ -170,6 +120,7 @@ CRssiDemander::CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono:
     , m_pServer{ &server }
     , m_pWindow{ &window }
     , m_Timer{}
+    , m_Protector{}
 {}
 CRssiDemander::~CRssiDemander()
 {
@@ -184,25 +135,27 @@ CRssiDemander::~CRssiDemander()
     //    //    join_rssi_demander();
     //}
 }
-CRssiDemander::CRssiDemander(CRssiDemander&& other) noexcept
-    : m_Queue{ std::move(other.m_Queue) }
-    , m_DemandInterval{ std::move(other.m_DemandInterval) }
-    , m_pServerPubKey{ std::move(other.m_pServerPubKey) }
-    , m_pServer{ std::move(other.m_pServer) }
-    , m_pWindow{ std::move(other.m_pWindow) }
-    , m_Timer{ std::move(other.m_Timer) }
-{}
-CRssiDemander& CRssiDemander::operator=(CRssiDemander&& other) noexcept
-{
-    m_Queue = std::move(other.m_Queue);
-    m_pServer = std::move(other.m_pServer);
-    m_pServerPubKey = std::move(other.m_pServerPubKey);
-    m_pWindow = std::move(other.m_pWindow);
-    m_DemandInterval = std::move(other.m_DemandInterval);
-    m_Timer = std::move(other.m_Timer);
-
-    return *this;
-}
+//CRssiDemander::CRssiDemander(CRssiDemander&& other) noexcept
+//    : m_Queue{ std::move(other.m_Queue) }
+//    , m_DemandInterval{ std::move(other.m_DemandInterval) }
+//    , m_pServerPubKey{ std::move(other.m_pServerPubKey) }
+//    , m_pServer{ std::move(other.m_pServer) }
+//    , m_pWindow{ std::move(other.m_pWindow) }
+//    , m_Timer{ std::move(other.m_Timer) }
+//    , m_Protector{ std::move(other.m_Protector) }
+//{}
+//CRssiDemander& CRssiDemander::operator=(CRssiDemander&& other) noexcept
+//{
+//    m_Queue = std::move(other.m_Queue);
+//    m_pServer = std::move(other.m_pServer);
+//    m_pServerPubKey = std::move(other.m_pServerPubKey);
+//    m_pWindow = std::move(other.m_pWindow);
+//    m_DemandInterval = std::move(other.m_DemandInterval);
+//    m_Timer = std::move(other.m_Timer);
+//    m_Protector = std::move(other.m_Protector);
+//
+//    return *this;
+//}
 //void CRssiDemander::move(CRssiDemander& other)
 //{
 //    m_Queue = std::move(other.m_Queue);
@@ -232,21 +185,27 @@ auto CRssiDemander::make_rssi_receiver()
             ble::ShaVersion version = extract_sha_version(packet);
             if (valid_sha_version_id(version))
             {
-                std::span<uint8_t> randomData = view_random_data_block(packet);
-                // TODO: Check cache if we expect an incoming packet with this random data
-
-                ble::ShaHash hash = ble::make_sha_hash(version, view_hash(packet));
-                std::span<uint8_t> signatureBlock = view_signature(packet);
-
-                if (valid_signature(pSelf->m_pServerPubKey.get(), signatureBlock, hash))
+                if (pSelf->m_Protector.expecting_packet(view_random_data_block(packet)))
                 {
-                    int8_t rssi = extract_rssi_value(packet);
-                    pSelf->m_Queue.push(rssi);
+                    // TODO: Check cache if we expect an incoming packet with this random data
+
+                    ble::ShaHash hash = ble::make_sha_hash(version, view_hash(packet));
+                    std::span<uint8_t> signatureBlock = view_signature(packet);
+
+                    if (valid_signature(pSelf->m_pServerPubKey.get(), signatureBlock, hash))
+                    {
+                        int8_t rssi = extract_rssi_value(packet);
+                        pSelf->m_Queue.push(rssi);
+                    }
+                    else
+                    {
+                        // TODO:: missed answers counter
+                        LOG_WARN("Recieved RSSI Notification packet with an invalid signature!");
+                    }
                 }
                 else
                 {
-                    // TODO:: missed answers counter
-                    LOG_WARN("Recieved RSSI Notification packet with an invalid signature!");
+                    LOG_WARN("Recieved packet with unexpected random data..");
                 }
             }
         }
@@ -384,7 +343,7 @@ std::vector<byte> CRssiDemander::make_packet_demand_rssi()
     }
 
     security::CRandom& rng = *expected;
-    std::vector<byte> randomBlock = generate_random_block(rng);
+    std::vector<byte> randomBlock = m_Protector.generate_random_block();
     security::CHash<sha_type> hash{ randomBlock };
     std::vector<byte> signature = m_pClientPrivKey->sign_hash(rng, hash);
 

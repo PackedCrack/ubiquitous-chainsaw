@@ -156,10 +156,10 @@ int main(int argc, char** argv)
             // if (missedAnswers > 5)
             //      cowabunga();
 
-            float avg = rssiPlot.rssi_avg();
-            if (avg < -70.0f)
+            int8_t median = rssiPlot.rssi_median();
+            if (median < -70)
             {
-                LOG_INFO("RSSI avg is too low - COWABUNGA TIME");
+                LOG_INFO("RSSI median is too low - COWABUNGA TIME");
             }
             //      cowabunga();
         }

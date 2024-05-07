@@ -4,10 +4,10 @@
 #include "CRSSIPlot.hpp"
 // third party
 #include "imgui/imgui.h"
-// clang-format off
-
-
-// clang-format on
+//
+//
+//
+//
 namespace gui
 {
 CRSSIPlot::CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander)
@@ -28,10 +28,15 @@ void CRSSIPlot::push()
 
     ImGui::End();
 }
-float CRSSIPlot::rssi_avg() const
+int8_t CRSSIPlot::rssi_median() const
 {
-    float sum = std::accumulate(std::begin(m_Values), std::end(m_Values), 0.0f);
-    return sum / static_cast<float>(m_Values.size());
+    std::vector<float> values = m_Values;
+    std::sort(std::begin(values), std::end(values));
+
+    auto nthElement = std::begin(values) + std::size(values) / 2;
+    std::nth_element(std::begin(values), nthElement, std::end(values));
+
+    return static_cast<int8_t>(values[std::ssize(values) / 2]);
 }
 void CRSSIPlot::plot()
 {
@@ -52,7 +57,7 @@ void CRSSIPlot::plot()
                      m_Values.data(),
                      std::ssize(m_Values),
                      0,
-                     std::format("Average: {:.2f}", rssi_avg()).c_str(),
+                     std::format("Median: {}", rssi_median()).c_str(),
                      MIN_RANGE,
                      MAX_RANGE,
                      ImVec2{ -FLT_MIN, 100.0f },

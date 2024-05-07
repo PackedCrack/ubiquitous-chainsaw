@@ -2,27 +2,92 @@
 // Created by qwerty on 2024-05-04.
 //
 #include "CReplayProtector.hpp"
+#include "client_defines.hpp"
 //
 //
 //
 //
-//bool CReplayProtector::expecting_packet(std::span<uint8_t> packet)
-//{
-//    m_PacketCache.find(Packet{ .randomData = packet });
-//
-//    while (!m_PacketAges.empty())
-//    {
-//        static constexpr float OLDEST_ALLOWED = static_cast<float>(std::chrono::seconds(3).count());
-//
-//        std::unordered_set<Packet>::const_iterator oldestPacket = m_PacketAges.top().packet;
-//        if (oldestPacket->timer.lap<float>() >= OLDEST_ALLOWED)
-//        {
-//            m_PacketCache.erase(oldestPacket);
-//            m_PacketAges.pop();
-//        }
-//        else
-//        {
-//            break;
-//        }
-//    }
-//}
+namespace
+{
+[[nodiscard]] std::unique_ptr<security::CRandom> make_rng()
+{
+    std::expected<security::CRandom, security::CRandom::Error> expected = security::CRandom::make_rng();
+    ASSERT(expected.has_value(), "Failed to create cryptographic rng generator");
+
+    // not a bug RVO does not apply here - you have to explicitly move out of expected.
+    return std::make_unique<security::CRandom>(std::move(*expected));
+}
+}    // namespace
+CReplayProtector::CReplayProtector()
+    : m_PacketCache{}
+    , m_PacketAges{}
+    , m_pRng{ make_rng() }
+    , m_Generator{ std::random_device{}() }
+{}
+CReplayProtector::CReplayProtector(const CReplayProtector& other)
+    : m_PacketCache{}
+    , m_PacketAges{}
+    , m_pRng{ make_rng() }
+    , m_Generator{ other.m_Generator }
+{}
+CReplayProtector& CReplayProtector::operator=(const CReplayProtector& other)
+{
+    if (this != &other)
+    {
+        m_PacketCache = other.m_PacketCache;
+        m_PacketAges = other.m_PacketAges;
+        m_pRng = make_rng();
+        m_Generator = other.m_Generator;
+    }
+
+    ASSERT(m_pRng != nullptr, "Expected Rng to be initialized.");
+
+    return *this;
+}
+bool CReplayProtector::expecting_packet(std::span<uint8_t> packet)
+{
+    remove_outdated_packets();
+
+    if (!m_PacketCache.contains(Packet{ .randomData = packet }))
+    {
+        return false;
+    }
+
+    return true;
+}
+const std::vector<byte>& CReplayProtector::generate_random_block()
+{
+    static std::uniform_int_distribution<size_t> distribution{ 64u, 96u };
+
+    size_t blockSize = distribution(m_Generator);
+    std::expected<std::vector<byte>, security::CRandom::Error> expected = m_pRng->generate_block(blockSize);
+    ASSERT(expected.has_value(), "Generating random data should never fail");
+
+    auto [iter, emplaced] = m_PacketCache.emplace(Packet{ .randomData = std::move(*expected) });
+    ASSERT(emplaced == true, "Expected a unique sequence of bytes");
+
+    m_PacketAges.push(PacketAge{ .packet = iter, .timer{} });
+
+    const std::vector<uint8_t>* pRandomData = std::get_if<std::vector<uint8_t>>(&(iter->randomData));
+    ASSERT(pRandomData != nullptr, "Failed to access variant which should always be stored as std::vector<uint8_t> in the cache");
+
+    return *pRandomData;
+}
+void CReplayProtector::remove_outdated_packets()
+{
+    while (!m_PacketAges.empty())
+    {
+        static constexpr float OLDEST_ALLOWED = static_cast<float>(std::chrono::seconds(3).count());
+
+        const PacketAge& oldestPacket = m_PacketAges.top();
+        if (oldestPacket.timer.lap<float>() >= OLDEST_ALLOWED)
+        {
+            m_PacketCache.erase(oldestPacket.packet);
+            m_PacketAges.pop();
+        }
+        else
+        {
+            break;
+        }
+    }
+}
