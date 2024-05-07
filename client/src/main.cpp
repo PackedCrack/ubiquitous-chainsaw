@@ -140,8 +140,8 @@ int main(int argc, char** argv)
     gui::CGui gui{};
 
     CServer server{};
-    CAuthenticator authenticator{ server };
-    auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, authenticator);
+    //CAuthenticator authenticator{ server };
+    auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, server);
     auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(10u, make_rssi_demander(server, window));
 
 

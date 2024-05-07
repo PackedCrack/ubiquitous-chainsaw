@@ -1,7 +1,5 @@
 SET(MAIN_SRCS 
         main.cpp
-		CAuthenticator.cpp
-		CAuthenticator.hpp
 		CServer.cpp
 		CServer.hpp
 		CRssiDemander.cpp
