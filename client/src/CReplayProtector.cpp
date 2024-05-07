@@ -58,7 +58,7 @@ bool CReplayProtector::expected_packet(std::span<uint8_t> packet)
     {
         return false;
     }
-   
+
     auto node = m_PacketCache.extract(iter);
     node.value().beenAnswered = true;
     m_PacketCache.insert(std::move(node));

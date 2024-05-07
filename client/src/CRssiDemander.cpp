@@ -135,35 +135,6 @@ CRssiDemander::~CRssiDemander()
     //    //    join_rssi_demander();
     //}
 }
-//CRssiDemander::CRssiDemander(CRssiDemander&& other) noexcept
-//    : m_Queue{ std::move(other.m_Queue) }
-//    , m_DemandInterval{ std::move(other.m_DemandInterval) }
-//    , m_pServerPubKey{ std::move(other.m_pServerPubKey) }
-//    , m_pServer{ std::move(other.m_pServer) }
-//    , m_pWindow{ std::move(other.m_pWindow) }
-//    , m_Timer{ std::move(other.m_Timer) }
-//    , m_Protector{ std::move(other.m_Protector) }
-//{}
-//CRssiDemander& CRssiDemander::operator=(CRssiDemander&& other) noexcept
-//{
-//    m_Queue = std::move(other.m_Queue);
-//    m_pServer = std::move(other.m_pServer);
-//    m_pServerPubKey = std::move(other.m_pServerPubKey);
-//    m_pWindow = std::move(other.m_pWindow);
-//    m_DemandInterval = std::move(other.m_DemandInterval);
-//    m_Timer = std::move(other.m_Timer);
-//    m_Protector = std::move(other.m_Protector);
-//
-//    return *this;
-//}
-//void CRssiDemander::move(CRssiDemander& other)
-//{
-//    m_Queue = std::move(other.m_Queue);
-//    m_pServer = std::move(other.m_pServer);
-//    m_pServerPubKey = std::move(other.m_pServerPubKey);
-//    m_pWindow = std::move(other.m_pWindow);
-//    m_DemandInterval = std::move(other.m_DemandInterval);
-//}
 std::optional<std::vector<int8_t>> CRssiDemander::rssi()
 {
     auto vec = std::make_optional<std::vector<int8_t>>();
@@ -231,8 +202,6 @@ void CRssiDemander::send_demand()
             {
             case CServer::HasSubscribedResult::subscribed:
             {
-                //gfx::CWindow& window = *(pSelf->m_pWindow);
-                //pSelf->m_pServer->demand_rssi(window);
                 // demand_rssi spawns a new coroutine task because we can't wait here.
                 // If we wait here then the timer will not be reset at the correct time.
                 pSelf->demand_rssi();
