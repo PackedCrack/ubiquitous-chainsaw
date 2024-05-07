@@ -44,14 +44,24 @@ CReplayProtector& CReplayProtector::operator=(const CReplayProtector& other)
 
     return *this;
 }
-bool CReplayProtector::expecting_packet(std::span<uint8_t> packet)
+bool CReplayProtector::expected_packet(std::span<uint8_t> packet)
 {
     remove_outdated_packets();
 
-    if (!m_PacketCache.contains(Packet{ .randomData = packet }))
+    Packet key{ .randomData = packet };
+    auto iter = m_PacketCache.find(key);
+    if (iter == std::end(m_PacketCache))
     {
         return false;
     }
+    if (iter->beenAnswered)
+    {
+        return false;
+    }
+   
+    auto node = m_PacketCache.extract(iter);
+    node.value().beenAnswered = true;
+    m_PacketCache.insert(std::move(node));
 
     return true;
 }

@@ -185,7 +185,7 @@ auto CRssiDemander::make_rssi_receiver()
             ble::ShaVersion version = extract_sha_version(packet);
             if (valid_sha_version_id(version))
             {
-                if (pSelf->m_Protector.expecting_packet(view_random_data_block(packet)))
+                if (pSelf->m_Protector.expected_packet(view_random_data_block(packet)))
                 {
                     // TODO: Check cache if we expect an incoming packet with this random data
 

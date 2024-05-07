@@ -14,6 +14,7 @@ private:
     struct Packet
     {
         std::variant<std::vector<uint8_t>, std::span<uint8_t>> randomData;
+        bool beenAnswered = false;
         [[nodiscard]] friend inline bool operator==(const Packet& lhs, const Packet& rhs)
         {
             bool equal{ true };
@@ -104,7 +105,7 @@ public:
     CReplayProtector& operator=(const CReplayProtector& other);
     CReplayProtector& operator=(CReplayProtector&& other) = default;
 public:
-    [[nodiscard]] bool expecting_packet(std::span<uint8_t> packet);
+    [[nodiscard]] bool expected_packet(std::span<uint8_t> packet);
     [[nodiscard]] const std::vector<byte>& generate_random_block();
 private:
     void remove_outdated_packets();
