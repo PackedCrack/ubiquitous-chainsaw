@@ -27,6 +27,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 project (${TEST_PROJECT})
 
 SET(SECURITY_DIR "${CMAKE_SOURCE_DIR}/../shared/security/")
+SET(CLIENT_DIR "${CMAKE_SOURCE_DIR}/../client/src/")
 
 add_executable(${TEST_PROJECT}
         test_CThreadSafeHashMap.cpp
@@ -38,10 +39,14 @@ add_executable(${TEST_PROJECT}
         test_CHash.cpp
         test_EccKey.cpp
         ${SECURITY_DIR}/ecc_key.cpp
+        # client test
+        test_ReplayProtection.cpp
+        ${CLIENT_DIR}/CReplayProtector.cpp
 )
 
 target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../shared/common")
 target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../shared/security")
+target_include_directories(${TEST_PROJECT} PRIVATE "${CMAKE_SOURCE_DIR}/../shared")
 
 
 set_property(TARGET ${TEST_PROJECT} PROPERTY CXX_STANDARD 23)

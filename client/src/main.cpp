@@ -140,7 +140,6 @@ int main(int argc, char** argv)
     gui::CGui gui{};
 
     CServer server{};
-    //CAuthenticator authenticator{ server };
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, server);
     auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(10u, make_rssi_demander(server, window));
 
@@ -152,22 +151,17 @@ int main(int argc, char** argv)
 
         if (server.connected())
         {
-            // int missedAnswers = rssiPlot.missed();
-            // if (missedAnswers > 5)
-            //      cowabunga();
-
             int8_t median = rssiPlot.rssi_median();
             if (median < -70)
             {
                 LOG_INFO("RSSI median is too low - COWABUNGA TIME");
+                //      cowabunga();
             }
-            //      cowabunga();
         }
         else
         {
             if (!server.is_authenticated())
             {
-                // TODO::
                 if (!scanner.scanning())
                 {
                     deviceList.recreate_list();
@@ -193,6 +187,7 @@ int main(int argc, char** argv)
         renderer.end_frame();
 
 
+        // Throttle application loop to 120 fps.
         double target = 8.333333;
         double timeToWait = target - timer.lap<double>();
         if (timeToWait > 0.0)

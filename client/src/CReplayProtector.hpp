@@ -13,7 +13,7 @@ class CReplayProtector
 private:
     struct Packet
     {
-        std::variant<std::vector<uint8_t>, std::span<uint8_t>> randomData;
+        std::variant<std::vector<uint8_t>, std::span<const uint8_t>> randomData;
         bool beenAnswered = false;
         [[nodiscard]] friend inline bool operator==(const Packet& lhs, const Packet& rhs)
         {
@@ -98,14 +98,14 @@ private:
         }
     };
 public:
-    CReplayProtector();
+    explicit CReplayProtector(std::chrono::seconds storeDuration);
     ~CReplayProtector() = default;
     CReplayProtector(const CReplayProtector& other);
     CReplayProtector(CReplayProtector&& other) = default;
     CReplayProtector& operator=(const CReplayProtector& other);
     CReplayProtector& operator=(CReplayProtector&& other) = default;
 public:
-    [[nodiscard]] bool expected_packet(std::span<uint8_t> packet);
+    [[nodiscard]] bool expected_random_data(std::span<const uint8_t> randomData);
     [[nodiscard]] const std::vector<byte>& generate_random_block();
 private:
     void remove_outdated_packets();
@@ -114,4 +114,5 @@ private:
     std::priority_queue<PacketAge> m_PacketAges;
     std::unique_ptr<security::CRandom> m_pRng;
     std::mt19937_64 m_Generator;
+    std::chrono::seconds m_OldestAllowed;
 };

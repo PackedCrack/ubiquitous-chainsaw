@@ -14,21 +14,22 @@ namespace
     std::expected<security::CRandom, security::CRandom::Error> expected = security::CRandom::make_rng();
     ASSERT(expected.has_value(), "Failed to create cryptographic rng generator");
 
-    // not a bug RVO does not apply here - you have to explicitly move out of expected.
     return std::make_unique<security::CRandom>(std::move(*expected));
 }
 }    // namespace
-CReplayProtector::CReplayProtector()
+CReplayProtector::CReplayProtector(std::chrono::seconds storeDuration)
     : m_PacketCache{}
     , m_PacketAges{}
     , m_pRng{ make_rng() }
     , m_Generator{ std::random_device{}() }
+    , m_OldestAllowed{ storeDuration }
 {}
 CReplayProtector::CReplayProtector(const CReplayProtector& other)
     : m_PacketCache{}
     , m_PacketAges{}
     , m_pRng{ make_rng() }
     , m_Generator{ other.m_Generator }
+    , m_OldestAllowed{ other.m_OldestAllowed }
 {}
 CReplayProtector& CReplayProtector::operator=(const CReplayProtector& other)
 {
@@ -38,17 +39,18 @@ CReplayProtector& CReplayProtector::operator=(const CReplayProtector& other)
         m_PacketAges = other.m_PacketAges;
         m_pRng = make_rng();
         m_Generator = other.m_Generator;
+        m_OldestAllowed = other.m_OldestAllowed;
     }
 
     ASSERT(m_pRng != nullptr, "Expected Rng to be initialized.");
 
     return *this;
 }
-bool CReplayProtector::expected_packet(std::span<uint8_t> packet)
+bool CReplayProtector::expected_random_data(std::span<const uint8_t> randomData)
 {
     remove_outdated_packets();
 
-    Packet key{ .randomData = packet };
+    Packet key{ .randomData = randomData };
     auto iter = m_PacketCache.find(key);
     if (iter == std::end(m_PacketCache))
     {
@@ -87,10 +89,8 @@ void CReplayProtector::remove_outdated_packets()
 {
     while (!m_PacketAges.empty())
     {
-        static constexpr float OLDEST_ALLOWED = static_cast<float>(std::chrono::seconds(3).count());
-
         const PacketAge& oldestPacket = m_PacketAges.top();
-        if (oldestPacket.timer.lap<float>() >= OLDEST_ALLOWED)
+        if (oldestPacket.timer.lap<float>() >= static_cast<float>(m_OldestAllowed.count()))
         {
             m_PacketCache.erase(oldestPacket.packet);
             m_PacketAges.pop();

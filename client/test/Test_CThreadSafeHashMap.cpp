@@ -5,10 +5,9 @@
 #include "common/CThreadSafeHashMap.hpp"
 
 
-// First, we define a class that inherits from ::testing::Test
-class CThreadSafeHashMapTest : public ::testing::Test {
+class CThreadSafeHashMapTest : public ::testing::Test
+{
 protected:
-    // You may define constructor(s) and destructor(s) as needed
     CThreadSafeHashMapTest()
         : m_pHashMap{ nullptr }
         , m_ReaderThread{}
@@ -16,12 +15,10 @@ protected:
     {}
     ~CThreadSafeHashMapTest() override = default;
     
-    // SetUp() is called immediately before a test starts
     void SetUp() override
     {
         m_pHashMap = std::make_unique<CThreadSafeHashMap<int32_t, int32_t>>();
     }
-    // called immediately after a test finishes
     void TearDown() override
     {
         if(m_ReaderThread.joinable())
