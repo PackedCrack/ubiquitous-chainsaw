@@ -5,10 +5,10 @@
 #include "../CServer.hpp"
 #include "../common/CStopWatch.hpp"
 #include "../CRssiDemander.hpp"
-// clang-format off
-
-
-// clang-format on
+//
+//
+//
+//
 namespace gui
 {
 class CRSSIPlot
@@ -24,12 +24,13 @@ public:
     CRSSIPlot& operator=(CRSSIPlot&& other) = default;
 public:
     void push();
-    [[nodiscard]] float rssi_avg() const;
+    [[nodiscard]] int8_t rssi_median() const;
 private:
     void plot();
-    void add_rssi_value(float value);
+    void add_rssi_value(int8_t value);
 private:
     std::size_t m_Index;
+    std::size_t m_MaxSize;
     std::vector<float> m_Values;
     std::shared_ptr<CRssiDemander> m_pDemander;
 };

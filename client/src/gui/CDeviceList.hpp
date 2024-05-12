@@ -1,9 +1,8 @@
 //
 // Created by qwerty on 2024-04-03.
 //
-
 #pragma once
-#include "../CAuthenticator.hpp"
+#include "../CServer.hpp"
 #include "taskflow/taskflow.hpp"
 #include "common/Pointer.hpp"
 #include "security/ecc_key.hpp"
@@ -12,6 +11,10 @@
 #include "../common/CMutex.hpp"
 #include "../common/CStopWatch.hpp"
 #include "../system/System.hpp"
+//
+//
+//
+//
 namespace gui
 {
 class CDeviceList
@@ -22,7 +25,7 @@ public:
     static constexpr std::string_view KEY = "devicelist";
     static constexpr std::chrono::seconds SCAN_TIME{ 25 };
 public:
-    explicit CDeviceList(ble::CScanner& scanner, CAuthenticator& authenticator);
+    explicit CDeviceList(ble::CScanner& scanner, CServer& server);
     ~CDeviceList();
     CDeviceList(const CDeviceList& other);
     CDeviceList(CDeviceList&& other) noexcept;
@@ -41,7 +44,7 @@ private:
     void device_list();
 private:
     Pointer<ble::CScanner> m_pScanner = nullptr;
-    Pointer<CAuthenticator> m_pAuthenticator = nullptr;
+    Pointer<CServer> m_pServer = nullptr;
     std::vector<ble::DeviceInfo> m_Devices;
     std::unique_ptr<mutex_t> m_pMutex;
     common::CStopWatch<time_t> m_ScanTimer;

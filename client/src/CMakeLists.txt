@@ -1,11 +1,11 @@
 SET(MAIN_SRCS 
         main.cpp
-		CAuthenticator.cpp
-		CAuthenticator.hpp
 		CServer.cpp
 		CServer.hpp
 		CRssiDemander.cpp
 		CRssiDemander.hpp
+		CReplayProtector.cpp
+		CReplayProtector.hpp
 		client_common.cpp
 		client_common.hpp
         resource.hpp

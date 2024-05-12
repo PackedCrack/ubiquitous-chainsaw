@@ -3,15 +3,16 @@
 //
 #pragma once
 #include "system/System.hpp"
+#include "common/CThreadSafeQueue.hpp"
 #include "bluetoothLE/Device.hpp"
 #include "bluetoothLE/ble_common.hpp"
 #include "gfx/CWindow.hpp"
 // security
 #include "security/ecc_key.hpp"
-// clang-format off
-
-
-// clang-format on
+//
+//
+//
+//
 struct AuthenticatedDevice
 {
     std::shared_ptr<ble::CDevice> pDevice;
@@ -37,22 +38,24 @@ public:
     CServer& operator=(const CServer& other);
     CServer& operator=(CServer&& other) = default;
 public:
+    void enqueue_devices(const std::vector<ble::DeviceInfo>& infos);
     void grant_authentication(AuthenticatedDevice&& device);
     void revoke_authentication();
     void subscribe(std::function<void(std::span<uint8_t>)>&& cb);
     void unsubscribe();
-    void demand_rssi(gfx::CWindow& window);
     [[nodiscard]] bool connected() const;
     [[nodiscard]] bool is_authenticated() const;
     [[nodiscard]] sys::awaitable_t<HasSubscribedResult> has_subscribed() const;
     [[nodiscard]] uint64_t server_address() const;
     [[nodiscard]] std::string server_address_as_str() const;
+    [[nodiscard]] std::optional<std::shared_ptr<ble::CDevice>> device();
 private:
-    [[nodiscard]] sys::awaitable_t<void>
-        try_demand_rssi(gfx::CWindow* pWindow, std::weak_ptr<ble::CCharacteristic> characteristic, std::vector<byte> packet);
+    [[nodiscard]] auto make_connection_changed_cb();
+    void process_queue();
+    [[nodiscard]] sys::awaitable_t<bool> verify_server_address(const std::shared_ptr<ble::CDevice>&, uint64_t address) const;
 public:
     std::unique_ptr<mutex_type> m_pMutex;
-    std::unique_ptr<security::CEccPrivateKey> m_pClientPrivateKey = nullptr;
     std::optional<AuthenticatedDevice> m_Server;
-    std::function<void(std::span<const uint8_t>)> m_RssiReceiver;
+    std::unique_ptr<security::CEccPublicKey> m_pServerKey = nullptr;
+    CThreadSafeQueue<ble::DeviceInfo> m_Devices;
 };
