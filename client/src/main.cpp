@@ -155,6 +155,7 @@ int main(int argc, char** argv)
             if (median < -70)
             {
                 LOG_INFO("RSSI median is too low - COWABUNGA TIME");
+                sys::cowabunga();
                 //      cowabunga();
             }
         }
