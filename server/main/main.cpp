@@ -2,6 +2,7 @@
 #define WOLFSSL_ESPWROOM32
 #include <wolfssl/wolfcrypt/settings.h>
 
+#include "usb_cdc.hpp"
 #include "sys/CSystem.hpp"
 #include "ble/CNimble.hpp"
 #include "sys/CNonVolatileStorage.hpp"
@@ -204,67 +205,93 @@ void tinyusb_cdc_line_state_changed_callback(int itf, cdcacm_event_t* event)
     int rts = event->line_state_changed_data.rts;
     ESP_LOGI(TAG, "Line state changed on channel %d: DTR:%d, RTS:%d", itf, dtr, rts);
 }
+void create_nvs_encryption_namespace()
+{
+    using NVS = storage::CNonVolatileStorage;
+    std::optional<NVS::CWriter> writer = NVS::make_writer(NVS_ENCRYPTION_NAMESPACE);
+    if (!writer)
+    {
+        LOG_FATAL_FMT("Failed to count stored encryption keys. Could not open handle to NVS's namespace \"{}\".",
+                      NVS_ENCRYPTION_NAMESPACE.data());
+    }
+
+    storage::NvsErrorCode result = writer->write_int8(NVS_KEY_NUM_STORED_ENC_KEYS, 0);
+    ASSERT(result == storage::NvsErrorCode::success, "Expected success");
+}
+[[nodiscard]] int8_t num_stored_encryption_keys()
+{
+    using NVS = storage::CNonVolatileStorage;
+    std::optional<NVS::CReader> reader = NVS::make_reader(NVS_ENCRYPTION_NAMESPACE);
+    if (!reader)
+    {
+        LOG_FATAL_FMT("Failed to count stored encryption keys. Could not open handle to NVS's namespace \"{}\".",
+                      NVS_ENCRYPTION_NAMESPACE.data());
+    }
+
+    std::expected<int8_t, storage::NvsErrorCode> expectedResult = reader->read_int8(NVS_KEY_NUM_STORED_ENC_KEYS);
+    if (!expectedResult)
+    {
+        if (expectedResult.error() == storage::NvsErrorCode::namespaceNotFound)
+        {
+            create_nvs_encryption_namespace();
+        }
+        else
+        {
+            LOG_FATAL_FMT("Failed to count stored encryption keys. Could not read from NVS's namespace \"{}\". Reason: \"{}\"",
+                          NVS_ENCRYPTION_NAMESPACE.data(),
+                          std::to_underlying(expectedResult.error()));
+        }
+    }
+
+    return *expectedResult;
+}
+[[nodiscard]] tusb_desc_device_t make_device_descriptor()
+{
+    static constexpr usb::DeviceDescriptorSettings settings{ .vendorID = 0xDE'AD,
+                                                             .productID = 0x13'37,
+                                                             .deviceVersion = 0x01'00,
+                                                             .manufactoryIndex = 0x00,
+                                                             .productIndex = 0x01,
+                                                             .serialNumberIndex = 0x02 };
+    static constexpr tusb_desc_device_t deviceDescriptor = usb::make_device_descriptor(settings);
+
+    return deviceDescriptor;
+}
+void listen_for_serial_communication()
+{
+    static constexpr tinyusb_config_cdcacm_t cdcConfig = usb::make_cdc_config();
+    std::array<const char*, 3> stringDescriptors{ "Manufacturer", "Chainsaw Access Token", "Serial Number" };
+    tinyusb_config_t config = usb::make_config(make_device_descriptor(), stringDescriptors);
+
+    usb::init_usb(config, cdcConfig);
+
+
+    while (num_stored_encryption_keys() < 3)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1'000));    // milisecs
+    }
+
+    sys::CSystem system{};
+    system.restart();
+}
 extern "C" void app_main(void)
 {
     sys::CSystem system{};
 
-    ESP_LOGI(TAG, "USB initialization");
-    tinyusb_config_t config{};
-    tusb_desc_device_t deviceDescriptor{
-        .bLength = sizeof(tusb_desc_device_t),
-        .bDescriptorType = TUSB_DESC_DEVICE,
-        .bcdUSB = 0x02'00,    // USB specification version - 2.0
-        .bDeviceClass = TUSB_CLASS_CDC,
-        .bDeviceSubClass = MISC_SUBCLASS_COMMON,
-        .bDeviceProtocol = MISC_PROTOCOL_IAD,
-        .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
-        .idVendor = 0xDE'AD,
-        .idProduct = 0x13'37,
-        .bcdDevice = 0x01'00,    // Device's firmware version - 1.0
-        // Indexing string descriptors start at 1. Index 0 is reserved for indicating that there are no string descriptors
-        .iManufacturer = 0x01,    // Index for the string containing the manufacturer name
-        .iProduct = 0x02,         // Index for the string containing the product name
-        .iSerialNumber = 0x03,    // Index for the string containing the serial number
-        .bNumConfigurations = 1
-    };
-    config.device_descriptor = &deviceDescriptor;
-    std::array<const char*, 4> stringDescriptors{ "Manufacturer", "Chainsaw Access Token", "Serial Number", "Dummy" };
-    config.string_descriptor = stringDescriptors.data();
-
-    ESP_ERROR_CHECK(tinyusb_driver_install(&config));
-
-    tinyusb_config_cdcacm_t acm_cfg = { .usb_dev = TINYUSB_USBDEV_0,
-                                        .cdc_port = TINYUSB_CDC_ACM_0,
-                                        .rx_unread_buf_sz = 64,
-                                        .callback_rx = &tinyusb_cdc_rx_callback,    // the first way to register a callback
-                                        .callback_rx_wanted_char = NULL,
-                                        .callback_line_state_changed = NULL,
-                                        .callback_line_coding_changed = NULL };
-
-    ESP_ERROR_CHECK(tusb_cdc_acm_init(&acm_cfg));
-    /* the second way to register a callback */
-    ESP_ERROR_CHECK(
-        tinyusb_cdcacm_register_callback(TINYUSB_CDC_ACM_0, CDC_EVENT_LINE_STATE_CHANGED, &tinyusb_cdc_line_state_changed_callback));
-
-#if (CONFIG_TINYUSB_CDC_COUNT > 1)
-    acm_cfg.cdc_port = TINYUSB_CDC_ACM_1;
-    ESP_ERROR_CHECK(tusb_cdc_acm_init(&acm_cfg));
-    ESP_ERROR_CHECK(
-        tinyusb_cdcacm_register_callback(TINYUSB_CDC_ACM_1, CDC_EVENT_LINE_STATE_CHANGED, &tinyusb_cdc_line_state_changed_callback));
-#endif
-
-    ESP_LOGI(TAG, "USB initialization DONE");
-
-
-    while (true)
     {
-        vTaskDelay(pdMS_TO_TICKS(4'000));    // milisecs
+        [[maybe_unused]] const storage::CNonVolatileStorage& nvs = storage::CNonVolatileStorage::instance();
+        [[maybe_unused]] std::expected<security::CWolfCrypt*, security::CWolfCrypt::Error> wc = security::CWolfCrypt::instance();
+        ASSERT(wc, "Tried to initilize WolfCrypt, but it has already been initlized!");
+    }
 
-        //ESP_LOG_BUFFER_HEXDUMP(TAG, buf, CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1, ESP_LOG_INFO);
-        for (auto&& key2 : keys)
-        {
-            LOG_INFO_FMT("Key type: {}", common::key_type_to_str(key2.first));
-        }
+    if (num_stored_encryption_keys() < 3)
+    {
+        // DO USB
+        listen_for_serial_communication();
+    }
+    else
+    {
+        // DO NIMBLE
     }
 
 

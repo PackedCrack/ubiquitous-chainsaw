@@ -1,6 +1,7 @@
 idf_component_register(
 	SRCS 
 	"main.cpp"
+    "usb_cdc.cpp"
 	"sys/CNonVolatileStorage.cpp" 
 	"sys/CChip.cpp" 
 	"sys/CSystem.cpp"

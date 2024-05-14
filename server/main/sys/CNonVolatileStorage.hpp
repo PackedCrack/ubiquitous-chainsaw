@@ -122,8 +122,8 @@ public:
     CNonVolatileStorage& operator=(CNonVolatileStorage&& other) = delete;
 public:
     [[nodiscard]] static CNonVolatileStorage& instance();
-    [[nodiscard]] std::optional<CReader> make_reader(std::string_view nameSpace);
-    [[nodiscard]] std::optional<CWriter> make_writer(std::string_view nameSpace);
+    [[nodiscard]] static std::optional<CReader> make_reader(std::string_view nameSpace);
+    [[nodiscard]] static std::optional<CWriter> make_writer(std::string_view nameSpace);
 
     // esp_err_t nvs_erase_key(nvs_handle_t handle, const char *key)
     // esp_err_t nvs_flash_erase(void) // Erase the default NVS partition.

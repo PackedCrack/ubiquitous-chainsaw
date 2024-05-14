@@ -133,7 +133,7 @@ CNonVolatileStorage::CReader::CReader(std::string_view nameSpace)
 {
     if (!m_Handle.has_value())
     {
-        throw std::invalid_argument("Error trying to open NVS. Invalid m_Handle value!");
+        throw std::runtime_error("Error trying to open NVS. Invalid m_Handle value!");
     }
 }
 std::optional<storage::CNonVolatileStorage::CReader> CNonVolatileStorage::CReader::make_reader(std::string_view nameSpace)
@@ -142,7 +142,7 @@ std::optional<storage::CNonVolatileStorage::CReader> CNonVolatileStorage::CReade
     {
         return std::make_optional<CReader>(CReader{ nameSpace });
     }
-    catch (const std::invalid_argument& e)
+    catch (const std::runtime_error& e)
     {
         // TODO: handle error here
         return std::nullopt;
@@ -185,7 +185,7 @@ CNonVolatileStorage::CWriter::CWriter(std::string_view nameSpace)
 {
     if (!m_Handle.has_value())
     {
-        throw std::invalid_argument("Error trying to open NVS. Invalid m_Handle value!");
+        throw std::runtime_error("Error trying to open NVS. Invalid m_Handle value!");
     }
 }    // CReader constructor
 std::optional<storage::CNonVolatileStorage::CWriter> CNonVolatileStorage::CWriter::make_writer(std::string_view nameSpace)
@@ -194,7 +194,7 @@ std::optional<storage::CNonVolatileStorage::CWriter> CNonVolatileStorage::CWrite
     {
         return std::make_optional<CWriter>(nameSpace);
     }
-    catch (const std::invalid_argument& e)
+    catch (const std::runtime_error& e)
     {
         // TODO: handle error here
         return std::nullopt;

@@ -2,6 +2,8 @@
 // Created by qwerty on 2024-05-14.
 //
 #pragma once
+#include "defines.hpp"
+// std
 #include <cstdint>
 //
 //
