@@ -19,11 +19,10 @@
 
 
 constexpr std::string_view NVS_ENCRYPTION_NAMESPACE = "ENC_STORAGE";
+constexpr std::string_view NVS_KEY_NUM_STORED_ENC_KEYS = "ENC_NUM_KEYS";
 constexpr std::string_view NVS_KEY_SERVER_PRIVATE = "ENC_PRIV";
 constexpr std::string_view NVS_KEY_SERVER_PUBLIC = "ENC_PUB";
 constexpr std::string_view NVS_KEY_CLIENT_PUBLIC = "ENC_CLIENT";
-constexpr std::string_view NVS_RSSI_NAMESPACE = "RSSI_STORAGE";
-constexpr std::string_view NVS_RSSI_KEY = "RSSI";
 inline std::string esp_err_to_str(esp_err_t code)
 {
     std::string err{};
@@ -78,11 +77,11 @@ requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, sec
     {
         LOG_FATAL("Failed to initilize NVS CReader");
     }
-    storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> readResult = reader.value().read_binary(key);
-    if (readResult.code != storage::NvsErrorCode::success)
+    std::expected<std::vector<uint8_t>, storage::NvsErrorCode> expectedResult = reader->read_binary(key);
+    if (!expectedResult)
     {
-        LOG_FATAL("Failed to retrieve the private key");
+        LOG_FATAL_FMT("Failed to retrieve the private key. Reason: {}", std::to_underlying(expectedResult.error()));
     }
 
-    return std::make_unique<key_t>(std::move(*readResult.data));
+    return std::make_unique<key_t>(std::move(*expectedResult));
 }

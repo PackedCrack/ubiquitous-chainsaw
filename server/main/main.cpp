@@ -76,32 +76,11 @@ void write_key_to_nvs(std::string_view nameSpace, std::string_view key, const st
         LOG_FATAL("Failed to initilize NVS CWriter");
     }
 
-    auto writerResult = writer.value().write_binary(key, keyData);
-    if (writerResult.code != storage::NvsErrorCode::success)
+    storage::NvsErrorCode result = writer->write_binary(key, keyData);
+    if (result != storage::NvsErrorCode::success)
     {
         LOG_FATAL("FAILED TO WRITE ENC KEY");
     }
-}
-storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs(std::string_view nameSpace, std::string_view key)
-{
-    std::optional<storage::CNonVolatileStorage::CReader> reader = storage::CNonVolatileStorage::CReader::make_reader(nameSpace);
-    if (!reader.has_value())
-    {
-        LOG_FATAL("Failed to initilize NVS CReader");
-    }
-    return reader.value().read_binary(key);
-}
-[[nodiscard]] auto make_load_key_invokable(std::string_view nameSpace, std::string_view key)
-{
-    return [nameSpace, key]() -> std::expected<std::vector<security::byte>, std::string>
-    {
-        auto readResult = read_key_from_nvs(nameSpace, key);
-        if (readResult.code != storage::NvsErrorCode::success)
-        {
-            LOG_FATAL("Unable to read servers private encryption key");
-        }
-        return std::expected<std::vector<security::byte>, std::string>{ std::move(readResult.data.value()) };
-    };
 }
 // void verify_ecc_keys()
 //{
@@ -151,9 +130,13 @@ storage::CNonVolatileStorage::ReadResult<std::vector<uint8_t>> read_key_from_nvs
 #include "tinyusb.h"
 #include "tusb_cdc_acm.h"
 #include "sdkconfig.h"
+#include "common/serial_communication.hpp"
+
 
 static const char* TAG = "example";
 static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
+static std::vector<std::pair<common::KeyType, std::vector<uint8_t>>> keys{};
+static auto key = std::make_pair<common::KeyType, std::vector<uint8_t>>(common::KeyType::undefined, {});
 void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t* event)
 {
     /* initialization */
@@ -163,6 +146,46 @@ void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t* event)
     esp_err_t ret = tinyusb_cdcacm_read(static_cast<tinyusb_cdcacm_itf_t>(itf), buf, CONFIG_TINYUSB_CDC_RX_BUFSIZE, &rx_size);
     if (ret == ESP_OK)
     {
+        static std::size_t keySize{};
+        if (key.first == common::KeyType::undefined || keySize == 0u)
+        {
+            LOG_INFO("Recieved and in first if statement");
+            ASSERT(rx_size == 1, "Expected header to be sent in single byte increments");
+            if (key.first == common::KeyType::undefined)
+            {
+                LOG_INFO("Changing key type");
+                key.first = common::KeyType{ buf[0] };
+            }
+            else if (keySize == 0u)
+            {
+                keySize = buf[0];
+                LOG_INFO_FMT("Changing key size to: \"{}\"", keySize);
+                //key.second.reserve(keySize);
+            }
+        }
+        else
+        {
+            LOG_INFO_FMT("Recieved \"{}\" and in else statement", rx_size);
+            ASSERT(rx_size <= keySize, "Expected recieved data to be less than or equal to the key");
+            for (std::size_t i = 0u; i < rx_size; ++i)
+            {
+                key.second.push_back(buf[i]);
+                LOG_INFO_FMT("Key size after push_back: {}", key.second.size());
+            }
+
+            if (key.second.size() == keySize)
+            {
+                keys.emplace_back(std::move(key));
+                key = std::make_pair<common::KeyType, std::vector<uint8_t>>(common::KeyType::undefined, {});
+                keySize = 0u;
+                LOG_INFO("Emplaced back key to vector");
+            }
+            else if (key.second.size() > keySize)
+            {
+                LOG_ERROR("Size of Key vector is greater than keysize");
+            }
+        }
+
         ESP_LOGI(TAG, "Data from channel %d:", itf);
         ESP_LOG_BUFFER_HEXDUMP(TAG, buf, rx_size, ESP_LOG_INFO);
     }
@@ -187,23 +210,25 @@ extern "C" void app_main(void)
 
     ESP_LOGI(TAG, "USB initialization");
     tinyusb_config_t config{};
-    tusb_desc_device_t deviceDescriptor{ .bLength = sizeof(tusb_desc_device_t),
-                                         .bDescriptorType = TUSB_DESC_DEVICE,
-                                         .bcdUSB = 0x02'00,    // USB specification version - 2.0
-                                         .bDeviceClass = TUSB_CLASS_CDC,
-                                         .bDeviceSubClass = MISC_SUBCLASS_COMMON,
-                                         .bDeviceProtocol = MISC_PROTOCOL_IAD,
-                                         .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
-                                         .idVendor = 0xDE'AD,
-                                         .idProduct = 0x13'37,
-                                         .bcdDevice = 0x01'00,     // Device's firmware version - 1.0
-                                         .iManufacturer = 0x01,    // Index for the string containing the manufacturer name
-                                         .iProduct = 0x02,         // Index for the string containing the product name
-                                         .iSerialNumber = 0x03,    // Index for the string containing the serial number
-                                         .bNumConfigurations = 1 };
+    tusb_desc_device_t deviceDescriptor{
+        .bLength = sizeof(tusb_desc_device_t),
+        .bDescriptorType = TUSB_DESC_DEVICE,
+        .bcdUSB = 0x02'00,    // USB specification version - 2.0
+        .bDeviceClass = TUSB_CLASS_CDC,
+        .bDeviceSubClass = MISC_SUBCLASS_COMMON,
+        .bDeviceProtocol = MISC_PROTOCOL_IAD,
+        .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
+        .idVendor = 0xDE'AD,
+        .idProduct = 0x13'37,
+        .bcdDevice = 0x01'00,    // Device's firmware version - 1.0
+        // Indexing string descriptors start at 1. Index 0 is reserved for indicating that there are no string descriptors
+        .iManufacturer = 0x01,    // Index for the string containing the manufacturer name
+        .iProduct = 0x02,         // Index for the string containing the product name
+        .iSerialNumber = 0x03,    // Index for the string containing the serial number
+        .bNumConfigurations = 1
+    };
     config.device_descriptor = &deviceDescriptor;
-    // Indexing string descriptors start at 1. Index 0 is reserved for indicating that there are no string descriptors
-    std::array<const char*, 4> stringDescriptors{ nullptr, "Manufacturer", "Chainsaw Access Token", "Serial Number" };
+    std::array<const char*, 4> stringDescriptors{ "Manufacturer", "Chainsaw Access Token", "Serial Number", "Dummy" };
     config.string_descriptor = stringDescriptors.data();
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&config));
@@ -233,7 +258,13 @@ extern "C" void app_main(void)
 
     while (true)
     {
-        vTaskDelay(pdMS_TO_TICKS(10'000));    // milisecs
+        vTaskDelay(pdMS_TO_TICKS(4'000));    // milisecs
+
+        //ESP_LOG_BUFFER_HEXDUMP(TAG, buf, CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1, ESP_LOG_INFO);
+        for (auto&& key2 : keys)
+        {
+            LOG_INFO_FMT("Key type: {}", common::key_type_to_str(key2.first));
+        }
     }
 
 
