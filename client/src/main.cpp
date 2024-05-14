@@ -124,8 +124,65 @@ void process_cmd_line_args(int argc, char** argv)
     return std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1));
 }
 }    // namespace
+#include <windows.h>
+#include <setupapi.h>
+#include <devguid.h>
+#include <ntddser.h>
+#include <regstr.h>
+#include <iostream>
+
+#pragma comment(lib, "setupapi.lib")
+namespace
+{}    // namespace
 int main(int argc, char** argv)
 {
+    HDEVINFO pDeviceInfoSet = nullptr;
+    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetclassdevsw
+    WIN_CHECK(pDeviceInfoSet = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr, nullptr, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+              pDeviceInfoSet != INVALID_HANDLE_VALUE);
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/ns-setupapi-sp_devinfo_data
+    SP_DEVINFO_DATA deviceInfoData{};
+    deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+    DWORD index = 0;
+    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdienumdeviceinfo
+    while (SetupDiEnumDeviceInfo(pDeviceInfoSet, index, &deviceInfoData) == TRUE)
+    {
+        std::array<BYTE, 512> buffer{};
+        DWORD requiredSize{};
+        // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceregistrypropertya
+        WIN_CHECK(SetupDiGetDeviceRegistryProperty(pDeviceInfoSet,
+                                                   &deviceInfoData,
+                                                   SPDRP_HARDWAREID,
+                                                   nullptr,
+                                                   buffer.data(),
+                                                   buffer.size(),
+                                                   &requiredSize));
+        ASSERT(requiredSize <= buffer.size(), "Pre allocated buffer size to small.");
+
+        std::string str{ std::begin(buffer), std::end(buffer) };
+        LOG_INFO_FMT("Hardware info: {}", str.c_str());
+        ++index;
+    }
+    DWORD error = GetLastError();
+    ASSERT(error == ERROR_NO_MORE_ITEMS, "There was an error when enumerating devices..");
+
+
+    if (pDeviceInfoSet != INVALID_HANDLE_VALUE)
+    {
+        // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdidestroydeviceinfolist
+        SetupDiDestroyDeviceInfoList(pDeviceInfoSet);
+    }
+
+    return 0;
+    /////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
+
+
     sys::CSystem system{};
 
     auto wc = security::CWolfCrypt::instance();
@@ -155,7 +212,7 @@ int main(int argc, char** argv)
             if (median < -70)
             {
                 LOG_INFO("RSSI median is too low - COWABUNGA TIME");
-                sys::cowabunga();
+                //sys::cowabunga();
                 //      cowabunga();
             }
         }

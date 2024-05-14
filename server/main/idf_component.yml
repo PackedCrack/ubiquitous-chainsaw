@@ -1,9 +1,10 @@
 ## IDF Component Manager Manifest File
 dependencies:
   wolfssl/wolfssl: "^5.6.6-stable-update2-esp32"
+  espressif/esp_tinyusb: "^1.4.4"
   ## Required IDF version
   idf:
-    version: ">=4.1.0"
+    version: ">=5.0"
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"
