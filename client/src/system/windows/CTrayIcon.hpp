@@ -6,8 +6,12 @@
 //#include "../../gfx/CWindow.hpp"
 // win32
 #include "SDL3/SDL.h"
-#include "../../win32.hpp"
+#include "win32.hpp"
 #include <shellapi.h>
+//
+//
+//
+//
 namespace gfx
 {
 class CWindow;

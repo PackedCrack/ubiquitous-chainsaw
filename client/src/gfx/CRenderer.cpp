@@ -20,8 +20,8 @@ ImGuiIO* create_imgui_io()
 }    // namespace
 namespace gfx
 {
-CRenderer::CRenderer(CWindow& window, uint32_t flags)
-    : m_pRenderer{ SDL_CreateRenderer(window.handle(), nullptr, flags) }
+CRenderer::CRenderer(CWindow& window)
+    : m_pRenderer{ SDL_CreateRenderer(window.handle(), nullptr) }
     , m_pContext{ create_imgui_context() }
     , m_pGuiIO{ create_imgui_io() }
 {

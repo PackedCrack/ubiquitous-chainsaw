@@ -2,12 +2,12 @@
 // Created by qwerty on 2024-03-01.
 //
 #pragma once
-#include "../../win32.hpp"
+#include "win32.hpp"
 #include <winrt/windows.foundation.h>
-// clang-format off
-
-
-// clang-format on
+//
+//
+//
+//
 namespace sys
 {
 using os_fire_and_forget_t = winrt::fire_and_forget;

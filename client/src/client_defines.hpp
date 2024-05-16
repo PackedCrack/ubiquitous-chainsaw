@@ -16,6 +16,7 @@
         {                                                                                                                                  \
             sys::CErrorMessage err{ GetLastError() };                                                                                      \
             LOG_ASSERT_FMT("\"{}\"", err.message());                                                                                       \
+            __debugbreak();                                                                                                                \
         }
 
     #define WIN_CHECK_HRESULT(expr)                                                                                                        \
@@ -24,5 +25,6 @@
         else                                                                                                                               \
         {                                                                                                                                  \
             LOG_ASSERT_FMT("\"{}\" failed with: \"{}\"", __func__, result);                                                                \
+            __debugbreak();                                                                                                                \
         }
 #endif
