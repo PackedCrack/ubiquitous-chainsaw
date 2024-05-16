@@ -76,7 +76,7 @@ void CRenderer::end_frame() const
     SDL_CHECK(SDL_RenderClear(m_pRenderer), "Failed to clear backbuffer!");
 
     ImGui::Render();
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), m_pRenderer);
 
     SDL_CHECK(SDL_RenderPresent(m_pRenderer), "Failed to present buffer");
 }

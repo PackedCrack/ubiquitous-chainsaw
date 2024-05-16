@@ -197,10 +197,17 @@ void CGui::push_menu_keys() const
         if (ImGui::MenuItem("Generate Keys", nullptr, false, !keys_exists()))
         {
             LOG_INFO("GENERATE KEYS");
+            // wait for coroutines
+            // make keys
+            // send keys
+            // recreate key owning widgets
         }
         if (ImGui::MenuItem("Delete Keys"))
         {
             LOG_INFO("DELETE KEYS");
+            // wait for coroutines
+            // delete keys
+            // recreate key owning widgets
         }
 
         ImGui::EndMenu();

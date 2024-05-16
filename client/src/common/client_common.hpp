@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-04-27.
 //
 #pragma once
-#include "system/System.hpp"
+#include "../system/System.hpp"
 #include "security/ecc_key.hpp"
 // clang-format off
 

@@ -21,7 +21,7 @@
 #include "bluetoothLE/Device.hpp"
 #include "gui/CDeviceList.hpp"
 #include "CRssiDemander.hpp"
-#include "client_common.hpp"
+#include "common/client_common.hpp"
 
 #include "common/CCoroutineManager.hpp"
 // clang-format off

@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-04-27.
 //
 #pragma once
-#include "client_common.hpp"
+#include "common/client_common.hpp"
 #include "common/Pointer.hpp"
 #include "common/CStopWatch.hpp"
 #include "common/CThreadSafeQueue.hpp"

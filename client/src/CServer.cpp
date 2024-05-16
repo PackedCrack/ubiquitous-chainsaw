@@ -2,7 +2,7 @@
 // Created by qwerty on 2024-04-25.
 //
 #include "CServer.hpp"
-#include "client_common.hpp"
+#include "common/client_common.hpp"
 #include "common/CCoroutineManager.hpp"
 //
 //
