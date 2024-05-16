@@ -147,115 +147,26 @@ int main(int argc, char** argv)
 {
     std::expected<sys::CSerialCommunication, sys::ErrorSerialCom> expected = sys::open_serial_communication();
 
+    sys::CSerialCommunication& serial = *expected;
 
-    sys::CSerialCommunication serial = sys::CSerialCommunication::make().value();
-
-
-    sys::CDeviceInfoSet deviceInfoSet{ GUID_DEVINTERFACE_COMPORT };
-    std::vector<std::string> infos = deviceInfoSet.enumerate_device_info(sys::CDeviceInfoSet::Property::hardwareID);
-    std::vector<std::string> infos2 = deviceInfoSet.enumerate_device_info(sys::CDeviceInfoSet::Property::friendlyName);
-    for (auto&& info : infos)
+    LOG_INFO("Waiting until go..");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    LOG_INFO("GO!");
     {
-        LOG_INFO_FMT("Info: {}", info.c_str());
+        std::array<uint8_t, 1> keyType{ 1 };
+        uint32_t bytesWritten = serial.write(keyType);
+        LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
     }
-    for (auto&& info : infos2)
     {
-        LOG_INFO_FMT("Info: {}", info.c_str());
+        std::array<uint8_t, 1> keySize{ 14 };
+        uint32_t bytesWritten = serial.write(keySize);
+        LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
     }
-
-
-    //// https://learn.microsoft.com/en-us/windows/win32/api/setupapi/ns-setupapi-sp_devinfo_data
-    //SP_DEVINFO_DATA deviceInfoData{};
-    //deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
-    //SP_DEVICE_INTERFACE_DATA deviceInterfaceData{};
-    //deviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
-
-    //DWORD index = 0;
-    //// https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdienumdeviceinfo
-    //while (SetupDiEnumDeviceInterfaces(deviceInfoSet.m_pDeviceInfoSet, nullptr, &GUID_DEVINTERFACE_COMPORT, index, &deviceInterfaceData) ==
-    //       TRUE)
-    //{
-    //    DWORD requiredSize{};
-    //    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceinterfacedetaila
-    //    SetupDiGetDeviceInterfaceDetail(deviceInfoSet.m_pDeviceInfoSet, &deviceInterfaceData, nullptr, 0, &requiredSize, nullptr);
-    //    // returns the required buffer size at RequiredSize and fails with GetLastError returning ERROR_INSUFFICIENT_BUFFER
-    //    ASSERT(GetLastError() == ERROR_INSUFFICIENT_BUFFER, "Working as intended. Good job Microsoft");
-
-
-    //    auto pDetailData = static_cast<SP_DEVICE_INTERFACE_DETAIL_DATA*>(std::malloc(requiredSize));
-    //    ASSERT(pDetailData, "Failed to allocate buffer for Device Details");
-    //    pDetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
-
-    //    WIN_CHECK(SetupDiGetDeviceInterfaceDetail(deviceInfoSet.m_pDeviceInfoSet,
-    //                                              &deviceInterfaceData,
-    //                                              pDetailData,
-    //                                              requiredSize,
-    //                                              nullptr,
-    //                                              &deviceInfoData));
-
-    //    LOG_INFO_FMT("Device Path: {}", pDetailData->DevicePath);
-
-
-    //    std::free(pDetailData);
-
-    //    std::array<BYTE, 512> buffer{};
-    //    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceregistrypropertya
-    //    WIN_CHECK(SetupDiGetDeviceRegistryProperty(deviceInfoSet.m_pDeviceInfoSet,
-    //                                               &deviceInfoData,
-    //                                               SPDRP_FRIENDLYNAME,
-    //                                               nullptr,
-    //                                               buffer.data(),
-    //                                               static_cast<DWORD>(buffer.size()),
-    //                                               &requiredSize));
-    //    ASSERT(requiredSize <= buffer.size(), "Pre allocated buffer size to small.");
-
-    //    LOG_INFO_FMT("Device Property Output: {}", std::string{ std::begin(buffer), std::end(buffer) }.c_str());
-
-    //    //deviceInfo.emplace_back(std::begin(buffer), std::end(buffer));
-
-    //    ++index;
-    //}
-    //WIN_CHECK(GetLastError() == ERROR_NO_MORE_ITEMS);
-
-
-    //HDEVINFO pDeviceInfoSet = nullptr;
-    //// https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetclassdevsw
-    //WIN_CHECK(pDeviceInfoSet = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr, nullptr, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    //          pDeviceInfoSet != INVALID_HANDLE_VALUE);
-
-    //// https://learn.microsoft.com/en-us/windows/win32/api/setupapi/ns-setupapi-sp_devinfo_data
-    //SP_DEVINFO_DATA deviceInfoData{};
-    //deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
-
-    //DWORD index = 0;
-    //// https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdienumdeviceinfo
-    //while (SetupDiEnumDeviceInfo(pDeviceInfoSet, index, &deviceInfoData) == TRUE)
-    //{
-    //    std::array<BYTE, 512> buffer{};
-    //    DWORD requiredSize{};
-    //    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceregistrypropertya
-    //    WIN_CHECK(SetupDiGetDeviceRegistryProperty(pDeviceInfoSet,
-    //                                               &deviceInfoData,
-    //                                               SPDRP_HARDWAREID,
-    //                                               nullptr,
-    //                                               buffer.data(),
-    //                                               buffer.size(),
-    //                                               &requiredSize));
-    //    ASSERT(requiredSize <= buffer.size(), "Pre allocated buffer size to small.");
-
-    //    std::string str{ std::begin(buffer), std::end(buffer) };
-    //    LOG_INFO_FMT("Hardware info: {}", str.c_str());
-    //    ++index;
-    //}
-    //DWORD error = GetLastError();
-    //ASSERT(error == ERROR_NO_MORE_ITEMS, "There was an error when enumerating devices..");
-
-
-    //if (pDeviceInfoSet != INVALID_HANDLE_VALUE)
-    //{
-    //    // https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdidestroydeviceinfolist
-    //    SetupDiDestroyDeviceInfoList(pDeviceInfoSet);
-    //}
+    {
+        std::array<uint8_t, 14> keyData{ 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78 };
+        uint32_t bytesWritten = serial.write(keyData);
+        LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
+    }
 
     return 0;
     /////////////////////////////////////////////////////////

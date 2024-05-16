@@ -75,7 +75,7 @@ public:
     [[nodiscard]] std::vector<std::string> enumerate_device_info(property_type property) const;
 private:
     [[nodiscard]] HDEVINFO get_class_devs() const;
-public:
+private:
     GUID m_Guid;
     HDEVINFO m_pDeviceInfoSet = INVALID_HANDLE_VALUE;
 };

@@ -9,6 +9,7 @@
 //
 namespace
 {
+constexpr DWORD NO_SHARING = 0;
 [[nodiscard]] std::string query_com_port(const sys::CDeviceInfoSet& deviceInfoSet, std::size_t tokenIndex)
 {
     using Property = sys::CDeviceInfoSet::Property;
@@ -78,7 +79,86 @@ CSerialCommunication::make_type CSerialCommunication::make()
     std::unreachable();
 }
 CSerialCommunication::CSerialCommunication(std::string_view comPort)
+    // https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
+    : m_Handle{ CreateFile(comPort.data(), GENERIC_READ | GENERIC_WRITE, NO_SHARING, nullptr, OPEN_EXISTING, 0, nullptr) }
 {
-    // get_com_port();
+    if (m_Handle == INVALID_HANDLE_VALUE)
+    {
+        CErrorMessage err{ GetLastError() };
+        LOG_ERROR_FMT("Failed to construct CSerialCommuncation. Reason: \"{}\"", err.message());
+        throw ErrorSerialCom::failedToOpenConnection;
+    }
+
+    set_serial_settings();
+    set_serial_timeouts();
+}
+CSerialCommunication::~CSerialCommunication()
+{
+    if (m_Handle != INVALID_HANDLE_VALUE)
+    {
+        // https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
+        WIN_CHECK(CloseHandle(m_Handle));
+    }
+}
+CSerialCommunication::CSerialCommunication(CSerialCommunication&& other) noexcept
+    : m_Handle{ std::exchange(other.m_Handle, INVALID_HANDLE_VALUE) }
+{}
+CSerialCommunication& CSerialCommunication::operator=(CSerialCommunication&& other) noexcept
+{
+    m_Handle = std::exchange(other.m_Handle, INVALID_HANDLE_VALUE);
+
+    return *this;
+}
+void CSerialCommunication::set_serial_timeouts() const
+{
+    COMMTIMEOUTS timeouts{
+        .ReadIntervalTimeout = 50,         /* Maximum time between read chars. */
+        .ReadTotalTimeoutMultiplier = 10,  /* Multiplier of characters.        */
+        .ReadTotalTimeoutConstant = 50,    /* Constant in milliseconds.        */
+        .WriteTotalTimeoutMultiplier = 10, /* Multiplier of characters.        */
+        .WriteTotalTimeoutConstant = 50,   /* Constant in milliseconds.        */
+    };
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setcommtimeouts
+    if (!SetCommTimeouts(m_Handle, &timeouts))
+    {
+        CErrorMessage err{ GetLastError() };
+        LOG_ERROR_FMT("Failed to update Serial Timeouts. Reason: \"{}\"", err.message());
+        throw ErrorSerialCom::failedToSetConnectionTimeouts;
+    }
+}
+void CSerialCommunication::set_serial_settings() const
+{
+    DCB serialSettings = serial_settings();
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setcommstate
+    if (!SetCommState(m_Handle, &serialSettings))
+    {
+        CErrorMessage err{ GetLastError() };
+        LOG_ERROR_FMT("Failed to update Serial Settings. Reason: \"{}\"", err.message());
+        throw ErrorSerialCom::failedToSetConnectionSettings;
+    }
+}
+DCB CSerialCommunication::serial_settings() const
+{
+    DCB serialSettings{};
+    serialSettings.DCBlength = sizeof(DCB);
+
+    // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcommstate
+    if (GetCommState(m_Handle, &serialSettings))
+    {
+        serialSettings.BaudRate = CBR_9600;
+        serialSettings.ByteSize = 8;
+        serialSettings.StopBits = ONESTOPBIT;
+        serialSettings.Parity = NOPARITY;
+
+        return serialSettings;
+    }
+    else
+    {
+        CErrorMessage err{ GetLastError() };
+        LOG_ERROR_FMT("Failed to retrieve Serial Settings. Reason: \"{}\"", err.message());
+        throw ErrorSerialCom::failedToGetConnectionSettings;
+    }
 }
 }    // namespace sys
