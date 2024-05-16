@@ -28,6 +28,7 @@ requires std::same_as<key_t, security::CEccPublicKey> || std::same_as<key_t, sec
 
     return std::make_unique<key_t>(std::move(*key));
 }
+[[nodiscard]] bool keys_exists();
 [[nodiscard]] auto make_invokable_save_file(std::string_view filename);
 [[nodiscard]] std::tuple<security::CEccPublicKey, security::CEccPrivateKey> make_ecc_keys();
 void save_ecc_keys(security::CEccPublicKey& pub, security::CEccPrivateKey& priv, std::string_view pubkey, std::string_view privkey);

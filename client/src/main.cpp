@@ -145,7 +145,7 @@ namespace
 {}    // namespace
 int main(int argc, char** argv)
 {
-    std::expected<sys::CSerialCommunication, sys::ErrorSerialCom> expected = sys::open_serial_communication();
+    /*std::expected<sys::CSerialCommunication, sys::ErrorSerialCom> expected = sys::open_serial_communication();
 
     sys::CSerialCommunication& serial = *expected;
 
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
         LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
     }
 
-    return 0;
+    return 0;*/
     /////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////

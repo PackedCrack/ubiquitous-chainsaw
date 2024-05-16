@@ -45,6 +45,18 @@ std::function<std::expected<std::vector<security::byte>, std::string>()> make_in
         }
     };
 }
+bool keys_exists()
+{
+    std::expected<std::filesystem::path, std::string> directory = sys::key_directory();
+    if (directory)
+    {
+        return std::filesystem::exists(*directory / CLIENT_PUBLIC_KEY_NAME) &&
+               std::filesystem::exists(*directory / CLIENT_PRIVATE_KEY_NAME) &&
+               std::filesystem::exists(*directory / SERVER_PUBLIC_KEY_NAME);
+    }
+
+    return false;
+}
 auto make_invokable_save_file(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)

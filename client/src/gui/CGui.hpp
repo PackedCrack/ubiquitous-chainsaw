@@ -28,6 +28,7 @@ public:
     CGui(CGui&& other) = default;
     CGui& operator=(const CGui& other) = default;
     CGui& operator=(CGui&& other) = default;
+public:
     template<typename widget_t, typename... ctor_args_t>
     requires imgui_renderable<widget_t>
     [[nodiscard]] widget_t& emplace(ctor_args_t&&... args)
@@ -40,6 +41,11 @@ public:
         return std::get<widget_t>(iter->second);
     }
     void push();
+private:
+    void push_dock_space() const;
+    void push_menu_bar() const;
+    void push_menu_keys() const;
+    void push_all_widgets();
 private:
     //std::vector<gui::CWidget> m_Widgets;
     std::map<KeyType, Widget> m_Widgets;
