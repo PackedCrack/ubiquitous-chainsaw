@@ -9,7 +9,6 @@ SET(MAIN_SRCS
 		client_common.cpp
 		client_common.hpp
         resource.hpp
-        win32.hpp
         client_defines.hpp
 )
 

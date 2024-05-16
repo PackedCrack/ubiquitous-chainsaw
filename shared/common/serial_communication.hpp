@@ -39,4 +39,4 @@ struct KeyTransferHeader
     uint8_t keyType;
     uint8_t keySize;
 };
-}
+}    // namespace common
