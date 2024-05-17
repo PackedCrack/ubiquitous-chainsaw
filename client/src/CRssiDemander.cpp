@@ -122,19 +122,6 @@ CRssiDemander::CRssiDemander(std::chrono::seconds demandInterval, CServer& serve
     , m_Timer{}
     , m_Protector{ std::chrono::seconds(3) }
 {}
-CRssiDemander::~CRssiDemander()
-{
-    //if (m_pServer)
-    //{
-    //    LOG_INFO("~CRssiDemander calling unsubscribe");
-    //    m_pServer->unsubscribe();
-    //}
-    LOG_INFO("EXITING ~CRssiDemander");
-    //if (m_pServer && m_pMutex)
-    //{
-    //    //    join_rssi_demander();
-    //}
-}
 std::optional<std::vector<int8_t>> CRssiDemander::rssi()
 {
     auto vec = std::make_optional<std::vector<int8_t>>();

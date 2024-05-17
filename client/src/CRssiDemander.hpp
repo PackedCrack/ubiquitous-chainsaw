@@ -16,15 +16,11 @@ class CRssiDemander : public std::enable_shared_from_this<CRssiDemander>
 {
 public:
     CRssiDemander(std::chrono::seconds demandInterval, CServer& server, gfx::CWindow& window);
-    ~CRssiDemander();
+    ~CRssiDemander() = default;
     CRssiDemander(const CRssiDemander& other) = delete;
-    //CRssiDemander(CRssiDemander&& other) noexcept;
     CRssiDemander(CRssiDemander&& other) = default;
     CRssiDemander& operator=(const CRssiDemander& other) = delete;
-    //CRssiDemander& operator=(CRssiDemander&& other) noexcept;
     CRssiDemander& operator=(CRssiDemander&& other) = default;
-    //private:
-    //    void move(CRssiDemander& other);
 public:
     [[nodiscard]] std::optional<std::vector<int8_t>> rssi();
     void send_demand();
