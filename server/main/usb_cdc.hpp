@@ -48,6 +48,18 @@ struct DeviceDescriptorSettings
         .bNumConfigurations = 1
     };
 }
+[[nodiscard]] consteval tusb_desc_device_t make_device_descriptor()
+{
+    constexpr usb::DeviceDescriptorSettings settings{ .vendorID = 0xDE'AD,
+                                                      .productID = 0x13'37,
+                                                      .deviceVersion = 0x01'00,
+                                                      .manufactoryIndex = 0x00,
+                                                      .productIndex = 0x01,
+                                                      .serialNumberIndex = 0x02 };
+    constexpr tusb_desc_device_t deviceDescriptor = usb::make_device_descriptor(settings);
+
+    return deviceDescriptor;
+}
 [[nodiscard]] tinyusb_config_t make_config(const tusb_desc_device_t& deviceDescriptor, std::array<const char*, 3>& stringDescriptors);
 void init_usb(const tinyusb_config_t& config, const tinyusb_config_cdcacm_t& cdcConfig);
 }    // namespace usb

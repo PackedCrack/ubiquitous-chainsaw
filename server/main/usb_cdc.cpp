@@ -9,8 +9,6 @@
 //
 namespace
 {
-static const char* TAG = "USB-CDC";
-//static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
 [[nodiscard]] std::string_view nvs_key(common::KeyType type)
 {
     switch (type)
@@ -56,46 +54,36 @@ void store_key_in_nvs(common::KeyType keyType, const std::vector<uint8_t>& key)
 }
 void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t* event)
 {
-    //static uint8_t buf[CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1];
     static std::array<uint8_t, CONFIG_TINYUSB_CDC_RX_BUFSIZE + 1> buf{};
     static auto key = std::make_pair<common::KeyType, std::vector<uint8_t>>(common::KeyType::undefined, {});
-    /* initialization */
-    size_t rx_size = 0;
 
-    /* read */
-    esp_err_t ret = tinyusb_cdcacm_read(static_cast<tinyusb_cdcacm_itf_t>(itf), buf.data(), CONFIG_TINYUSB_CDC_RX_BUFSIZE, &rx_size);
-    if (ret == ESP_OK)
+    size_t rx_size{};
+    esp_err_t result = tinyusb_cdcacm_read(static_cast<tinyusb_cdcacm_itf_t>(itf), buf.data(), CONFIG_TINYUSB_CDC_RX_BUFSIZE, &rx_size);
+    if (result == ESP_OK)
     {
         static std::size_t keySize{};
         if (key.first == common::KeyType::undefined || keySize == 0u)
         {
-            LOG_INFO("Recieved and in first if statement");
             ASSERT(rx_size == 1, "Expected header to be sent in single byte increments");
             if (key.first == common::KeyType::undefined)
             {
-                LOG_INFO("Changing key type");
                 key.first = common::KeyType{ buf[0] };
             }
             else if (keySize == 0u)
             {
                 keySize = buf[0];
-                LOG_INFO_FMT("Changing key size to: \"{}\"", keySize);
-                //key.second.reserve(keySize);
             }
         }
         else
         {
-            LOG_INFO_FMT("Recieved \"{}\" and in else statement", rx_size);
             ASSERT(rx_size <= keySize, "Expected recieved data to be less than or equal to the key");
             for (std::size_t i = 0u; i < rx_size; ++i)
             {
                 key.second.push_back(buf[i]);
-                LOG_INFO_FMT("Key size after push_back: {}", key.second.size());
             }
 
             if (key.second.size() == keySize)
             {
-//keys.emplace_back(std::move(key));
 #ifdef NDEBUG
                 ESP_LOG_BUFFER_HEXDUMP(TAG, keys.back().second.data(), keys.back().second.size(), ESP_LOG_INFO);
 #endif
@@ -105,19 +93,16 @@ void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t* event)
 
                 key = std::make_pair<common::KeyType, std::vector<uint8_t>>(common::KeyType::undefined, {});
                 keySize = 0u;
-                LOG_INFO("Emplaced back key to vector");
             }
             else if (key.second.size() > keySize)
             {
                 LOG_ERROR("Size of Key vector is greater than keysize");
             }
         }
-
-        ESP_LOGI(TAG, "Data from channel %d:", itf);
     }
     else
     {
-        ESP_LOGE(TAG, "Read error");
+        LOG_ERROR("USB Serial Read error");
     }
 
     /* write back */
@@ -138,9 +123,7 @@ tinyusb_config_t make_config(const tusb_desc_device_t& deviceDescriptor, std::ar
 {
     tinyusb_config_t config{};
     config.device_descriptor = &deviceDescriptor;
-    config.string_descriptor =
-        stringDescriptors.data();    // stringDescriptors cant be const& because tinyusb need 'const char**' not 'const char* const*'
-
+    config.string_descriptor = stringDescriptors.data();
 
     return config;
 }
