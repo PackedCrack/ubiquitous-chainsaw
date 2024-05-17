@@ -69,7 +69,7 @@ bool keys_exists()
 
     return false;
 }
-auto make_invokable_save_file(std::string_view filename)
+std::function<bool(std::vector<security::byte>&&)> make_invokable_save_file(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }](std::vector<security::byte>&& key)
     {

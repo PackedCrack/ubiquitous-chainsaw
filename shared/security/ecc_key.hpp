@@ -211,5 +211,7 @@ requires std::is_invocable_r_v<std::expected<std::vector<byte>, ErrorMakeEccKey>
             LOG_FATAL("Failed to construct ecc key because file IO threw exception.");
         }
     }
+
+    std::unreachable();
 }
 }    // namespace security

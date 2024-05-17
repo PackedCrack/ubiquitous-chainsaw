@@ -131,8 +131,7 @@ void load_layout()
 }    // namespace
 namespace gui
 {
-CGui::CGui(std::function<void()>&& generateKeyAction,
-           std::function<void(CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList)>&& deleteKeyAction)
+CGui::CGui(std::function<void()>&& generateKeyAction, std::function<void(CRSSIPlot&, gui::CDeviceList&)>&& deleteKeyAction)
     : m_Widgets{}
     , m_GenerateKeysAction{ std::move(generateKeyAction) }
     , m_DeleteKeysAction{ std::move(deleteKeyAction) }
@@ -206,12 +205,6 @@ void CGui::push_menu_keys()
         {
             ASSERT(m_GenerateKeysAction, "Expected a valid action for \"Generate Keys\"");
             m_GenerateKeysAction();
-
-            // wait for coroutines
-            common::coroutine_manager_instance().wait_for_all();
-            // make keys
-            // send keys
-            // recreate key owning widgets
         }
         if (ImGui::MenuItem("Delete Keys"))
         {

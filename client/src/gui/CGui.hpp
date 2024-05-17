@@ -22,8 +22,7 @@ class CGui
 {
     using KeyType = std::string_view;
 public:
-    explicit CGui(std::function<void()>&& generateKeyAction,
-                  std::function<void(CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList)>&& deleteKeyAction);
+    explicit CGui(std::function<void()>&& generateKeyAction, std::function<void(CRSSIPlot&, gui::CDeviceList&)>&& deleteKeyAction);
     ~CGui();
     CGui(const CGui& other) = default;
     CGui(CGui&& other) = default;

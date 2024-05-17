@@ -24,7 +24,7 @@ private:
 public:
     // void write();
     template<typename buffer_t>
-    requires common::buffer<buffer_t>
+    requires common::const_buffer<buffer_t>
     [[nodiscard]] uint32_t write(buffer_t&& buffer) const
     {
         DWORD bytesWritten{};

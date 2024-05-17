@@ -255,7 +255,10 @@ void CRssiDemander::demand_rssi()
             co_return;
         }
 
-        co_await pSelf->try_demand_rssi(wpCharacteristic.value(), pSelf->make_packet_demand_rssi());
+        if (pSelf->m_pClientPrivKey)
+        {
+            co_await pSelf->try_demand_rssi(wpCharacteristic.value(), pSelf->make_packet_demand_rssi());
+        }
     };
 
     coroutineManager.fire_and_forget(coroutine, weak_from_this());

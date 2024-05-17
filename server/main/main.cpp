@@ -284,6 +284,11 @@ extern "C" void app_main(void)
         ASSERT(wc, "Tried to initilize WolfCrypt, but it has already been initlized!");
     }
 
+    // using NVS = storage::CNonVolatileStorage;
+    // std::optional<NVS::CWriter> writer = NVS::make_writer(NVS_ENCRYPTION_NAMESPACE);
+    // ASSERT(writer, "Failed to open writer to NVS");
+    // ASSERT(writer->write_int8(NVS_KEY_NUM_STORED_ENC_KEYS, 0) == storage::NvsErrorCode::success, "Failed to update key count in NVS.");
+
     if (num_stored_encryption_keys() < 3)
     {
         // DO USB

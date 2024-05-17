@@ -22,7 +22,11 @@ CDeviceList::CDeviceList(ble::CScanner& scanner, CServer& server)
     , m_pMutex{ std::make_unique<std::mutex>() }
     , m_ScanTimer{}
 {
-    spawn_time_limited_scan();
+    //spawn_time_limited_scan();
+    if (m_ScanTimer.active())
+    {
+        m_ScanTimer.stop();
+    }
 }
 CDeviceList::~CDeviceList()
 {

@@ -23,6 +23,8 @@
 #include "CRssiDemander.hpp"
 #include "common/client_common.hpp"
 
+#include "common/serial_communication.hpp"
+#include "system/SerialCommunication.hpp"
 #include "common/CCoroutineManager.hpp"
 // clang-format off
 
@@ -137,17 +139,97 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
+[[nodiscard]] bool send_key(common::KeyType keyType, const std::vector<uint8_t>& keyData)
+{
+    std::expected<sys::CSerialCommunication, sys::ErrorSerialCom> serialComm = sys::open_serial_communication();
+    if (serialComm)
+    {
+        common::KeyTransferHeader header{ .keyType = std::to_underlying(keyType),
+                                          .keySize = common::assert_down_cast<uint8_t>(keyData.size()) };
+
+        std::array<uint8_t, 1> keyType{ header.keyType };
+        int32_t bytesWritten = serialComm->write(keyType);
+
+        std::array<uint8_t, 1> keySize{ header.keySize };
+        bytesWritten = bytesWritten + serialComm->write(keySize);
+
+        bytesWritten = bytesWritten + serialComm->write(keyData);
+
+        return bytesWritten == keyData.size() + sizeof(common::KeyTransferHeader) ? true : false;
+    }
+    else
+    {
+        // TODO: do something with some errors - DeviceNotFound should show helpful message in gui
+        LOG_ERROR_FMT("Failed to sent key. Reason: {}", sys::err_serial_com_to_str(serialComm.error()));
+    }
+
+    return false;
+}
 [[nodiscard]] gui::CGui make_gui(gfx::CWindow& window, CServer& server)
 {
-    auto generateKeysAction = []()
+    auto generateKeysAction = [&server]() mutable
     {
         // wait for coroutines
         common::coroutine_manager_instance().wait_for_all();
         // make keys
+        {
+            auto [pubKey, privKey] = make_ecc_keys();
+            save_ecc_key(pubKey, SERVER_PUBLIC_KEY_NAME);
+
+            {
+                std::stringstream sstream{};
+                for (auto&& byte : pubKey.to_der())
+                {
+                    sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
+                }
+                LOG_INFO_FMT("Server Public Key: {}", sstream.str());
+            }
+            {
+                std::stringstream sstream{};
+                for (auto&& byte : privKey.to_der())
+                {
+                    sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
+                }
+                LOG_INFO_FMT("Server Private Key: {}", sstream.str());
+            }
+
+            if (!send_key(common::KeyType::serverPublic, pubKey.to_der()))
+            {
+                LOG_ERROR("Failed to send Servers Public Key");
+            }
+            if (!send_key(common::KeyType::serverPrivate, privKey.to_der()))
+            {
+                LOG_ERROR("Failed to send Servers Private Key");
+            }
+
+
+            //save_ecc_keys(pubKey, privKey, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME);
+        }
+        {
+            auto [pubKey, privKey] = make_ecc_keys();
+            save_ecc_key(pubKey, CLIENT_PUBLIC_KEY_NAME);
+            save_ecc_key(privKey, CLIENT_PRIVATE_KEY_NAME);
+
+            {
+                std::stringstream sstream{};
+                for (auto&& byte : pubKey.to_der())
+                {
+                    sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
+                }
+                LOG_INFO_FMT("Client Public Key: {}", sstream.str());
+            }
+            if (!send_key(common::KeyType::clientPublic, pubKey.to_der()))
+            {
+                LOG_ERROR("Failed to send Clients Public Key");
+            }
+
+            //save_ecc_keys(pubKey, privKey, CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME);
+        }
         // send keys
         // recreate key owning widgets
+        server.reload_public_key();
     };
-    auto eraseKeysAction = [&window, server](gui::CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList) mutable
+    auto eraseKeysAction = [&window, &server](gui::CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList) mutable
     {
         // wait for coroutines
         common::coroutine_manager_instance().wait_for_all();
@@ -171,7 +253,6 @@ void process_cmd_line_args(int argc, char** argv)
 
 #pragma comment(lib, "setupapi.lib")
 #include "system/windows/CDeviceInfoSet.hpp"
-#include "system/SerialCommunication.hpp"
 namespace
 {}    // namespace
 int main(int argc, char** argv)
