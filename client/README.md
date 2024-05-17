@@ -1,41 +1,21 @@
-## Compiler Support
-Clang 17
--DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+**As of now this is Windows 10/11 only.**
 
-GCC 13
+# Configure for Visual Studio
+Clone the repo and then simply use the CMake GUI to configure for Visual Studio 17 (or newer). Once configured generate a visual studio solution. 
+Don't forget to set the 'chainsaw' project to "startup project".
 
-TODO: look up MSVC ver
-
-https://en.cppreference.com/w/cpp/compiler_support/23
-
-
-TODO: clean up build steps.. They are a bit outdated now since windows requires visual studio toolchain
-
-# Build
-### Pre steps
-* Environment variables 'clang' and 'clang++' must hold the path to the respective executables
-* /cppcheck.sh must be executable -> sudo chmod +x cppcheck.sh
-* Install cppcheck -> sudo apt install cppcheck
-* Install cmake -> sudo apt install cmake
-
-## Building with Ninja
-* sudo apt install ninja-build
-* cd root
-* mkdir build
-* cd build
-#### Debug Configuration
-* cmake .. -G Ninja -D CMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-#### ReleaseWithDebugInfo Configuration
-* cmake .. -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-#### MinSizeRelease Configuration
-* cmake .. -G Ninja -D CMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-#### Release Configuration
-* cmake .. -G Ninja -D CMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-#### Compile and Link
-ninja
+# Configure for Clion
+* Clone the repo to disk
+* Open the repos root directory in Clion
+* In the top right corner under "CMake Profiles" (likely says Debug) press the arrow to open the drop down menu.
+* Press "Edit CMake Profiles..."
+* Press Add (the '+' icon), shortcut Alt + Insert (default).
+* Under "Toolchain" to the right. Select Visual Studio.
+* Select Generator (I use ninja)
+* Repeat the process for Debug, RelWithDebInfo and Release
 
 ## Removing Cppcheck as build dependency
-Cppcheck can be removed as a custom build target in case it causes troubles (Visual Studio does not like it e.g.). Or in case you just don't want to install it..
+Cppcheck can be removed as a custom build target if it causes troubles. Or in case you just don't want to install it..
 * open root/src/CMakeLists.txt
 * Remove line 5 - "add_dependencies(${MAIN_PROJECT} cppcheck)"
 
