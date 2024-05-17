@@ -20,8 +20,8 @@ ImGuiIO* create_imgui_io()
 }    // namespace
 namespace gfx
 {
-CRenderer::CRenderer(CWindow& window, uint32_t flags)
-    : m_pRenderer{ SDL_CreateRenderer(window.handle(), nullptr, flags) }
+CRenderer::CRenderer(CWindow& window)
+    : m_pRenderer{ SDL_CreateRenderer(window.handle(), nullptr) }
     , m_pContext{ create_imgui_context() }
     , m_pGuiIO{ create_imgui_io() }
 {
@@ -76,7 +76,7 @@ void CRenderer::end_frame() const
     SDL_CHECK(SDL_RenderClear(m_pRenderer), "Failed to clear backbuffer!");
 
     ImGui::Render();
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), m_pRenderer);
 
     SDL_CHECK(SDL_RenderPresent(m_pRenderer), "Failed to present buffer");
 }

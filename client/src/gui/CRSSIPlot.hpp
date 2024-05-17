@@ -16,7 +16,7 @@ class CRSSIPlot
 public:
     static constexpr std::string_view KEY = "rssiplot";
 public:
-    explicit CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander);
+    explicit CRSSIPlot(std::shared_ptr<CRssiDemander> pDemander, std::size_t size = 14);
     ~CRSSIPlot() = default;
     CRSSIPlot(const CRSSIPlot& other) = delete;
     CRSSIPlot(CRSSIPlot&& other) = default;
@@ -25,6 +25,7 @@ public:
 public:
     void push();
     [[nodiscard]] int8_t rssi_median() const;
+    [[nodiscard]] float median_buffer_ratio() const;
 private:
     void plot();
     void add_rssi_value(int8_t value);

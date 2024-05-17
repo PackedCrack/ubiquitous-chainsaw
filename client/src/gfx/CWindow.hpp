@@ -2,7 +2,7 @@
 #include "../client_defines.hpp"
 #include "../system/TrayIcon.hpp"
 // third_party
-#include "../win32.hpp"
+#include "../system/windows/win32.hpp"
 #include "SDL3/SDL.h"
 namespace gfx
 {

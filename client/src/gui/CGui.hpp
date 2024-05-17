@@ -22,12 +22,13 @@ class CGui
 {
     using KeyType = std::string_view;
 public:
-    CGui();
+    explicit CGui(std::function<void()>&& generateKeyAction, std::function<void(CRSSIPlot&, gui::CDeviceList&)>&& deleteKeyAction);
     ~CGui();
     CGui(const CGui& other) = default;
     CGui(CGui&& other) = default;
     CGui& operator=(const CGui& other) = default;
     CGui& operator=(CGui&& other) = default;
+public:
     template<typename widget_t, typename... ctor_args_t>
     requires imgui_renderable<widget_t>
     [[nodiscard]] widget_t& emplace(ctor_args_t&&... args)
@@ -39,9 +40,23 @@ public:
 
         return std::get<widget_t>(iter->second);
     }
+    template<typename widget_t>
+    requires imgui_renderable<widget_t>
+    [[nodiscard]] std::optional<std::reference_wrapper<widget_t>> find()
+    {
+        auto iter = m_Widgets.find(widget_t::KEY);
+        return iter != std::end(m_Widgets) ? std::make_optional<std::reference_wrapper<widget_t>>(std::get<widget_t>(iter->second))
+                                           : std::nullopt;
+    }
     void push();
 private:
-    //std::vector<gui::CWidget> m_Widgets;
+    void push_dock_space();
+    void push_menu_bar();
+    void push_menu_keys();
+    void push_all_widgets();
+private:
     std::map<KeyType, Widget> m_Widgets;
+    std::function<void()> m_GenerateKeysAction;
+    std::function<void(CRSSIPlot&, CDeviceList&)> m_DeleteKeysAction;
 };
 }    // namespace gui

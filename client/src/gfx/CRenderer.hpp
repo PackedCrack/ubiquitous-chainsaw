@@ -10,13 +10,13 @@ namespace gfx
 class CRenderer
 {
 public:
-    CRenderer(CWindow& window, uint32_t flags);
+    explicit CRenderer(CWindow& window);
     ~CRenderer();
     CRenderer(const CRenderer& other) = delete;
     CRenderer(CRenderer&& other) noexcept;
     CRenderer& operator=(const CRenderer& other) = delete;
     CRenderer& operator=(CRenderer&& other) noexcept;
-
+public:
     void begin_frame() const;
     void end_frame() const;
     void set_clear_color(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha = 255);

@@ -112,7 +112,7 @@ requires security::hash_algorithm<sha_t>
     return packet;
 }
 }    // namespace
-CRssiDemander::CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono::seconds demandInterval)
+CRssiDemander::CRssiDemander(std::chrono::seconds demandInterval, CServer& server, gfx::CWindow& window)
     : m_Queue{}
     , m_DemandInterval{ demandInterval }
     , m_pServerPubKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }
@@ -255,7 +255,10 @@ void CRssiDemander::demand_rssi()
             co_return;
         }
 
-        co_await pSelf->try_demand_rssi(wpCharacteristic.value(), pSelf->make_packet_demand_rssi());
+        if (pSelf->m_pClientPrivKey)
+        {
+            co_await pSelf->try_demand_rssi(wpCharacteristic.value(), pSelf->make_packet_demand_rssi());
+        }
     };
 
     coroutineManager.fire_and_forget(coroutine, weak_from_this());

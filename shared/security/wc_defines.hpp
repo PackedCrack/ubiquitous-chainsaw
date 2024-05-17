@@ -23,6 +23,7 @@ static constexpr WCResult WC_FAILURE = -1;
         else                                                                                                                               \
         {                                                                                                                                  \
             LOG_ASSERT_FMT("WolfCrypt failure: \"{}\"", WC_ERR_TO_STR(code));                                                              \
+            HW_INTERRUPT;                                                                                                                  \
         }
 #else
     #define WC_CHECK(expr) expr

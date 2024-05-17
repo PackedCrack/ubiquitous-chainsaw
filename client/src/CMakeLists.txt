@@ -6,10 +6,7 @@ SET(MAIN_SRCS
 		CRssiDemander.hpp
 		CReplayProtector.cpp
 		CReplayProtector.hpp
-		client_common.cpp
-		client_common.hpp
         resource.hpp
-        win32.hpp
         client_defines.hpp
 )
 

@@ -1,8 +1,14 @@
 SET(WINDOWS_SRCS
-		CSystem.cpp
+        win32.hpp
+        System.cpp
+        CSystem.cpp
 		CSystem.hpp
 		CErrorMessage.cpp
 		CErrorMessage.hpp
+        CDeviceInfoSet.cpp
+		CDeviceInfoSet.hpp
+        CSerialCommunication.cpp
+        CSerialCommunication.hpp
 		CTrayIcon.cpp
 		CTrayIcon.hpp)
 

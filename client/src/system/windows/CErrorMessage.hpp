@@ -3,7 +3,11 @@
 //
 
 #pragma once
-#include "../../win32.hpp"
+#include "win32.hpp"
+//
+//
+//
+//
 namespace sys
 {
 class CErrorMessage

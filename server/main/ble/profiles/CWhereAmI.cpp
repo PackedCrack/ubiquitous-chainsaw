@@ -383,7 +383,7 @@ std::vector<uint8_t> CWhereAmI::write_random_data_block(std::vector<uint8_t>& pa
     static constexpr RSSINotificationHeader HEADER{};
 
     uint8_t offset = sizeof(RSSINotificationHeader);
-    uint8_t size = m_RandomDataBlock.size();
+    auto size = common::assert_down_cast<uint8_t>(m_RandomDataBlock.size());
 
     packet[HEADER.randomDataOffset] = offset;
     packet[HEADER.randomDataSize] = size;
@@ -404,7 +404,7 @@ std::vector<uint8_t> CWhereAmI::write_rssi_value(std::vector<uint8_t>& packet) c
     packet[HEADER.rssiOffset] = offset;
     packet[HEADER.rssiSize] = size;
 
-    packet[offset] = m_Rssi;
+    packet[offset] = static_cast<uint8_t>(m_Rssi);
 
     LOG_INFO_FMT("AAAAAAAAA RSSI: {}", m_Rssi);
 
