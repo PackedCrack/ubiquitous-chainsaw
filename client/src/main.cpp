@@ -30,6 +30,17 @@
 // clang-format on
 namespace
 {
+constexpr double FPS_120 = 8.333333;
+constexpr double FPS_144 = 6.944444;
+template<typename duration_t>
+void frame_time_target(const common::CStopWatch<duration_t>& timer, double targetTime)
+{
+    double timeToWait = targetTime - timer.lap<double>();
+    if (timeToWait > 0.0)
+    {
+        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
+    }
+}
 void validate_app_directory()
 {
     auto validate_app_directory = [](const std::filesystem::path& appDirectory)
@@ -100,14 +111,14 @@ void process_cmd_line_args(int argc, char** argv)
                         sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
                     }
                     LOG_INFO_FMT("{}: {}", keyName, sstream.str());
-                    return std::expected<std::vector<byte>, std::string>{};
+                    return std::expected<std::vector<byte>, security::ErrorMakeEccKey>{};
                 };
             };
-            auto log_failure = [](const std::string& err)
+            auto log_failure = [](security::ErrorMakeEccKey err)
             {
-                LOG_ERROR_FMT("Could not print key contents. Reason: \"{}\"", err);
+                LOG_ERROR_FMT("Could not print key contents. Reason: \"{}\"", std::to_underlying(err));
 
-                return std::expected<std::vector<byte>, std::string>{};
+                return std::expected<std::vector<byte>, security::ErrorMakeEccKey>{};
             };
 
             static constexpr std::array<std::string_view, 4u> keyNames = { CLIENT_PUBLIC_KEY_NAME,
@@ -126,9 +137,29 @@ void process_cmd_line_args(int argc, char** argv)
         }
     }
 }
-[[nodiscard]] std::shared_ptr<CRssiDemander> make_rssi_demander(CServer& server, gfx::CWindow& window)
+[[nodiscard]] gui::CGui make_gui(gfx::CWindow& window, CServer& server)
 {
-    return std::make_shared<CRssiDemander>(server, window, std::chrono::seconds(1));
+    auto generateKeysAction = []()
+    {
+        // wait for coroutines
+        common::coroutine_manager_instance().wait_for_all();
+        // make keys
+        // send keys
+        // recreate key owning widgets
+    };
+    auto eraseKeysAction = [&window, server](gui::CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList) mutable
+    {
+        // wait for coroutines
+        common::coroutine_manager_instance().wait_for_all();
+        // delete keys
+        erase_stored_ecc_keys();
+        // recreate key owning widgets
+        server.reload_public_key();
+        rssiPlot = gui::CRSSIPlot{ make_rssi_demander(server, window) };
+        deviceList.clear_list();
+    };
+
+    return gui::CGui{ std::move(generateKeysAction), std::move(eraseKeysAction) };
 }
 }    // namespace
 #include <windows.h>
@@ -187,11 +218,13 @@ int main(int argc, char** argv)
     // SDL window and input must be called on the same thread
     gfx::CWindow window{ "Some title", 1'280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY };
     gfx::CRenderer renderer{ window };
-    gui::CGui gui{};
 
     CServer server{};
+    gui::CGui gui = make_gui(window, server);
+
+
     auto& deviceList = gui.emplace<gui::CDeviceList>(scanner, server);
-    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(10u, make_rssi_demander(server, window));
+    auto& rssiPlot = gui.emplace<gui::CRSSIPlot>(make_rssi_demander(server, window));
 
 
     bool exit = false;
@@ -199,33 +232,40 @@ int main(int argc, char** argv)
     {
         common::CStopWatch timer{};
 
-        if (server.connected())
+        if (keys_exists())
         {
-            int8_t median = rssiPlot.rssi_median();
-            if (median < -70)
+            if (server.connected())
             {
-                LOG_INFO("RSSI median is too low - COWABUNGA TIME");
-                //sys::cowabunga();
-                //      cowabunga();
+                int8_t median = rssiPlot.rssi_median();
+                if (median < -70)
+                {
+                    LOG_INFO("RSSI median is too low - COWABUNGA TIME");
+                    //sys::cowabunga();
+                    //      cowabunga();
+                }
+            }
+            else
+            {
+                if (!server.is_authenticated())
+                {
+                    if (!scanner.scanning())
+                    {
+                        deviceList.recreate_list();
+                        rssiPlot = gui::CRSSIPlot{ make_rssi_demander(server, window) };
+                    }
+
+                    static uint32_t ab = 0;
+                    if ((ab % 150) == 0)
+                    {
+                        LOG_INFO("No authenticated server - begin cowabunga timer");
+                    }
+                    ++ab;
+                }
             }
         }
         else
         {
-            if (!server.is_authenticated())
-            {
-                if (!scanner.scanning())
-                {
-                    deviceList.recreate_list();
-                    rssiPlot = gui::CRSSIPlot{ 10u, make_rssi_demander(server, window) };
-                }
-
-                static uint32_t ab = 0;
-                if ((ab % 150) == 0)
-                {
-                    LOG_INFO("No authenticated server - begin cowabunga timer");
-                }
-                ++ab;
-            }
+            // some gui
         }
 
 
@@ -238,14 +278,8 @@ int main(int argc, char** argv)
         renderer.end_frame();
 
 
-        // frame_time_target(&timer, FPS_120);
         // Throttle application loop to 120 fps.
-        double target = 8.333333;
-        double timeToWait = target - timer.lap<double>();
-        if (timeToWait > 0.0)
-        {
-            std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(timeToWait));
-        }
+        frame_time_target(timer, FPS_120);
     }
 
     common::coroutine_manager_instance().wait_for_all();

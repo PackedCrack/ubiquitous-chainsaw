@@ -112,7 +112,7 @@ requires security::hash_algorithm<sha_t>
     return packet;
 }
 }    // namespace
-CRssiDemander::CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono::seconds demandInterval)
+CRssiDemander::CRssiDemander(std::chrono::seconds demandInterval, CServer& server, gfx::CWindow& window)
     : m_Queue{}
     , m_DemandInterval{ demandInterval }
     , m_pServerPubKey{ load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME) }

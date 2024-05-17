@@ -15,7 +15,7 @@
 class CRssiDemander : public std::enable_shared_from_this<CRssiDemander>
 {
 public:
-    CRssiDemander(CServer& server, gfx::CWindow& window, std::chrono::seconds demandInterval);
+    CRssiDemander(std::chrono::seconds demandInterval, CServer& server, gfx::CWindow& window);
     ~CRssiDemander();
     CRssiDemander(const CRssiDemander& other) = delete;
     //CRssiDemander(CRssiDemander&& other) noexcept;
@@ -43,3 +43,8 @@ private:
     common::CStopWatch<std::chrono::seconds> m_Timer;
     CReplayProtector m_Protector;
 };
+template<typename... ctor_args_t>
+[[nodiscard]] std::shared_ptr<CRssiDemander> make_rssi_demander(ctor_args_t&&... args)
+{
+    return std::make_shared<CRssiDemander>(std::chrono::seconds(1), std::forward<ctor_args_t>(args)...);
+}

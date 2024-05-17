@@ -2,13 +2,24 @@
 // Created by qwerty on 2024-04-27.
 //
 #include "client_common.hpp"
-//clang-format off
-
-
-//clang-format on
-std::function<std::expected<std::vector<security::byte>, std::string>()> make_invokable_load_file(std::string_view filename)
+//
+//
+//
+//
+namespace
 {
-    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, std::string>
+void erase_file(const std::filesystem::path& file)
+{
+    if (std::filesystem::exists(file))
+    {
+        ASSERT(std::filesystem::is_regular_file(file), "Expected to remove a file.");
+        std::filesystem::remove(file);
+    }
+}
+}    // namespace
+std::function<std::expected<std::vector<security::byte>, security::ErrorMakeEccKey>()> make_invokable_load_file(std::string_view filename)
+{
+    return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, security::ErrorMakeEccKey>
     {
         std::expected<std::filesystem::path, std::string> expected = sys::key_directory();
         if (expected)
@@ -19,7 +30,7 @@ std::function<std::expected<std::vector<security::byte>, std::string>()> make_in
             {
                 try
                 {
-                    std::expected<std::vector<security::byte>, std::string> data{};
+                    std::expected<std::vector<security::byte>, security::ErrorMakeEccKey> data{};
                     std::streamsize size = file.tellg();
                     data->resize(size);
                     file.seekg(0);
@@ -31,17 +42,18 @@ std::function<std::expected<std::vector<security::byte>, std::string>()> make_in
                 }
                 catch (const std::ios::failure& err)
                 {
-                    return std::unexpected(std::format("Exception thrown when trying to read file: \"{}\"", err.what()));
+                    LOG_ERROR_FMT("Exception thrown when trying to read file: \"{}\"", err.what());
+                    return std::unexpected(security::ErrorMakeEccKey::fileIOException);
                 }
             }
             else
             {
-                return std::unexpected(std::format("Could not open file: \'{}\'", filename.string()));
+                return std::unexpected(security::ErrorMakeEccKey::couldNotOpenKeyFile);
             }
         }
         else
         {
-            return std::unexpected(std::format("Could not retrieve key location. Failed with: \"{}\"", expected.error()));
+            return std::unexpected(security::ErrorMakeEccKey::keyLocationNotFound);
         }
     };
 }
@@ -110,4 +122,15 @@ void save_ecc_keys(security::CEccPublicKey& pub, security::CEccPrivateKey& priv,
     };
 
     [[maybe_unused]] auto result = sys::key_directory().and_then(restrict_private_key).or_else(log_failure);
+}
+void erase_stored_ecc_keys()
+{
+    std::expected<std::filesystem::path, std::string> directory = sys::key_directory();
+    if (directory)
+    {
+        erase_file(*directory / CLIENT_PUBLIC_KEY_NAME);
+        erase_file(*directory / CLIENT_PRIVATE_KEY_NAME);
+        erase_file(*directory / SERVER_PUBLIC_KEY_NAME);
+        erase_file(*directory / SERVER_PRIVATE_KEY_NAME);    // shouldnt be stored but check if it is
+    }
 }

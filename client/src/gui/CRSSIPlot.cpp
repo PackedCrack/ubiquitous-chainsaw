@@ -10,7 +10,7 @@
 //
 namespace gui
 {
-CRSSIPlot::CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander)
+CRSSIPlot::CRSSIPlot(std::shared_ptr<CRssiDemander> pDemander, std::size_t size)
     : m_Index{ 0u }
     , m_MaxSize{ size }
     , m_Values{ 0 }

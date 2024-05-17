@@ -16,7 +16,7 @@ class CRSSIPlot
 public:
     static constexpr std::string_view KEY = "rssiplot";
 public:
-    explicit CRSSIPlot(std::size_t size, std::shared_ptr<CRssiDemander> pDemander);
+    explicit CRSSIPlot(std::shared_ptr<CRssiDemander> pDemander, std::size_t size = 14);
     ~CRSSIPlot() = default;
     CRSSIPlot(const CRSSIPlot& other) = delete;
     CRSSIPlot(CRSSIPlot&& other) = default;

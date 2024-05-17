@@ -241,6 +241,12 @@ void CServer::unsubscribe()
         coroutineManager.fire_and_forget(coroutine, m_Server->pDevice);
     }
 }
+bool CServer::reload_public_key()
+{
+    std::lock_guard lock{ *m_pMutex };
+    m_pServerKey = load_key<security::CEccPublicKey>(SERVER_PUBLIC_KEY_NAME);
+    return m_pServerKey ? true : false;
+}
 bool CServer::connected() const
 {
     std::lock_guard lock{ *m_pMutex };
@@ -404,6 +410,7 @@ sys::awaitable_t<bool> CServer::verify_server_address(const std::shared_ptr<ble:
             const uint8_t SIGNATURE_SIZE = buffer[HEADER.signatureSize];
             std::span<uint8_t> signature{ std::begin(buffer) + SIGNATURE_OFFSET, SIGNATURE_SIZE };
 
+            ASSERT(m_pServerKey, "This should always be valid - key reload waits for coro to finnish");
             std::string macAddress = ble::DeviceInfo::address_as_str(address);
             co_return co_await verify_hash_and_signature(macAddress, m_pServerKey.get(), hash, signature);
         }

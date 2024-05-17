@@ -26,20 +26,7 @@ CDeviceList::CDeviceList(ble::CScanner& scanner, CServer& server)
 }
 CDeviceList::~CDeviceList()
 {
-    if (m_pScanner->scanning())
-    {
-        {
-            std::lock_guard lock{ *m_pMutex };
-            if (m_ScanTimer.active())
-            {
-                m_ScanTimer.stop();
-            }
-        }
-
-        // spin until the thread has stopped
-        while (m_pScanner->scanning())
-        {};
-    }
+    end_time_limited_scan();
 }
 CDeviceList::CDeviceList(const CDeviceList& other)
     : m_pScanner{ nullptr }
@@ -132,12 +119,12 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
             if (m_ScanTimer.lap<float>() > static_cast<float>(seconds.count()) || m_pServer->is_authenticated())
             {
                 m_ScanTimer.stop();
-                m_pScanner->end_scan();
+
                 break;
             }
 
             // Intentionally throttle so this thread doesnt go bananas
-            std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
             size_t foundDevices = m_pScanner->num_devices().load();
             if (prevFound < foundDevices)
             {
@@ -155,6 +142,8 @@ auto CDeviceList::time_limited_scan(std::chrono::seconds seconds)
                 prevFound = m_Devices.size();
             }
         }
+
+        m_pScanner->end_scan();
     };
 }
 void CDeviceList::recreate_list()
@@ -168,10 +157,32 @@ void CDeviceList::recreate_list()
     m_Devices.clear();
     spawn_time_limited_scan();
 }
+void CDeviceList::clear_list()
+{
+    end_time_limited_scan();
+    m_Devices.clear();
+}
 void CDeviceList::spawn_time_limited_scan()
 {
     tf::Executor& executor = sys::executor();
     executor.silent_async(time_limited_scan(SCAN_TIME));
+}
+void CDeviceList::end_time_limited_scan()
+{
+    if (m_pScanner->scanning())
+    {
+        {
+            std::lock_guard lock{ *m_pMutex };
+            if (m_ScanTimer.active())
+            {
+                m_ScanTimer.stop();
+            }
+        }
+
+        // spin until the thread has stopped
+        while (m_pScanner->scanning())
+        {};
+    }
 }
 void CDeviceList::authentication_status()
 {

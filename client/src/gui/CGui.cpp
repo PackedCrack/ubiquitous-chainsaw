@@ -2,8 +2,13 @@
 #include "font_louis_george.hpp"
 #include "layout.hpp"
 #include "../system/System.hpp"
+#include "../common/CCoroutineManager.hpp"
 // third_party
 #include "imgui/imgui.h"
+//
+//
+//
+//
 namespace
 {
 void begin_dockspace()
@@ -126,8 +131,11 @@ void load_layout()
 }    // namespace
 namespace gui
 {
-CGui::CGui()
+CGui::CGui(std::function<void()>&& generateKeyAction,
+           std::function<void(CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList)>&& deleteKeyAction)
     : m_Widgets{}
+    , m_GenerateKeysAction{ std::move(generateKeyAction) }
+    , m_DeleteKeysAction{ std::move(deleteKeyAction) }
 {
     set_style();
 
@@ -157,7 +165,7 @@ void CGui::push()
 
     push_all_widgets();
 }
-void CGui::push_dock_space() const
+void CGui::push_dock_space()
 {
     static constexpr ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_AutoHideTabBar;
 
@@ -173,7 +181,7 @@ void CGui::push_dock_space() const
     push_menu_bar();
     ImGui::End();
 }
-void CGui::push_menu_bar() const
+void CGui::push_menu_bar()
 {
     if (ImGui::BeginMenuBar())
     {
@@ -190,24 +198,31 @@ void CGui::push_menu_bar() const
         ImGui::EndMenuBar();
     }
 }
-void CGui::push_menu_keys() const
+void CGui::push_menu_keys()
 {
     if (ImGui::BeginMenu("Keys"))
     {
         if (ImGui::MenuItem("Generate Keys", nullptr, false, !keys_exists()))
         {
-            LOG_INFO("GENERATE KEYS");
+            ASSERT(m_GenerateKeysAction, "Expected a valid action for \"Generate Keys\"");
+            m_GenerateKeysAction();
+
             // wait for coroutines
+            common::coroutine_manager_instance().wait_for_all();
             // make keys
             // send keys
             // recreate key owning widgets
         }
         if (ImGui::MenuItem("Delete Keys"))
         {
-            LOG_INFO("DELETE KEYS");
-            // wait for coroutines
-            // delete keys
-            // recreate key owning widgets
+            std::optional<std::reference_wrapper<CRSSIPlot>> rssiPlot = find<CRSSIPlot>();
+            ASSERT(rssiPlot, "Expected a CRSSIPlot Widget to exist");
+
+            std::optional<std::reference_wrapper<CDeviceList>> deviceList = find<CDeviceList>();
+            ASSERT(rssiPlot, "Expected a CDeviceList Widget to exist");
+
+            ASSERT(m_DeleteKeysAction, "Expected a valid action for \"Delete Keys\"");
+            m_DeleteKeysAction(*rssiPlot, *deviceList);
         }
 
         ImGui::EndMenu();

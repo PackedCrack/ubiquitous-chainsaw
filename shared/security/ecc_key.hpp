@@ -180,8 +180,14 @@ public:
 private:
     ecc_key m_Key;
 };
+enum class ErrorMakeEccKey
+{
+    fileIOException,
+    couldNotOpenKeyFile,
+    keyLocationNotFound
+};
 template<typename key_t, typename invokable_t>
-requires std::is_invocable_r_v<std::expected<std::vector<byte>, std::string>, invokable_t>
+requires std::is_invocable_r_v<std::expected<std::vector<byte>, ErrorMakeEccKey>, invokable_t>
 [[nodiscard]] std::optional<key_t> make_ecc_key(invokable_t&& load)
 {
     auto expected = load();
@@ -191,8 +197,19 @@ requires std::is_invocable_r_v<std::expected<std::vector<byte>, std::string>, in
     }
     else
     {
-        LOG_ERROR_FMT("Failed to create ecc key: \"{}\"", expected.error());
-        return std::nullopt;
+        if (expected.error() == ErrorMakeEccKey::couldNotOpenKeyFile)
+        {
+            return std::nullopt;
+        }
+        else if (expected.error() == ErrorMakeEccKey::keyLocationNotFound)
+        {
+            LOG_FATAL("Failed to construct ecc key because Key Directory could not be located.");
+        }
+        else
+        {
+            ASSERT(expected.error() == ErrorMakeEccKey::fileIOException, "Unknown error returned.");
+            LOG_FATAL("Failed to construct ecc key because file IO threw exception.");
+        }
     }
 }
 }    // namespace security

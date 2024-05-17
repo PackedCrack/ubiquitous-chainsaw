@@ -43,6 +43,7 @@ public:
     void revoke_authentication();
     void subscribe(std::function<void(std::span<uint8_t>)>&& cb);
     void unsubscribe();
+    [[nodiscard]] bool reload_public_key();
     [[nodiscard]] bool connected() const;
     [[nodiscard]] bool is_authenticated() const;
     [[nodiscard]] sys::awaitable_t<HasSubscribedResult> has_subscribed() const;
