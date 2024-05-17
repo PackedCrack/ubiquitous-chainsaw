@@ -1,4 +1,3 @@
-// Wolfcrypt must be included BEFORE windows.h
 #include "system/System.hpp"
 #include "system/TrayIcon.hpp"
 
@@ -14,9 +13,6 @@
 #include "common/CStopWatch.hpp"
 #include "CServer.hpp"
 
-#include <winrt/Windows.Foundation.h>
-#include <winrt/windows.storage.streams.h>
-
 #include "bluetoothLE/Scanner.hpp"
 #include "bluetoothLE/Device.hpp"
 #include "gui/CDeviceList.hpp"
@@ -26,10 +22,12 @@
 #include "common/serial_communication.hpp"
 #include "system/SerialCommunication.hpp"
 #include "common/CCoroutineManager.hpp"
-// clang-format off
-
-
-// clang-format on
+//
+//
+//
+// Set this to 0 during development unless you want to risk having computer hibernate..
+#define COWABUNGA             1
+#define HIBERNATION_THRESHOLD -77
 namespace
 {
 constexpr double FPS_120 = 8.333333;
@@ -90,17 +88,6 @@ void process_cmd_line_args(int argc, char** argv)
     for (int32_t i = 1; i < argc; ++i)
     {
         std::string_view arg{ argv[i] };
-        if (arg == "--make-keys")
-        {
-            {
-                auto [pubKey, privKey] = make_ecc_keys();
-                save_ecc_keys(pubKey, privKey, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME);
-            }
-            {
-                auto [pubKey, privKey] = make_ecc_keys();
-                save_ecc_keys(pubKey, privKey, CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME);
-            }
-        }
         if (arg == "--print-keys")
         {
             auto print_key = [](std::string_view keyName)
@@ -125,8 +112,7 @@ void process_cmd_line_args(int argc, char** argv)
 
             static constexpr std::array<std::string_view, 4u> keyNames = { CLIENT_PUBLIC_KEY_NAME,
                                                                            CLIENT_PRIVATE_KEY_NAME,
-                                                                           SERVER_PUBLIC_KEY_NAME,
-                                                                           SERVER_PRIVATE_KEY_NAME };
+                                                                           SERVER_PUBLIC_KEY_NAME };
             for (auto&& keyName : keyNames)
             {
                 auto load_key = make_invokable_load_file(keyName);
@@ -147,8 +133,8 @@ void process_cmd_line_args(int argc, char** argv)
         common::KeyTransferHeader header{ .keyType = std::to_underlying(keyType),
                                           .keySize = common::assert_down_cast<uint8_t>(keyData.size()) };
 
-        std::array<uint8_t, 1> keyType{ header.keyType };
-        int32_t bytesWritten = serialComm->write(keyType);
+        std::array<uint8_t, 1> type{ header.keyType };
+        int32_t bytesWritten = serialComm->write(type);
 
         std::array<uint8_t, 1> keySize{ header.keySize };
         bytesWritten = bytesWritten + serialComm->write(keySize);
@@ -169,29 +155,11 @@ void process_cmd_line_args(int argc, char** argv)
 {
     auto generateKeysAction = [&server]() mutable
     {
-        // wait for coroutines
         common::coroutine_manager_instance().wait_for_all();
-        // make keys
+
         {
             auto [pubKey, privKey] = make_ecc_keys();
             save_ecc_key(pubKey, SERVER_PUBLIC_KEY_NAME);
-
-            {
-                std::stringstream sstream{};
-                for (auto&& byte : pubKey.to_der())
-                {
-                    sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
-                }
-                LOG_INFO_FMT("Server Public Key: {}", sstream.str());
-            }
-            {
-                std::stringstream sstream{};
-                for (auto&& byte : privKey.to_der())
-                {
-                    sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
-                }
-                LOG_INFO_FMT("Server Private Key: {}", sstream.str());
-            }
 
             if (!send_key(common::KeyType::serverPublic, pubKey.to_der()))
             {
@@ -201,41 +169,24 @@ void process_cmd_line_args(int argc, char** argv)
             {
                 LOG_ERROR("Failed to send Servers Private Key");
             }
-
-
-            //save_ecc_keys(pubKey, privKey, SERVER_PUBLIC_KEY_NAME, SERVER_PRIVATE_KEY_NAME);
         }
         {
             auto [pubKey, privKey] = make_ecc_keys();
             save_ecc_key(pubKey, CLIENT_PUBLIC_KEY_NAME);
             save_ecc_key(privKey, CLIENT_PRIVATE_KEY_NAME);
 
-            {
-                std::stringstream sstream{};
-                for (auto&& byte : pubKey.to_der())
-                {
-                    sstream << std::setw(2) << std::setfill('0') << std::hex << static_cast<int32_t>(byte);
-                }
-                LOG_INFO_FMT("Client Public Key: {}", sstream.str());
-            }
             if (!send_key(common::KeyType::clientPublic, pubKey.to_der()))
             {
                 LOG_ERROR("Failed to send Clients Public Key");
             }
-
-            //save_ecc_keys(pubKey, privKey, CLIENT_PUBLIC_KEY_NAME, CLIENT_PRIVATE_KEY_NAME);
         }
-        // send keys
-        // recreate key owning widgets
         server.reload_public_key();
     };
     auto eraseKeysAction = [&window, &server](gui::CRSSIPlot& rssiPlot, gui::CDeviceList& deviceList) mutable
     {
-        // wait for coroutines
         common::coroutine_manager_instance().wait_for_all();
-        // delete keys
+
         erase_stored_ecc_keys();
-        // recreate key owning widgets
         server.reload_public_key();
         rssiPlot = gui::CRSSIPlot{ make_rssi_demander(server, window) };
         deviceList.clear_list();
@@ -244,50 +195,8 @@ void process_cmd_line_args(int argc, char** argv)
     return gui::CGui{ std::move(generateKeysAction), std::move(eraseKeysAction) };
 }
 }    // namespace
-#include <windows.h>
-#include <setupapi.h>
-#include <devguid.h>
-#include <ntddser.h>
-#include <regstr.h>
-#include <iostream>
-
-#pragma comment(lib, "setupapi.lib")
-#include "system/windows/CDeviceInfoSet.hpp"
-namespace
-{}    // namespace
 int main(int argc, char** argv)
 {
-    /*std::expected<sys::CSerialCommunication, sys::ErrorSerialCom> expected = sys::open_serial_communication();
-
-    sys::CSerialCommunication& serial = *expected;
-
-    LOG_INFO("Waiting until go..");
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    LOG_INFO("GO!");
-    {
-        std::array<uint8_t, 1> keyType{ 1 };
-        uint32_t bytesWritten = serial.write(keyType);
-        LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
-    }
-    {
-        std::array<uint8_t, 1> keySize{ 14 };
-        uint32_t bytesWritten = serial.write(keySize);
-        LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
-    }
-    {
-        std::array<uint8_t, 14> keyData{ 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78 };
-        uint32_t bytesWritten = serial.write(keyData);
-        LOG_INFO_FMT("Wrote {} bytes", bytesWritten);
-    }
-
-    return 0;*/
-    /////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////
-
-
     sys::CSystem system{};
 
     auto wc = security::CWolfCrypt::instance();
@@ -318,11 +227,14 @@ int main(int argc, char** argv)
             if (server.connected())
             {
                 int8_t median = rssiPlot.rssi_median();
-                if (median < -70)
+                if (median < HIBERNATION_THRESHOLD && rssiPlot.median_buffer_ratio() > 0.50f)
                 {
+#if COWABUNGA
+                    sys::cowabunga();
+                    sys::auto_wakeup_timer(std::chrono::seconds(10));
+#else
                     LOG_INFO("RSSI median is too low - COWABUNGA TIME");
-                    //sys::cowabunga();
-                    //      cowabunga();
+#endif
                 }
             }
             else

@@ -17,6 +17,17 @@ void erase_file(const std::filesystem::path& file)
     }
 }
 }    // namespace
+void erase_stored_ecc_keys()
+{
+    std::expected<std::filesystem::path, std::string> directory = sys::key_directory();
+    if (directory)
+    {
+        erase_file(*directory / CLIENT_PUBLIC_KEY_NAME);
+        erase_file(*directory / CLIENT_PRIVATE_KEY_NAME);
+        erase_file(*directory / SERVER_PUBLIC_KEY_NAME);
+        erase_file(*directory / SERVER_PRIVATE_KEY_NAME);    // shouldnt be stored but check if it is
+    }
+}
 std::function<std::expected<std::vector<security::byte>, security::ErrorMakeEccKey>()> make_invokable_load_file(std::string_view filename)
 {
     return [filename = std::filesystem::path{ filename }]() -> std::expected<std::vector<security::byte>, security::ErrorMakeEccKey>
@@ -96,41 +107,4 @@ std::tuple<security::CEccPublicKey, security::CEccPrivateKey> make_ecc_keys()
     security::CEccKeyPair keyPair{ rng };
 
     return { keyPair.public_key(), keyPair.private_key() };
-}
-void save_ecc_keys(security::CEccPublicKey& pub, security::CEccPrivateKey& priv, std::string_view pubkey, std::string_view privkey)
-{
-    if (!pub.write_to_disk(make_invokable_save_file(pubkey)))
-    {
-        LOG_FATAL("Could not save public key to disk!");
-    }
-    if (!priv.write_to_disk(make_invokable_save_file(privkey)))
-    {
-        LOG_FATAL("Could not save private key to disk!");
-    }
-
-    auto restrict_private_key = [privkey](const std::filesystem::path& keyLocation)
-    {
-        sys::restrict_file_permissions(keyLocation / std::filesystem::path{ privkey });
-        return std::expected<std::filesystem::path, std::string>{};
-    };
-    auto log_failure = [](const std::string& err)
-    {
-        LOG_ERROR_FMT("Could not set private key to admin owned - "
-                      "because filepath to key location could not be retrieved: \"{}\"",
-                      err);
-        return std::expected<std::filesystem::path, std::string>{};
-    };
-
-    [[maybe_unused]] auto result = sys::key_directory().and_then(restrict_private_key).or_else(log_failure);
-}
-void erase_stored_ecc_keys()
-{
-    std::expected<std::filesystem::path, std::string> directory = sys::key_directory();
-    if (directory)
-    {
-        erase_file(*directory / CLIENT_PUBLIC_KEY_NAME);
-        erase_file(*directory / CLIENT_PRIVATE_KEY_NAME);
-        erase_file(*directory / SERVER_PUBLIC_KEY_NAME);
-        erase_file(*directory / SERVER_PRIVATE_KEY_NAME);    // shouldnt be stored but check if it is
-    }
 }

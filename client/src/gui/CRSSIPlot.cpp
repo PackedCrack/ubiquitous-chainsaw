@@ -38,6 +38,10 @@ int8_t CRSSIPlot::rssi_median() const
 
     return static_cast<int8_t>(values[std::ssize(values) / 2]);
 }
+float CRSSIPlot::median_buffer_ratio() const
+{
+    return static_cast<float>(m_Values.size()) / static_cast<float>(m_MaxSize);
+}
 void CRSSIPlot::plot()
 {
     m_pDemander->send_demand();
@@ -55,7 +59,7 @@ void CRSSIPlot::plot()
     static constexpr float MAX_RANGE = 0.0f;
     ImGui::PlotLines("RSSI",
                      m_Values.data(),
-                     std::ssize(m_Values),
+                     common::assert_down_cast<int32_t>(std::ssize(m_Values)),
                      0,
                      std::format("Median: {}", rssi_median()).c_str(),
                      MIN_RANGE,

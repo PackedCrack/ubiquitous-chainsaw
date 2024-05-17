@@ -25,6 +25,7 @@ public:
 public:
     void push();
     [[nodiscard]] int8_t rssi_median() const;
+    [[nodiscard]] float median_buffer_ratio() const;
 private:
     void plot();
     void add_rssi_value(int8_t value);

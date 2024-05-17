@@ -3,7 +3,10 @@
 //
 #pragma once
 #include "win32.hpp"
+#pragma warning(push)
+#pragma warning(disable: 4'265)    // missing virtual destructor - wtf microsfot?
 #include <winrt/windows.foundation.h>
+#pragma warning(pop)
 //
 //
 //
